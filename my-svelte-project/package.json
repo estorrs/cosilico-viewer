@@ -1,0 +1,21 @@
+{
+  "name": "my-svelte-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "svelte": "^5.19.6",
+    "vite": "^6.1.0"
+  },
+  "dependencies": {
+    "ol": "^10.4.0",
+    "zarr": "^0.6.3",
+    "zarr-js": "^3.3.0"
+  }
+}

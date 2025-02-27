@@ -9,12 +9,12 @@ import { ZarrTile } from './ZarrTile';
 
 class ZarrTileSource extends TileImage {
     constructor(options) {
-        const { url, tileSize = 512, resolutions, tIndex = 0, cIndices = [0], zIndex = 0 } = options;
+        const { url, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndices = [0], zIndex = 0 } = options;
 
         const tileGrid = new TileGrid({
             tileSize: tileSize,
-            resolutions: resolutions.map(r => r / 512), // Normalize resolutions to pixel space
-            extent: [0, 0, 8000, 5000] // Adjust based on full image size
+            resolutions: resolutions.map(r => r / tileSize), // Normalize resolutions to pixel space
+            extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
         });
 
         super({
@@ -47,6 +47,20 @@ class ZarrTileSource extends TileImage {
         if (!this.node) return null;
         return new ZarrTile([z, x, y], 0, this, this.node, this.tIndex, this.cIndices, this.zIndex);
     }
+
+    setIndices(tIndex, cIndices, zIndex) {
+        this.tIndex = tIndex;
+        this.cIndices = cIndices;
+        this.zIndex = zIndex;
+    
+        console.log("Updated indices:", { tIndex, cIndices, zIndex });
+    
+        // ✅ Tell OpenLayers that tiles have changed
+        this.changed(); 
+    }
+  
+    
+    
 }
 
 export default ZarrTileSource;

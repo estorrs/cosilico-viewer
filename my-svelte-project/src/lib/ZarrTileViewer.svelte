@@ -5,23 +5,22 @@
   import TileLayer from 'ol/layer/Tile';
   import { get as getProjection, Projection } from 'ol/proj';
   import { ScaleLine } from 'ol/control';
-  import TileGrid from 'ol/tilegrid/TileGrid';
   import ZarrTileSource from './ZarrTileSource';
-  // import ZarrTileSource from '$lib/zarr/ZarrTileSource.js'; // Try with .js extension
 
 
+  let resolutions = [8192, 4096, 2048, 1024, 512];
+  let url = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip';
 
   // Image metadata
   let fullImageWidth = 5000;  // Example: full resolution width in pixels
   let fullImageHeight = 8000;  // Example: full resolution height in pixels
   let micronsPerPixel = 0.2125; // Microns per pixel at full resolution
+  let tileSize = 512;
 
   let tIndex = $state(0);
   let cIndices = $state([0]);
   let zIndex = $state(0);
-  // let resolutions = $state([512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]);
-  let resolutions = [8192, 4096, 2048, 1024, 512];
-  let url = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip';
+ 
 
   let map;
   let zarrSource;
@@ -45,7 +44,7 @@
     }
 
     // Create a new ZarrTileSource
-    zarrSource = new ZarrTileSource({ url, resolutions, tIndex, cIndices, zIndex });
+    zarrSource = new ZarrTileSource({ url, fullImageHeight, fullImageWidth, tileSize, resolutions, tIndex, cIndices, zIndex });
 
     // Create the new map
     map = new Map({
@@ -55,20 +54,46 @@
         projection: pixelProjection,
         center: [fullImageWidth / 2, fullImageHeight / 2],
         zoom: 1,
-        // minZoom: 1,
-        // maxZoom: 5,
-        // extent: [0, 0, fullImageWidth, fullImageHeight]
       })
     });
   }
 
-  // Run `createMap()` when the component mounts
   onMount(createMap);
 
   // Recreate `zarrSource` and `map` whenever `cIndices`, `tIndex`, or `zIndex` change
+  // $effect(() => {
+  //   createMap();
+  // });
+
+  function updateCIndices(event) {
+    const value = parseInt(event.target.value);
+    if (event.target.checked) {
+      cIndices = [...cIndices, value];
+    } else {
+      cIndices = cIndices.filter(i => i !== value);
+    }
+  }
+
+  function updateIndices() {
+    console.log("Updating indices:", { tIndex, cIndices, zIndex });
+
+    if (zarrSource) {
+        zarrSource.setIndices(tIndex, cIndices, zIndex);
+
+        // ✅ Refresh the map tiles without recreating the view
+        map.getLayers().forEach(layer => {
+            if (layer.getSource() === zarrSource) {
+                layer.getSource().refresh();
+            }
+        });
+    }
+  }
   $effect(() => {
-    createMap();
+    updateIndices();
   });
+
+  
+
 
 
 </script>
@@ -84,9 +109,20 @@
     T Index: <input type="number" bind:value={tIndex}>
   </label>
 
-  <label>
+  <!-- <label>
     C Indices (comma-separated):
     <input type="text" bind:value={cIndices} oninput={(e) => cIndices = e.target.value.split(',').map(Number) || [0]}>
+  </label> -->
+  <label>
+    C Indices:
+    <div>
+      {#each [0, 1, 2, 3] as index}
+        <label>
+          <input type="checkbox" value={index} onchange={updateCIndices} checked={cIndices.includes(index)}>
+          {index}
+        </label>
+      {/each}
+    </div>
   </label>
 
   <label>

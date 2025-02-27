@@ -76,16 +76,18 @@ class ZarrTile extends ImageTile {
             const [z, x, y] = this.tileCoord;
             const resolution = this.source.resolutions[z];
             const tileArrayPath = `/zooms/${resolution}/tiles`;
-            console.log('getting array at ', tileArrayPath);
-
+    
+            console.log('Getting array at', tileArrayPath);
+    
             const arr = await open(this.node.resolve(tileArrayPath), { kind: "array" });
+    
             var grayscaleImages = [];
-            for (let i = 0; i < this.cIndices.length; i++) {
-                const tileSlice = [x, y, this.tIndex, this.cIndices[i], this.zIndex, null, null];
-                console.log('getting tile slice ', tileSlice);
-                const tile = await await get(arr, tileSlice);
-                console.log('tile', tile);
-
+            for (let i = 0; i < this.source.cIndices.length; i++) {  
+                // ✅ Use `this.source.tIndex` and `this.source.zIndex`
+                const tileSlice = [x, y, this.source.tIndex, this.source.cIndices[i], this.source.zIndex, null, null];
+                console.log('Getting tile slice', tileSlice);
+                const tile = await get(arr, tileSlice);
+    
                 let tileData;
                 if (tile.data instanceof Uint8Array) {
                     tileData = new Uint8ClampedArray(tile.data);
@@ -93,23 +95,12 @@ class ZarrTile extends ImageTile {
                     console.log(tile.data);
                     throw new Error("Unsupported dtype");
                 }
-
+    
                 grayscaleImages.push(tileData);
             }
-
-            const rgbaData = applyPseudocolor(this.colors, grayscaleImages, this.image.width, this.image.height);
-            console.log('rgba data', rgbaData);
-            // // Assume `imageData` is your ImageData object
-            // const rgbaData = new Uint8ClampedArray(512 * 512 * 4);
-            // for (let i = 0; i < tileData.length; i++) {
-            //     const intensity = tileData[i]; // Grayscale value
-            //     rgbaData[i * 4] = intensity;     // Red
-            //     rgbaData[i * 4 + 1] = intensity; // Green
-            //     rgbaData[i * 4 + 2] = intensity; // Blue
-            //     rgbaData[i * 4 + 3] = 255;       // Alpha (fully opaque)
-            // }
     
-            // Draw tile
+            const rgbaData = applyPseudocolor(this.colors.slice(0, grayscaleImages.length), grayscaleImages, this.image.width, this.image.height);
+    
             const ctx = this.image.getContext('2d');
             const imageData = ctx.createImageData(512, 512);
             imageData.data.set(rgbaData);
@@ -122,7 +113,6 @@ class ZarrTile extends ImageTile {
             this.state = 3; // TileState.ERROR
         }
     }
-    
 
     getImage() {
         return this.image;

@@ -12,18 +12,20 @@
 
 
   // Image metadata
-  let fullImageWidth = 51265;  // Example: full resolution width in pixels
-  let fullImageHeight = 74945;  // Example: full resolution height in pixels
+  let fullImageWidth = 5000;  // Example: full resolution width in pixels
+  let fullImageHeight = 8000;  // Example: full resolution height in pixels
   let micronsPerPixel = 0.2125; // Microns per pixel at full resolution
 
-  let map;
   let tIndex = $state(0);
   let cIndices = $state([0]);
   let zIndex = $state(0);
-  let resolutions = $state([512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]);
-  let url = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing//image.zarr.zip';
+  // let resolutions = $state([512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]);
+  let resolutions = [8192, 4096, 2048, 1024, 512];
+  let url = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip';
 
+  let map;
   let zarrSource;
+  let scaleControl;
 
   // Define a projection where 1 pixel = 1 coordinate unit
   const pixelProjection = new Projection({
@@ -32,56 +34,54 @@
     extent: [0, 0, fullImageWidth, fullImageHeight], // Define the image space
   });
 
-  onMount(() => {
+  // Function to create the map and tile source
+  function createMap() {
+    console.log("Creating new ZarrTileSource with indices:", { tIndex, cIndices, zIndex });
+
+    // Destroy the old map if it exists
+    if (map) {
+      map.setTarget(null);
+      map = null;
+    }
+
+    // Create a new ZarrTileSource
     zarrSource = new ZarrTileSource({ url, resolutions, tIndex, cIndices, zIndex });
 
+    // Create the new map
     map = new Map({
       target: 'map',
-      layers: [
-        new TileLayer({ source: zarrSource })
-      ],
+      layers: [new TileLayer({ source: zarrSource })],
       view: new View({
-        projection: pixelProjection, // ✅ Use pixel-based projection
-        center: [fullImageWidth / 2, fullImageHeight / 2], // Center in pixel space
-        zoom: 2,
-        extent: [0, 0, fullImageWidth, fullImageHeight] // Restrict movement to image bounds
+        projection: pixelProjection,
+        center: [fullImageWidth / 2, fullImageHeight / 2],
+        zoom: 1,
+        // minZoom: 1,
+        // maxZoom: 5,
+        // extent: [0, 0, fullImageWidth, fullImageHeight]
       })
     });
+  }
 
-    // Add Scale Bar in Microns
-    const scaleBar = new ScaleLine({
-      units: 'metric', 
-      bar: true,
-      steps: 4,
-      text: true,
-      minWidth: 100,
-      render: (event) => {
-        const scaleElement = event.target.element;
-        const scaleText = scaleElement.querySelector('.ol-scale-text');
+  // Run `createMap()` when the component mounts
+  onMount(createMap);
 
-        if (scaleText) {
-          const originalScale = parseFloat(scaleText.innerText.replace(/[^\d.]/g, '')); // Extract numeric value
-          const scaleInMicrons = originalScale * 1e6 / micronsPerPixel; // Convert meters to microns
-          scaleText.innerText = `${scaleInMicrons.toFixed(1)} µm`; // Display in microns
-        }
-      }
-    });
-
-    map.addControl(scaleBar);
+  // Recreate `zarrSource` and `map` whenever `cIndices`, `tIndex`, or `zIndex` change
+  $effect(() => {
+    createMap();
   });
 
-  function updateIndices() {
-    zarrSource.setIndices(tIndex, cIndices, zIndex);
-  }
+
 </script>
 
 <!-- Map Container -->
 <div>
   <div id="map" style="width: 100%; height: 500px; position: relative;"></div>
 
+
+
   <!-- Controls for user to modify tile settings -->
   <label>
-    T Index: <input type="number" bind:value={tIndex} oninput={updateIndices}>
+    T Index: <input type="number" bind:value={tIndex}>
   </label>
 
   <label>
@@ -90,19 +90,14 @@
   </label>
 
   <label>
-    Z Index: <input type="number" bind:value={zIndex} oninput={updateIndices}>
+    Z Index: <input type="number" bind:value={zIndex}>
   </label>
 </div>
 
 
 <style>
-  :global(.ol-scale-bar) {
-    position: absolute;
-    bottom: 10px;
-    left: 10px;
-    background: white;
-    padding: 4px;
-    border-radius: 4px;
+  #map {
+    background-color: black; /* Change this to any color you want */
   }
 </style>
 

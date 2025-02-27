@@ -1,7 +1,11 @@
 import TileImage from 'ol/source/TileImage';
 import TileGrid from 'ol/tilegrid/TileGrid';
-import * as zarr from 'zarr';
+// import * as zarr from 'zarr';
+import { ZipFileStore } from "@zarrita/storage";
+import { open } from "@zarrita/core";
+
 import { ZarrTile } from './ZarrTile';
+
 
 class ZarrTileSource extends TileImage {
     constructor(options) {
@@ -10,7 +14,7 @@ class ZarrTileSource extends TileImage {
         const tileGrid = new TileGrid({
             tileSize: tileSize,
             resolutions: resolutions.map(r => r / 512), // Normalize resolutions to pixel space
-            extent: [0, 0, 10000, 8000] // Adjust based on full image size
+            extent: [0, 0, 8000, 5000] // Adjust based on full image size
         });
 
         super({
@@ -23,22 +27,25 @@ class ZarrTileSource extends TileImage {
         this.tIndex = tIndex;
         this.cIndices = cIndices;
         this.zIndex = zIndex;
-        this.zarrStore = null;
+        this.node = null;
+
+        console.log('c index', this.cIndices);
         this.initZarr();
     }
 
     async initZarr() {
         try {
-            const store = new zarr.HTTPStore(this.url);
-            this.zarrStore = await zarr.openGroup(store, '/', 'r');
+            const store = await ZipFileStore.fromUrl(this.url);
+            const node = await open(store); // Get the root structure
+            this.node = node
         } catch (error) {
             console.error("Error loading Zarr:", error);
         }
     }
 
     getTile(z, x, y, pixelRatio, projection) {
-        if (!this.zarrStore) return null;
-        return new ZarrTile([z, x, y], 0, this, this.zarrStore, this.tIndex, this.cIndices, this.zIndex);
+        if (!this.node) return null;
+        return new ZarrTile([z, x, y], 0, this, this.node, this.tIndex, this.cIndices, this.zIndex);
     }
 }
 

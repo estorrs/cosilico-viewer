@@ -1,4 +1,5 @@
 import TileImage from 'ol/source/TileImage';
+import DataTileSource from 'ol/source/DataTile';
 import TileGrid from 'ol/tilegrid/TileGrid';
 // import * as zarr from 'zarr';
 import { ZipFileStore } from "@zarrita/storage";
@@ -47,7 +48,7 @@ class ZarrTileSource extends TileImage {
         if (!this.node) return null;
         return new ZarrTile([z, x, y], 0, this, this.node, this.tIndex, this.cIndices, this.zIndex);
     }
-
+    
     setIndices(tIndex, cIndices, zIndex) {
         this.tIndex = tIndex;
         this.cIndices = cIndices;
@@ -58,6 +59,7 @@ class ZarrTileSource extends TileImage {
         // ✅ Tell OpenLayers that tiles have changed
         this.changed(); 
     }
+
   
     
     

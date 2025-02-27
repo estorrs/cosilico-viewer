@@ -53,7 +53,6 @@ function applyPseudocolor(colors, grayscaleImages, width, height) {
 }
 
 
-
 class ZarrTile extends ImageTile {
     constructor(tileCoord, state, source, node, tIndex, cIndices, zIndex) {
         super(tileCoord, state, null, null, () => {}); // ✅ Ensure all required arguments are passed
@@ -120,3 +119,7 @@ class ZarrTile extends ImageTile {
 }
 
 export { ZarrTile };
+
+
+
+

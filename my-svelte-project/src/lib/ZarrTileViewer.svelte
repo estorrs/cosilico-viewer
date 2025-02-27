@@ -44,7 +44,7 @@
     }
 
     // Create a new ZarrTileSource
-    zarrSource = new ZarrTileSource({ url, fullImageHeight, fullImageWidth, tileSize, resolutions, tIndex, cIndices, zIndex });
+    zarrSource = new ZarrTileSource({ url, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, tIndex, cIndices, zIndex });
 
     // Create the new map
     map = new Map({
@@ -109,10 +109,6 @@
     T Index: <input type="number" bind:value={tIndex}>
   </label>
 
-  <!-- <label>
-    C Indices (comma-separated):
-    <input type="text" bind:value={cIndices} oninput={(e) => cIndices = e.target.value.split(',').map(Number) || [0]}>
-  </label> -->
   <label>
     C Indices:
     <div>

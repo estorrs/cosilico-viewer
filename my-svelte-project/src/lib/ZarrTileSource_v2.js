@@ -10,7 +10,7 @@ import { ZarrTile } from './ZarrTile';
 
 class ZarrTileSource extends TileImage {
     constructor(options) {
-        const { url, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndex = 0, zIndex = 0 } = options;
+        const { url, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndices = [0], zIndex = 0 } = options;
 
         const tileGrid = new TileGrid({
             tileSize: tileSize,
@@ -26,11 +26,13 @@ class ZarrTileSource extends TileImage {
         this.url = url;
         this.resolutions = resolutions;
         this.tIndex = tIndex;
-        this.cIndex = cIndex;
+        this.cIndices = cIndices;
         this.zIndex = zIndex;
         this.node = null;
-        this.tileSize = tileSize;
+        this.minValues = [0];
+        this.maxValues = [255];
 
+        console.log('c index', this.cIndices);
         this.initZarr();
     }
 
@@ -46,9 +48,28 @@ class ZarrTileSource extends TileImage {
 
     getTile(z, x, y, pixelRatio, projection) {
         if (!this.node) return null;
-        return new ZarrTile([z, x, y], 0, this, this.node, this.tIndex, this.cIndex, this.zIndex);
+        return new ZarrTile([z, x, y], 0, this, this.node, this.tIndex, this.cIndices, this.zIndex);
+    }
+    
+    setIndices(tIndex, cIndices, zIndex) {
+        this.tIndex = tIndex;
+        this.cIndices = cIndices;
+        this.zIndex = zIndex;
+    
+        console.log("Updated indices:", { tIndex, cIndices, zIndex });
+    
+        this.changed(); 
     }
 
+    setMinMax(minValues, maxValues) {
+        this.minValues = minValues;
+        this.maxValues = maxValues;
+        this.changed(); // Trigger a tile refresh with the new min/max
+    }
+    
+
+  
+    
     
 }
 

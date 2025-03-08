@@ -22,15 +22,14 @@ class ZarrTile extends ImageTile {
     async loadTile() {
         try {
             const [z, x, y] = this.tileCoord;
+            console.log('Image: call to z, x, y', z, x, y);
             const resolution = this.source.resolutions[z];
             const tileArrayPath = `/zooms/${resolution}/tiles`;
-    
-            console.log('Getting array at', tileArrayPath);
-    
+        
             const arr = await open(this.node.resolve(tileArrayPath), { kind: "array" });
            
-            // ✅ Use `this.source.tIndex` and `this.source.zIndex`
             const tileSlice = [x, y, this.source.tIndex, this.source.cIndex, this.source.zIndex, null, null];
+            // console.log('Image: getting array at', tileArrayPath, tileSlice);
             const tile = await get(arr, tileSlice);
 
             let tileData;
@@ -49,11 +48,10 @@ class ZarrTile extends ImageTile {
                 rgbaData[i * 4 + 3] = 255;       // A (fully opaque)
             }
     
-            const ctx = this.image.getContext('2d');
+            const ctx = this.image.getContext('2d', { willReadFrequently: true });
             const imageData = ctx.createImageData(512, 512);
             imageData.data.set(rgbaData);
             ctx.putImageData(imageData, 0, 0);
-            console.log(imageData);
     
             this.state = 2; // TileState.LOADED
             this.changed(); // Notify OpenLayers

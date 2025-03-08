@@ -2,32 +2,36 @@
   import { onMount } from 'svelte';
   import Map from 'ol/Map';
   import View from 'ol/View';
-  import TileLayer from 'ol/layer/Tile';
+  import VectorTileLayer from 'ol/layer/VectorTile';
   import ImageLayer from 'ol/layer/Image';
   import RasterSource from 'ol/source/Raster';
-  import WebGLTileLayer from 'ol/layer/WebGLTile.js';
   import { get as getProjection, Projection } from 'ol/proj';
-  import { ScaleLine } from 'ol/control';
+  import { Fill, Stroke, Style, Circle } from 'ol/style.js';
   import ZarrTileSource from './ZarrTileSource';
+  // import ZarrVectorTileSource from './ZarrVectorTileSource';
+  import ZarrVectorLoader from './ZarrVectorLoader';
   import { applyPseudocolorToPixel, minMaxRangePixelTransform, hexToInt, intToHex} from './PixelTransforms.js';
 
-
+  let vectorUrl = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip';
 
   let resolutions = [8192, 4096, 2048, 1024, 512];
   let url = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip';
-
-  // Image metadata
+  
   let fullImageWidth = 5000;  // Example: full resolution width in pixels
   let fullImageHeight = 8000;  // Example: full resolution height in pixels
   let micronsPerPixel = 0.2125; // Microns per pixel at full resolution
+
+
+
+
   let tileSize = 512;
 
   let tIndex = $state(0);
-  let cIndices = $state([0]);
+  let cIndices = $state([]);
   let zIndex = $state(0);
-  let minValues = $state([0]);
-  let maxValues = $state([255]);
-  let colors = ['FF0000', '00FF00', '0000FF', '00FFFF'];
+  let minValues = $state([]);
+  let maxValues = $state([]);
+  let colors = ['#FF0000', '#00FF00', '#0000FF', '#00FFFF'];
  
 
   let map;
@@ -35,6 +39,8 @@
   let rasterLayer;
   let rasterSource;
   let sources = [];
+
+  let pointsLayer;
 
   // Define a projection where 1 pixel = 1 coordinate unit
   const pixelProjection = new Projection({
@@ -50,23 +56,17 @@
             values.push(pixels[i][0]);  // Get multi-band pixel array
           }
           const normValues = minMaxRangePixelTransform(values, data.minValues, data.maxValues);
-          // const pseudoPixel = applyPseudocolorToPixel(data.colors.slice(0, pixels.length), normValues);
-          // const normValues = minMaxRangePixelTransform(values, [0], [50]);
-          const pseudoPixel = applyPseudocolorToPixel(['#FF0000'], normValues);
+          const pseudoPixel = applyPseudocolorToPixel(data.colors.slice(0, normValues.length), normValues);
           return [...pseudoPixel];
   };
 
   function createRasterSource() {
     rasterSource = new RasterSource({
-          sources: sources, // Initially empty
+          sources: [...sources], // Initially empty
           operation: transformSourcePixels,
           lib: {
             minMaxRangePixelTransform: minMaxRangePixelTransform,
             applyPseudocolorToPixel: applyPseudocolorToPixel,
-            intToHex,
-            minValues: minValues,
-            maxValues: maxValues,
-            colors: [...colors.map(hexToInt)],
           },
       });
       updateBeforeOperations();
@@ -74,60 +74,100 @@
   }
 
   function initializeRasterSource() {
-      
       rasterSource = createRasterSource();
       rasterLayer = new ImageLayer({
           source: rasterSource,
       });
 
       map.addLayer(rasterLayer);
+
+      addChannel(0);
   }
 
-  // Function to dynamically add a new channel to RasterSource
-  function addChannels() {
-    console.log(cIndices.length, sources.length);
-    if (cIndices.length > sources.length) {
-        const cIndex = cIndices[cIndices.length - 1];
+  function createVectorSource() {
+    const vectorLoader = new ZarrVectorLoader(
+        vectorUrl,
+        fullImageHeight,
+        fullImageWidth,
+        pixelProjection,
+        tileSize,
+        resolutions,
+        0 // feature group
+    );
+
+    const vectorTileSource = vectorLoader.vectorTileSource;
+
+
+    // const vectorTileStyle = new Style({
+    //     image: new Circle({
+    //         radius: 1,
+    //         fill: new Fill({ color: 'blue' }),
+    //         stroke: new Stroke({ color: 'white', width: 0 })
+    //     })
+    // });
+
+
+
+    const vectorTileStyle = function (feature) {
+    // Example filter: Show only features with count > 10
+      // console.log(feature);
+      return new Style({
+        image: new Circle({
+          radius: 6,
+          fill: new Fill({ color: 'blue' }),
+          stroke: new Stroke({ color: 'white', width: 2 })
+        })
+      });
+    }
+    const vectorTileLayer = new VectorTileLayer({
+        source: vectorTileSource,
+        style: vectorTileStyle,
+    });
+    map.addLayer(vectorTileLayer);
+  }
+
+  function addChannel(cIndex) {
         console.log('adding channel', cIndex);
+
         const newSource = new ZarrTileSource({ url, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, tIndex, cIndex, zIndex });
 
-        sources.push(newSource); // Add new source to the array
+        cIndices.push(cIndex);
+        sources.push(newSource);
+        minValues.push(0);
+        maxValues.push(255);
 
         rasterSource = createRasterSource();
 
         rasterLayer.setSource(rasterSource);
+  }
 
-        if (cIndices.length == minValues.length + 1) {
-          minValues.push(0);
-        }
-        if (cIndices.length == maxValues.length + 1) {
-          maxValues.push(255);
-        }
+  function removeChannel(cIndex) {
+        console.log('removing channel', cIndex);
+        const removalIndex = cIndices.indexOf(cIndex);
 
+        cIndices.splice(removalIndex, 1);
+        sources.splice(removalIndex, 1);
+        minValues.splice(removalIndex);
+        maxValues.splice(removalIndex);
 
+        rasterSource = createRasterSource();
 
-        // rasterSource.setSources(sources); // Update RasterSource
-        // rasterSource.changed(); // Force OpenLayers to refresh the raster
-    }
+        rasterLayer.setSource(rasterSource);
   }
 
   function updateBeforeOperations() {
-    console.log('updating operations with');
-    console.log('minValues', $state.snapshot(minValues));
-    console.log('maxvalues', $state.snapshot(maxValues));
+    console.log('running update', $state.snapshot(minValues), $state.snapshot(maxValues));
     rasterSource.on('beforeoperations', function (event) {
         event.data.minValues = [...minValues];
         event.data.maxValues = [...maxValues];
-        // event.data.colors = colors;
+        event.data.colors = colors;
     });
     rasterSource.changed();
   }
 
-  // Function to create the map and tile source
   function createMap() {
     console.log("Creating new ZarrTileSource with indices:", { tIndex, cIndices, zIndex });
 
-    // Destroy the old map if it exists
     if (map) {
       map.setTarget(null);
       map = null;
@@ -136,7 +176,6 @@
     // Create the new map
     map = new Map({
       target: 'map',
-      // layers: [new TileLayer({ source: zarrSource })],
       view: new View({
         projection: pixelProjection,
         center: [fullImageWidth / 2, fullImageHeight / 2],
@@ -144,7 +183,15 @@
       })
     });
 
+    map.on('pointermove', function (event) {
+      const pixel = event.pixel;  // Mouse pixel coordinates
+      const coordinate = event.coordinate; // Map coordinates
+      // console.log('pixel', pixel);
+      // console.log('coordinate', coordinate);
+    });
+
     initializeRasterSource();
+    createVectorSource();
   }
 
   onMount(createMap);
@@ -152,34 +199,13 @@
   function updateCIndices(event) {
     const value = parseInt(event.target.value);
     if (event.target.checked) {
-      cIndices = [...cIndices, value];
+      addChannel(value);
     } else {
-      cIndices = cIndices.filter(i => i !== value);
+      removeChannel(value);
     }
   }
 
-  // function updateMinMax(event) {
-
-  // }
-
-  // function updateIndices() {
-  //   console.log("Updating indices:", { tIndex, cIndices, zIndex });
-
-  //   if (zarrSource) {
-  //       zarrSource.setIndices(tIndex, cIndices, zIndex);
-
-  //       // ✅ Refresh the map tiles without recreating the view
-  //       map.getLayers().forEach(layer => {
-  //           if (layer.getSource() === zarrSource) {
-  //               layer.getSource().refresh();
-  //           }
-  //       });
-  //   }
-  // }
-
-
   $effect(() => {
-    addChannels();
     updateBeforeOperations();
   })
 

@@ -9,7 +9,7 @@
 <main>
   
 
-  <h1>ZzzZZZZZZZZZZZ</h1>
+  <h1>Microscopy Viewer</h1>
   <ZarrTileViewer />
 
 </main>

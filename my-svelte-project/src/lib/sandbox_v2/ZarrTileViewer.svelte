@@ -13,23 +13,45 @@
   import { ZipFileStore } from "@zarrita/storage";
   import { open } from "@zarrita/core";
   import { get, slice } from "@zarrita/indexing";
-  import { initZarr } from './ZarrHelpers';
+  // import { initZarr } from './ZarrHelpers';
   import { applyPseudocolorToPixel, minMaxRangePixelTransform, hexToInt, intToHex} from './PixelTransforms.js';
 
 
   let vectorUrl = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip';
-  let imageUrl = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip';
-
-  let imageNode;
-  let vectorNode;
 
   let resolutions = [8192, 4096, 2048, 1024, 512];
+  let url = 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip';
 
 
   let featureGroupsMap = new globalThis.Map();
   let featureGroups = $state(null);
   let featureNames = $state(null); 
+  let blank = [];
+  const loadVectorMetadata = async function () {
+    const store = await ZipFileStore.fromUrl(vectorUrl);
+    const node = await open(store); // Get the root structure
+    const metaPath = '/metadata/features'
+    const featureNamesArr = await open(node.resolve(`${metaPath}/feature_names`), { kind: "array" });
+    const featureNamesChunk = await get(featureNamesArr, [null]);
+    featureNames = featureNamesChunk.data;
 
+    for (let i = 0; i < resolutions.length; i++) {
+      const res = resolutions[i];
+      const featureGroupsArr = await open(node.resolve(`${metaPath}/feature_groups/${res}`), { kind: "array" });
+      const featureGroupsChunk = await get(featureGroupsArr, [null]);
+      featureGroupsMap.set(res, featureGroupsChunk.data);
+    }
+
+    for (let i = 0; i < featureNames.length; i++) {
+      let fgs = [];
+      for (let j = 0; j < resolutions.length; j++) {
+        const res = resolutions[j];
+        fgs.push(featureGroupsMap.get(res)[i]);
+      }
+      blank.push(fgs);
+    }
+    featureGroups = blank;
+  };
 
   let fullImageWidth = 5000;  // Example: full resolution width in pixels
   let fullImageHeight = 8000;  // Example: full resolution height in pixels
@@ -99,11 +121,73 @@
       addChannel(0);
   }
 
+  function addFeature(featureName) {
+    console.log('adding feature', featureName);
+    const featureIndex = featureNames.indexOf(featureName);
+    const featureGroup = featureGroups[featureIndex];
+
+    const vectorLoader = new ZarrVectorLoader(
+        vectorUrl,
+        fullImageHeight,
+        fullImageWidth,
+        pixelProjection,
+        tileSize,
+        resolutions,
+        featureGroup,
+    );
+
+    const vectorTileSource = vectorLoader.vectorTileSource;
+
+    const vectorTileStyle = function (feature) {
+      // console.log(feature);
+      // const idx = feature.properties.feature_index;
+      const idx = feature.values_.feature_index;
+      // console.log(visibleFeatureIndices, idx);
+      if (visibleFeatureIndices.includes(idx)) {
+        const styleObj = new Style({
+          image: new Circle({
+            radius: 6,
+            fill: new Fill({ color: 'blue' }),
+            stroke: new Stroke({ color: 'white', width: 2 })
+          })
+        });
+        return styleObj;
+      }
+    }
+
+    const vectorTileLayer = new VectorTileLayer({
+        source: vectorTileSource,
+        style: vectorTileStyle,
+    });
+
+    map.addLayer(vectorTileLayer);
+
+    featureGroupToLayer.set(featureGroup, vectorTileLayer);
+
+    visibleFeatureIndices.push(featureIndex);
+    visibleFeatureGroups.push(featureGroup);
+    visibleFeatureNames.push(featureName);
+  }
+
+  function removeFeature(featureName) {
+    console.log('removing feature', featureName);
+    const featureIndex = featureNames.indexOf(featureName);
+    const featureGroup = visibleFeatureGroups[featureIndex];
+    
+    visibleFeatureIndices.splice(featureIndex, 1);
+    visibleFeatureGroups.slice(featureGroup, 1);
+    visibleFeatureNames.splice(featureName, 1);
+
+    map.removeLayer(featureGroupToLayer.get(featureGroup));
+    featureGroupToLayer.delete(featureGroup);
+
+
+  }
+
   function addChannel(cIndex) {
         console.log('adding channel', cIndex);
-        console.log('node passed to zarrtilesource', imageNode);
-        const newSource = new ZarrTileSource({ node: imageNode, fullImageHeight, fullImageWidth, tileSize, resolutions, tIndex, cIndex, zIndex });
-        console.log('raster source', newSource);
+
+        const newSource = new ZarrTileSource({ url, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, tIndex, cIndex, zIndex });
 
         cIndices.push(cIndex);
         sources.push(newSource);
@@ -139,99 +223,14 @@
     rasterSource.changed();
   }
 
-  const loadVectorMetadata = async function () {
-    let blank = [];
-    const metaPath = '/metadata/features'
-    const featureNamesArr = await open(vectorNode.resolve(`${metaPath}/feature_names`), { kind: "array" });
-    const featureNamesChunk = await get(featureNamesArr, [null]);
-    featureNames = featureNamesChunk.data;
-
-    for (let i = 0; i < resolutions.length; i++) {
-      const res = resolutions[i];
-      const featureGroupsArr = await open(vectorNode.resolve(`${metaPath}/feature_groups/${res}`), { kind: "array" });
-      const featureGroupsChunk = await get(featureGroupsArr, [null]);
-      featureGroupsMap.set(res, featureGroupsChunk.data);
-    }
-
-    for (let i = 0; i < featureNames.length; i++) {
-      let fgs = [];
-      for (let j = 0; j < resolutions.length; j++) {
-        const res = resolutions[j];
-        fgs.push(featureGroupsMap.get(res)[i]);
-      }
-      blank.push(fgs.join());
-    }
-    featureGroups = blank;
-  };
-
-  function addFeature(featureName) {
-    console.log('adding feature', featureName);
-    const featureIndex = featureNames.indexOf(featureName);
-    const featureGroup = featureGroups[featureIndex];
-
-    const vectorLoader = new ZarrVectorLoader(
-        vectorNode,
-        fullImageHeight,
-        fullImageWidth,
-        pixelProjection,
-        tileSize,
-        resolutions,
-        featureGroup,
-    );
-
-    const vectorTileSource = vectorLoader.vectorTileSource;
-
-    const vectorTileStyle = function (feature) {
-      const idx = feature.values_.feature_index;
-      if (visibleFeatureIndices.includes(idx)) {
-        const styleObj = new Style({
-          image: new Circle({
-            radius: 6,
-            fill: new Fill({ color: 'blue' }),
-            stroke: new Stroke({ color: 'white', width: 2 })
-          })
-        });
-        return styleObj;
-      }
-    }
-
-    const vectorTileLayer = new VectorTileLayer({
-        source: vectorTileSource,
-        style: vectorTileStyle,
-    });
-
-    map.addLayer(vectorTileLayer);
-
-    featureGroupToLayer.set(featureGroup, vectorTileLayer);
-
-    visibleFeatureIndices.push(featureIndex);
-    visibleFeatureGroups.push(featureGroup);
-    visibleFeatureNames.push(featureName);
-  }
-
-  function removeFeature(featureName) {
-    console.log('removing feature', featureName);
-    console.log('visibleFeatureGroups', visibleFeatureGroups);
-    const featureIndex = visibleFeatureNames.indexOf(featureName);
-    const featureGroup = visibleFeatureGroups[featureIndex];
-    
-    visibleFeatureIndices.splice(featureIndex, 1);
-    visibleFeatureGroups.splice(featureGroup, 1);
-    visibleFeatureNames.splice(featureName, 1);
-
-    const layer = featureGroupToLayer.get(featureGroup)
-
-    layer.getSource().changed();
-
-    map.removeLayer(layer);
-    featureGroupToLayer.delete(featureGroup);
-
-
-
-
-  }
-
   function createMap() {
+    console.log("Creating new ZarrTileSource with indices:", { tIndex, cIndices, zIndex });
+
+    if (map) {
+      map.setTarget(null);
+      map = null;
+    }
+
     // Create the new map
     map = new Map({
       target: 'map',
@@ -248,17 +247,10 @@
     });
 
     initializeRasterSource();
+    loadVectorMetadata();
   }
 
-  onMount(async () => {
-    imageNode = await initZarr(imageUrl);
-    vectorNode = await initZarr(vectorUrl);
-    loadVectorMetadata();
-    console.log(imageNode, vectorNode);
-    console.log('running create map');
-    createMap();
-    console.log('map created', map);
-  });
+  onMount(createMap);
 
   function toggleFeature(featureName) {
     if (visibleFeatureNames.includes(featureName)) {
@@ -278,11 +270,12 @@
   }
 
   $effect(() => {
-    console.log('Checking for min/max updates:', JSON.stringify(minValues), JSON.stringify(maxValues));
-    if (rasterSource) {
-        updateBeforeOperations();
-    }
-  });
+    updateBeforeOperations();
+  })
+
+
+  
+
 
 
 </script>

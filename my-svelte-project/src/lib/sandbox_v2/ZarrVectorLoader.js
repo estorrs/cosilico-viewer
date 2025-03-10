@@ -11,14 +11,15 @@ import TileGrid from 'ol/tilegrid/TileGrid';
 
 
 class ZarrVectorLoader {
-    constructor(vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize = 512, resolutions, featureGroup) {
-        this.node = vectorNode
+    constructor(zarrUrl, fullImageHeight, fullImageWidth, pixelProjection, tileSize = 512, resolutions, featureGroup) {
+        this.zarrUrl = zarrUrl;
         this.fullImageHeight = fullImageHeight;
         this.fullImageWidth = fullImageWidth; 
         this.projection = pixelProjection;
         this.tileSize = tileSize;
         this.resolutions = resolutions;
-        this.featureGroup = featureGroup.split(',');
+        this.featureGroup = featureGroup;
+        this.node = null;
 
         this.format = new GeoJSON();
 
@@ -28,9 +29,20 @@ class ZarrVectorLoader {
             extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
         });
     
-        console.log('vector loader, node is', this.node);
-
+        this.initZarr();
         this.vectorTileSource = this.getVectorSource();
+    }
+
+    async initZarr() {
+        try {
+            // console.log(this.zarrUrl);
+            const store = await ZipFileStore.fromUrl(this.zarrUrl);
+            const node = await open(store); // Get the root structure
+            this.node = await node
+            console.log('Vector: node opened', this.node);
+        } catch (error) {
+            console.error("Vector: Error loading Zarr:", error);
+        }
     }
 
     getVectorSource() {
@@ -49,7 +61,10 @@ class ZarrVectorLoader {
                     const x = parseInt(pieces[1]);
                     const y = parseInt(pieces[2]);
                     console.log('Vector: call to z, x, y', z, x, y);
+                    // console.log('x y z', x, y, z);
                     const resolution = this.resolutions[z];
+                    // console.log('vectorsource resolutions', this.resolutions);
+                    // console.log('vectorsource resolution', resolution);
                     const fg = this.featureGroup[z];
 
                     const groupPath = `/zooms/${resolution}/${x}_${y}/${fg}`;
@@ -62,7 +77,9 @@ class ZarrVectorLoader {
                     let isPresent = true;
                     try {
                         const g = await open(this.node.resolve(groupPath), { kind: "group" });
+                        // console.log('Vector: group found at path', groupPath);
                     }  catch (error) {
+                        // console.log('Vector: group not found at path', groupPath);
                         isPresent = false;
                     }
         
@@ -83,6 +100,12 @@ class ZarrVectorLoader {
                         const idsChunk = await get(idArr, [null]);
                         const locationsXChunk = await get(locationArr, [null, 0]);
                         const locationsYChunk = await get(locationArr, [null, 1]);
+            
+                        // console.log('countsChunk', countsChunk);
+                        // console.log('featureIndiciesChunk', featureIndiciesChunk);
+                        // console.log('idsChunk', idsChunk);
+                        // console.log('locationsXChunk', locationsXChunk);
+                        // console.log('locationsYChunk', locationsYChunk);
             
                         let counts;
                         if (countsChunk.data instanceof Uint32Array) {

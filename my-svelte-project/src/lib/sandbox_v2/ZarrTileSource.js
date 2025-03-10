@@ -10,7 +10,7 @@ import { ZarrTile } from './ZarrTile';
 
 class ZarrTileSource extends TileImage {
     constructor(options) {
-        const { node, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndex = 0, zIndex = 0 } = options;
+        const { url, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndex = 0, zIndex = 0 } = options;
 
         const tileGrid = new TileGrid({
             tileSize: tileSize,
@@ -23,30 +23,26 @@ class ZarrTileSource extends TileImage {
             tileUrlFunction: () => null, // Not needed since we override getTile
         });
 
-        console.log('node passed to zarrtilesource', node);
-
-        // this.url = url;
-        this.node = node;
+        this.url = url;
         this.resolutions = resolutions;
         this.tIndex = tIndex;
         this.cIndex = cIndex;
         this.zIndex = zIndex;
+        this.node = null;
         this.tileSize = tileSize;
 
-        console.log('image loader, node is', this.node);
-
-        // this.initZarr();
+        this.initZarr();
     }
 
-    // async initZarr() {
-    //     try {
-    //         const store = await ZipFileStore.fromUrl(this.url);
-    //         const node = await open(store); // Get the root structure
-    //         this.node = node
-    //     } catch (error) {
-    //         console.error("Error loading Zarr:", error);
-    //     }
-    // }
+    async initZarr() {
+        try {
+            const store = await ZipFileStore.fromUrl(this.url);
+            const node = await open(store); // Get the root structure
+            this.node = node
+        } catch (error) {
+            console.error("Error loading Zarr:", error);
+        }
+    }
 
     getTile(z, x, y, pixelRatio, projection) {
         if (!this.node) return null;

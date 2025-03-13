@@ -14,6 +14,7 @@
     "vite": "^6.1.0"
   },
   "dependencies": {
+    "colorjs.io": "^0.5.2",
     "ol": "^10.4.0",
     "zarr": "^0.6.3",
     "zarr-js": "^3.3.0"

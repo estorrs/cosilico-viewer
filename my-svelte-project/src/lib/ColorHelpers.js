@@ -1,5 +1,10 @@
 import Color from "colorjs.io";
 
+export const defaultPalettes = {
+    imagePallete: 'multiplex',
+    featurePallete: 'bright',
+};
+
 export const categoricalPalettes = {
     multiplex: ['#030bfc', '#fc0303', '#00f742', '#ffff00', '#f70dff', '#03fcf0', '#ffffff'],
     deep: ["#4c72b0", "#dd8452", "#55a868", "#c44e52", "#8172b3", "#937860", "#da8bc3", "#8c8c8c", "#ccb974", "#64b5cd"],
@@ -119,8 +124,9 @@ export function valueToColor(paletteName, value, minValue, maxValue, centerValue
         throw new Error(`Palette "${paletteName}" not found in continuous or diverging palettes.`);
     }
 
-    // Ensure value is within the given range
-    value = Math.max(minValue, Math.min(maxValue, value));
+    // Clip value within the given range
+    if (value <= minValue) return palette[0]; // ✅ Return min color
+    if (value >= maxValue) return palette[palette.length - 1]; // ✅ Return max color
 
     let index;
 
@@ -148,3 +154,4 @@ export function valueToColor(paletteName, value, minValue, maxValue, centerValue
 
     return palette[index];
 }
+

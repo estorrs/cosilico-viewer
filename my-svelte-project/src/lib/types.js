@@ -72,6 +72,7 @@ import ZarrVectorLoader from './ZarrVectorLoader';
  * @typedef {Object} Image
  * @property {string} version
  * @property {string} imageId
+ * @property {string} name
  * @property {Group<ZipFileStore<HTTPRangeReader>>} node
  * @property {Ome} ome
  * @property {number[]} resolutions
@@ -115,8 +116,8 @@ import ZarrVectorLoader from './ZarrVectorLoader';
  * @property {Map<string, CategoricalFeatureView>} featureNameToView
  * @property {number} fillOpacity
  * @property {number} strokeOpacity
- * @property {number[]} visibleFeatureNames
- * @property {number[]} visibleFeatureGroups
+ * @property {string[]} visibleFeatureNames
+ * @property {string[]} visibleFeatureGroups
  * @property {number[]} visibleFeatureIndices
  * @property {ZarrVectorLoader[]} zarrVectorLoaders
 */
@@ -145,11 +146,14 @@ import ZarrVectorLoader from './ZarrVectorLoader';
 /**
  * @typedef {Object} FeatureGroupVector
  * @property {string} version
+ * @property {string} name
  * @property {string} vectorId
  * @property {string} vectorType // [point, polygon]
  * @property {Group<ZipFileStore<HTTPRangeReader>>} node
  * @property {number[]} resolutions
  * @property {number} tileSize
+ * @property {number} sizeY
+ * @property {number} sizeX
  * @property {string[]} featureNames
  * @property {string[]} featureGroups
  * @property {Map<number, number[]>} featureGroupsMap
@@ -160,11 +164,14 @@ import ZarrVectorLoader from './ZarrVectorLoader';
 /**
  * @typedef {Object} CategoricalVector
  * @property {string} version
+ * @property {string} name
  * @property {string} vectorId
  * @property {string} vectorType // [point, polygon]
  * @property {Group<ZipFileStore<HTTPRangeReader>>} node
  * @property {number[]} resolutions
  * @property {number} tileSize
+ * @property {number} sizeY
+ * @property {number} sizeX
  * @property {string[]} featureNames
  * @property {CategoricalView} vectorView
  * @property {VectorTileLayer} vectorTileLayer
@@ -173,11 +180,14 @@ import ZarrVectorLoader from './ZarrVectorLoader';
 /**
  * @typedef {Object} ContinuousVector
  * @property {string} version
+ * @property {string} name
  * @property {string} vectorId
  * @property {string} vectorType // [point, polygon]
  * @property {Group<ZipFileStore<HTTPRangeReader>>} node
  * @property {number[]} resolutions
  * @property {number} tileSize
+ * @property {number} sizeY
+ * @property {number} sizeX
  * @property {number} minValue
  * @property {number} maxValue
  * @property {ContinuousView} vectorView

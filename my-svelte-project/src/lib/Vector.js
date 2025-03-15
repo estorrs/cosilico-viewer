@@ -3,14 +3,12 @@ import { get, slice } from "@zarrita/indexing";
 import { Projection } from 'ol/proj';
 import VectorTileLayer from 'ol/layer/VectorTile';
 import { SvelteMap } from "svelte/reactivity";
+import { Style } from "ol/style";
 
 
 import ZarrVectorLoader from './ZarrVectorLoader';
 import { generateColorMapping, defaultPalettes, categoricalPalettes } from './ColorHelpers';
 import { generateShape } from "./ShapeHelpers";
-
-
-
 
 export class FeatureGroupVector {
     constructor(
@@ -38,7 +36,6 @@ export class FeatureGroupVector {
     }
 
     addFeature(featureName, map) {
-        console.log('adding feature', featureName);
         // @ts-ignore
         const featureIndex = this.featureNames.indexOf(featureName);
         const featureGroup = this.featureGroups[featureIndex];
@@ -55,13 +52,16 @@ export class FeatureGroupVector {
 
         const vectorTileSource = vectorLoader.vectorTileSource;
 
-        const vectorTileStyle = function (feature) {
+        const vectorTileStyle = (feature) => {
             const idx = feature.values_.feature_index;
             const name = this.featureNames[idx];
             if (this.vectorView.visibleFeatureIndices.includes(idx)) {
-                return this.vectorView.featureNameToView.get(name).shape
+                return new Style({
+                    image: this.vectorView.featureNameToView.get(name).shape
+                });
             }
         }
+
 
         const layer = new VectorTileLayer({
             source: vectorTileSource,

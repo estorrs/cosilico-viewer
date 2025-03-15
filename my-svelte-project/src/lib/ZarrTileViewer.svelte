@@ -3,17 +3,16 @@
   import Map from "ol/Map";
   import View from "ol/View";
   import { SvelteMap } from "svelte/reactivity";
-  import { writable } from "svelte/store";
 
   import { initZarr } from "./ZarrHelpers";
   import { Image } from "./Image";
   import { FeatureGroupVector } from "./Vector";
 
-
   let images = $state(new SvelteMap());
   let featureGroupVectors = $state(new SvelteMap());
 
-  let testImage = $state(null);
+  let reloadChannelInfoKey = $state(true);
+  let reloadFeatureInfoKey = $state(true);
 
   let map;
 
@@ -49,11 +48,10 @@
       featureVectorNode,
       "lsdkjf",
     );
+    // vectorIsLoaded = transcriptsVector.isLoaded;
 
     images.set(multiplexImage.imageId, multiplexImage);
     featureGroupVectors.set(transcriptsVector.vectorId, transcriptsVector);
-
-    testImage = multiplexImage;
 
     createMap(
       multiplexImage.projection,
@@ -64,6 +62,14 @@
     // make first channel visible by default
     multiplexImage.addChannel(multiplexImage.channelNames[0], map);
 
+    // wait so feature names can render to screen
+    let interval = setInterval(() => {
+        if (transcriptsVector.isLoaded) {
+            console.log("Condition met! Stopping loop.");
+            reloadFeatureInfoKey = !reloadFeatureInfoKey;
+            clearInterval(interval); 
+        }
+    }, 500); // Runs every 500ms (0.5s)
   });
 
   function toggleFeature(featureName, catVector) {
@@ -80,100 +86,86 @@
     } else {
       image.addChannel(channelName, map);
     }
-    testImage = { ...testImage };
-    // images = new SvelteMap(images); // force update
-    // image.imageView.visibleChannelNames = [...image.imageView.visibleChannelNames];
-    // console.log('channel added', channelName, image);
-  }
+
+    reloadChannelInfoKey = !reloadChannelInfoKey; // forces reload of channel info elements
+  } 
 
   function updateMinValue(image, channelName, event) {
-    const newValue = event.target.value
+    const newValue = event.target.value;
     const channelView = image.imageView.channelNameToView.get(channelName);
     channelView.minValue = Number(newValue);
     image.updateBeforeOperations();
   }
 
   function updateMaxValue(image, channelName, event) {
-    const newValue = event.target.value
+    const newValue = event.target.value;
     const channelView = image.imageView.channelNameToView.get(channelName);
     channelView.maxValue = Number(newValue);
     image.updateBeforeOperations();
   }
-
-//   $effect(() => {
-//   if (images[0].imageView) {
-//     console.log("Re-rendering visibleChannelNames", images[0].imageView.visibleChannelNames);
-
-//   }
-// });
-
-
-  // $effect(() => {
-  //   for (let i = 0; i < images.size; i++) {
-  //     const image = images[i];
-  //     if (image.rasterSource) {
-  //       image.updateBeforeOperations();
-  //     }
-  //   }
-  // });
 </script>
 
 <!-- Map Container -->
 <div>
   <div id="map" style="width: 100%; height: 500px; position: relative;"></div>
-
-  <!-- Select Channels for Multiple Images -->
   {#each Array.from(images.values()) as image}
-    <label>
-      Select Channels ({image.name}):
-      <div>
-        {#if image?.channelNames && image.channelNames.length > 0}
-          {#each image.channelNames ?? [] as channelName}
-            <label>
-              <input
-                type="checkbox"
-                checked={image.imageView.visibleChannelNames.includes(
-                  channelName,
-                )}
-                onchange={() => toggleChannel(channelName, image)}
-              />
-              {channelName}
-            </label>
-          {/each}
-        {:else}
-          <p>Loading channels...</p>
-        {/if}
-      </div>
-    </label>
-
-    <!-- Min/Max Adjustment for Each Image -->
-    <label>
-      Min/Max Adjustment ({image.name}):
-      {#each image.imageView.visibleChannelNames as channelName, i}
-       {console.log("Rendering channel:", channelName, "Index:", i)}
+    {#if image.imageView}
+      <label>
+        Select Channels ({image.name}):
         <div>
-          <label
-            >{channelName} Min:
-            <input
-              type="number"
-              value={image.imageView.channelNameToView.get(channelName).minValue}
-              onchange={(event) => updateMinValue(image, channelName, event)}
-            />
-          </label>
-          <label
-            >Max:
-            <input
-              type="number"
-              value={image.imageView.channelNameToView.get(channelName).maxValue}
-              onchange={(event) => updateMaxValue(image, channelName, event)}
-            />
-          </label>
+          {#if image?.channelNames && image.channelNames.length > 0}
+            {#each image.channelNames ?? [] as channelName}
+              <label>
+                <input
+                  type="checkbox"
+                  checked={image.imageView.visibleChannelNames.includes(
+                    channelName,
+                  )}
+                  onchange={() => toggleChannel(channelName, image)}
+                />
+                {channelName}
+              </label>
+            {/each}
+          {:else}
+            <p>Loading channels...</p>
+          {/if}
         </div>
-      {/each}
-    </label>
+      </label>
+
+      {#key reloadChannelInfoKey}
+        <label>
+          Min/Max Adjustment ({image.name}):
+          {#each image.imageView.visibleChannelNames as channelName, j}
+            <div>
+              <label
+                >{channelName} Min:
+                <input
+                  type="number"
+                  value={image.imageView.channelNameToView.get(channelName)
+                    .minValue}
+                  onchange={(event) =>
+                    updateMinValue(image, channelName, event)}
+                />
+              </label>
+              <label
+                >Max:
+                <input
+                  type="number"
+                  value={image.imageView.channelNameToView.get(channelName)
+                    .maxValue}
+                  onchange={(event) =>
+                    updateMaxValue(image, channelName, event)}
+                />
+              </label>
+            </div>
+          {/each}
+        </label>
+      {/key}
+    {/if}
   {/each}
 
   <!-- Select Features for Multiple Vectors -->
+  {#key reloadFeatureInfoKey}
   {#each Array.from(featureGroupVectors.values()) as fgVector}
     <label>
       Select Features ({fgVector.name}):
@@ -197,6 +189,7 @@
       </div>
     </label>
   {/each}
+  {/key}
 </div>
 
 <style>

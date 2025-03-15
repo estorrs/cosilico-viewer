@@ -23,9 +23,6 @@ class ZarrTileSource extends TileImage {
             tileUrlFunction: () => null, // Not needed since we override getTile
         });
 
-        console.log('node passed to zarrtilesource', node);
-
-        // this.url = url;
         this.node = node;
         this.resolutions = resolutions;
         this.tIndex = tIndex;
@@ -33,20 +30,7 @@ class ZarrTileSource extends TileImage {
         this.zIndex = zIndex;
         this.tileSize = tileSize;
 
-        console.log('image loader, node is', this.node);
-
-        // this.initZarr();
     }
-
-    // async initZarr() {
-    //     try {
-    //         const store = await ZipFileStore.fromUrl(this.url);
-    //         const node = await open(store); // Get the root structure
-    //         this.node = node
-    //     } catch (error) {
-    //         console.error("Error loading Zarr:", error);
-    //     }
-    // }
 
     getTile(z, x, y, pixelRatio, projection) {
         if (!this.node) return null;

@@ -7,6 +7,7 @@ export async function initZarr(zarrUrl) {
         // console.log(this.zarrUrl);
         const store = await ZipFileStore.fromUrl(zarrUrl);
         const node = await open(store); // Get the root structure
+
         console.log('node opened at', zarrUrl);
         return node;
     } catch (error) {

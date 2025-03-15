@@ -85,7 +85,6 @@ export class Image {
     }
     
     addChannel(channelName, map) {
-      console.log('adding channel', channelName);
       const cIndex = this.channelNames.indexOf(channelName);
       const newSource = new ZarrTileSource({
         node: this.node,
@@ -105,7 +104,6 @@ export class Image {
     }
     
     removeChannel(channelName, map) {
-      console.log('removing channel', channelName);
     
       const removalIndex = this.imageView.visibleChannelNames.indexOf(channelName);
     

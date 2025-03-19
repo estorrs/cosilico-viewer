@@ -81,7 +81,10 @@ export class Image {
             source: this.rasterSource,
         });
 
-        map.addLayer(this.rasterLayer);
+        const layers = map.getLayers();
+        layers.removeAt(0);
+        layers.insertAt(0, this.rasterLayer);
+
     }
     
     addChannel(channelName, map) {

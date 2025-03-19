@@ -29,7 +29,6 @@ class ZarrTile extends ImageTile {
             const arr = await open(this.node.resolve(tileArrayPath), { kind: "array" });
            
             const tileSlice = [x, y, this.source.tIndex, this.source.cIndex, this.source.zIndex, null, null];
-            // console.log('Image: getting array at', tileArrayPath, tileSlice);
             const tile = await get(arr, tileSlice);
 
             let tileData;
@@ -49,7 +48,7 @@ class ZarrTile extends ImageTile {
             }
     
             const ctx = this.image.getContext('2d', { willReadFrequently: true });
-            const imageData = ctx.createImageData(512, 512);
+            const imageData = ctx.createImageData(this.source.tileSize, this.source.tileSize);
             imageData.data.set(rgbaData);
             ctx.putImageData(imageData, 0, 0);
     

@@ -27,6 +27,7 @@
       }),
     });
 
+
     // map.on('pointermove', function (event) {
     //   const pixel = event.pixel;  // Mouse pixel coordinates
     //   const coordinate = event.coordinate; // Map coordinates

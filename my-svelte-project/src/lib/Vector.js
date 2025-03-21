@@ -71,7 +71,11 @@ export class FeatureGroupVector {
         this.vectorView.visibleFeatureGroups.push(featureGroup);
         this.vectorView.visibleFeatureNames.push(featureName);
 
+        console.log('refreshing layer');
+        // this.layer.setStyle(this.layer.getStyle());
         this.layer.getSource().changed();
+
+        console.log(this.layer);
     }
 
     removeFeature(featureName, map) {

@@ -14,8 +14,10 @@ export class FeatureGroupVector {
     constructor(
         node,
         vectorId,
+        map
     ) {
         this.node = node;
+        this.map = map;
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
@@ -24,6 +26,7 @@ export class FeatureGroupVector {
         this.sizeY = this.node.attrs.size[0];
         this.sizeX = this.node.attrs.size[1];
         this.tileSize = this.resolutions[this.resolutions.length - 1];
+        this.layer = null;
         this.isLoaded = false;
 
         this.projection = new Projection({
@@ -40,41 +43,35 @@ export class FeatureGroupVector {
         const featureIndex = this.featureNames.indexOf(featureName);
         const featureGroup = this.featureGroups[featureIndex];
 
-        const vectorLoader = new ZarrVectorLoader(
-            this.node,
-            this.sizeY,
-            this.sizeX,
-            this.projection,
-            this.tileSize,
-            this.resolutions,
-            featureGroup,
-        );
+        this.vectorLoader.addFeatureGroup(featureGroup);
 
-        const vectorTileSource = vectorLoader.vectorTileSource;
+        // const vectorTileSource = this.vectorLoader.vectorTileSource;
 
-        const vectorTileStyle = (feature) => {
-            const idx = feature.values_.feature_index;
-            const name = this.featureNames[idx];
-            if (this.vectorView.visibleFeatureIndices.includes(idx)) {
-                return new Style({
-                    image: this.vectorView.featureNameToView.get(name).shape
-                });
-            }
-        }
+        // const vectorTileStyle = (feature) => {
+        //     const idx = feature.values_.feature_index;
+        //     const name = this.featureNames[idx];
+        //     if (this.vectorView.visibleFeatureIndices.includes(idx)) {
+        //         return new Style({
+        //             image: this.vectorView.featureNameToView.get(name).shape
+        //         });
+        //     }
+        // }
 
 
-        const layer = new VectorTileLayer({
-            source: vectorTileSource,
-            style: vectorTileStyle,
-        });
+        // const layer = new VectorTileLayer({
+        //     source: vectorTileSource,
+        //     style: vectorTileStyle,
+        // });
 
-        map.addLayer(layer);
+        // map.addLayer(layer);
 
-        this.featureNameToLayer.set(featureName, layer);
+        // this.featureNameToLayer.set(featureName, layer);
 
         this.vectorView.visibleFeatureIndices.push(featureIndex);
         this.vectorView.visibleFeatureGroups.push(featureGroup);
         this.vectorView.visibleFeatureNames.push(featureName);
+
+        this.layer.getSource().changed();
     }
 
     removeFeature(featureName, map) {
@@ -85,12 +82,16 @@ export class FeatureGroupVector {
         this.vectorView.visibleFeatureGroups.splice(featureIndex, 1);
         this.vectorView.visibleFeatureNames.splice(featureIndex, 1);
 
-        const layer = this.featureNameToLayer.get(featureName);
+        this.vectorLoader.removeFeatureGroup(featureGroup);
 
-        layer.getSource().changed();
+        this.layer.getSource().changed();
 
-        map.removeLayer(layer);
-        this.featureNameToLayer.delete(featureGroup);
+        // const layer = this.featureNameToLayer.get(featureName);
+
+        // layer.getSource().changed();
+
+        // map.removeLayer(layer);
+        // this.featureNameToLayer.delete(featureGroup);
     }
 
     async populateInitialFields() {
@@ -118,9 +119,18 @@ export class FeatureGroupVector {
             this.featureGroups.push(fgs.join());
         }
 
-        this.featureNameToLayer = new SvelteMap();
+        // this.featureNameToLayer = new SvelteMap();
 
         this.featureToColor = generateColorMapping(defaultPalettes.featurePallete, this.featureNames);
+
+        this.vectorLoader = new ZarrVectorLoader(
+            this.node,
+            this.sizeY,
+            this.sizeX,
+            this.projection,
+            this.tileSize,
+            this.resolutions,
+        );
         //create view
         this.vectorView = {
             featureNameToView: new globalThis.Map(),
@@ -129,7 +139,6 @@ export class FeatureGroupVector {
             visibleFeatureNames: [],
             visibleFeatureGroups: [],
             visibleFeatureIndices: [],
-            zarrVectorLoaders: [],
         };
 
         for (let i = 0; i < this.featureNames.length; i++) {
@@ -144,6 +153,24 @@ export class FeatureGroupVector {
 
             this.vectorView.featureNameToView.set(featureName, catFeatureView);
         }
+
+        const vectorTileStyle = (feature) => {
+            const idx = feature.values_.feature_index;
+            const name = this.featureNames[idx];
+            if (this.vectorView.visibleFeatureIndices.includes(idx)) {
+                return new Style({
+                    image: this.vectorView.featureNameToView.get(name).shape
+                });
+            }
+        }
+
+        this.layer = new VectorTileLayer({
+            source: this.vectorLoader.vectorTileSource,
+            style: vectorTileStyle,
+        });
+
+        this.map.addLayer(this.layer);
+
         this.isLoaded = true;
 
     }

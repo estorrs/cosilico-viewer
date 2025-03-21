@@ -45,20 +45,23 @@
 
     const multiplexImage = new Image(imageNode, "asdlfjk");
 
-    const transcriptsVector = new FeatureGroupVector(
-      featureVectorNode,
-      "lsdkjf",
-    );
+    
     // vectorIsLoaded = transcriptsVector.isLoaded;
 
     images.set(multiplexImage.imageId, multiplexImage);
-    featureGroupVectors.set(transcriptsVector.vectorId, transcriptsVector);
 
     createMap(
       multiplexImage.projection,
       multiplexImage.sizeX,
       multiplexImage.sizeY,
     );
+
+    const transcriptsVector = new FeatureGroupVector(
+      featureVectorNode,
+      "lsdkjf",
+      map
+    );
+    featureGroupVectors.set(transcriptsVector.vectorId, transcriptsVector);
 
     // make first channel visible by default
     multiplexImage.addChannel(multiplexImage.channelNames[0], map);

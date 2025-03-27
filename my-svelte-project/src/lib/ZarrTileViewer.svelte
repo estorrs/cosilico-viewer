@@ -27,6 +27,14 @@
       }),
     });
 
+    // map.on('movestart', () => {
+    //     for (const [key, img] of images) {
+    //       for (const zts of img.imageView.zarrTileSources) { 
+    //         zts.loadGenerationCounter++;
+    //       }
+    //     }
+    // });
+
 
     // map.on('pointermove', function (event) {
     //   const pixel = event.pixel;  // Mouse pixel coordinates
@@ -60,17 +68,17 @@
       multiplexImage.sizeY,
     );
 
-    // make first channel visible by default
-    multiplexImage.addChannel(multiplexImage.channelNames[0], map);
-
     // wait so feature names can render to screen
     let interval = setInterval(() => {
         if (transcriptsVector.isLoaded) {
-            console.log("Condition met! Stopping loop.");
+            console.log("Vector condition met! Stopping loop.");
             reloadFeatureInfoKey = !reloadFeatureInfoKey;
             clearInterval(interval); 
         }
-    }, 500); // Runs every 500ms (0.5s)
+    }, 100); // Runs every 100ms (0.1s)
+
+    // make first channel visible by default
+    multiplexImage.addChannel(multiplexImage.channelNames[0], map);
   });
 
   function toggleFeature(featureName, catVector) {

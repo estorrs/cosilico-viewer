@@ -11,7 +11,7 @@ import { ZarrTile } from './ZarrTile';
 class ZarrTileSource extends TileImage {
     constructor(options) {
         const { node, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndex = 0, zIndex = 0 } = options;
-
+        
         const tileGrid = new TileGrid({
             tileSize: tileSize,
             resolutions: resolutions.map(r => r / tileSize), // Normalize resolutions to pixel space
@@ -23,6 +23,8 @@ class ZarrTileSource extends TileImage {
             tileUrlFunction: () => null, // Not needed since we override getTile
         });
 
+        this.isLoaded = false;
+
         this.node = node;
         this.resolutions = resolutions;
         this.tIndex = tIndex;
@@ -30,11 +32,27 @@ class ZarrTileSource extends TileImage {
         this.zIndex = zIndex;
         this.tileSize = tileSize;
 
+        this.loadGenerationCounter = 0;
+
+        this.initializeArrs();
+
+    }
+
+    async initializeArrs() {
+        // preload array locations
+        this.zoomArrs = new Map();
+        for (const res of this.resolutions) {
+            const tileArrayPath = `/zooms/${res}/tiles`;
+            const arr = await open(this.node.resolve(tileArrayPath), { kind: "array" });
+            this.zoomArrs.set(res, arr);
+        }
+        this.isLoaded = true
     }
 
     getTile(z, x, y, pixelRatio, projection) {
         if (!this.node) return null;
-        return new ZarrTile([z, x, y], 0, this, this.node, this.tIndex, this.cIndex, this.zIndex);
+        if (!this.isLoaded) return null;
+        return new ZarrTile([z, x, y], 0, this, this.node, this.zoomArrs, this.tIndex, this.cIndex, this.zIndex);
     }
 
     

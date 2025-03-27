@@ -64,6 +64,7 @@ export class FeatureGroupVector {
 
 
         const layer = new VectorTileLayer({
+            preload: 0,
             source: vectorTileSource,
             style: vectorTileStyle,
         });

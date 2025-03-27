@@ -12,6 +12,7 @@ import TileGrid from 'ol/tilegrid/TileGrid';
 
 class ZarrVectorLoader {
     constructor(vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize = 512, resolutions, featureGroup) {
+        this.isLoaded = false;
         this.node = vectorNode
         this.fullImageHeight = fullImageHeight;
         this.fullImageWidth = fullImageWidth; 
@@ -37,7 +38,6 @@ class ZarrVectorLoader {
         console.log('vector node', this.node);
         return new VectorTileSource({
             format: null, // 🔥 Prevents OpenLayers from automatically processing tile data
-            // projection: this.projection,
             tileGrid: this.tileGrid,
             tileUrlFunction: function (tileCoord) {
                 return `${tileCoord[0]}/${tileCoord[1]}/${tileCoord[2]}`;

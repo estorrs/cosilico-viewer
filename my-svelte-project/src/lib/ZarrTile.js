@@ -3,12 +3,15 @@ import ImageTile from 'ol/ImageTile';
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
 
+import { debounceTileLoad } from './DebounceUtils.js';
+
 class ZarrTile extends ImageTile {
-    constructor(tileCoord, state, source, node, tIndex, cIndex, zIndex) {
-        super(tileCoord, state, null, null, () => {}); // ✅ Ensure all required arguments are passed
+    constructor(tileCoord, state, source, node, zoomArrs, tIndex, cIndex, zIndex) {
+        super(tileCoord, state, null, null, () => { }); // ✅ Ensure all required arguments are passed
 
         this.source = source;
         this.node = node;
+        this.zoomArrs = zoomArrs;
         this.tIndex = tIndex;
         this.cIndex = cIndex;
         this.zIndex = zIndex;
@@ -21,15 +24,16 @@ class ZarrTile extends ImageTile {
 
     async loadTile() {
         try {
+
             const [z, x, y] = this.tileCoord;
-            console.log('Image: call to z, x, y', z, x, y);
+            const tileKey = `img-${z}-${x}-${y}-${this.cIndex}-${this.zIndex}-${this.tIndex}`;
+
             const resolution = this.source.resolutions[z];
-            const tileArrayPath = `/zooms/${resolution}/tiles`;
-        
-            const arr = await open(this.node.resolve(tileArrayPath), { kind: "array" });
-           
+            const arr = this.zoomArrs.get(resolution);
+
             const tileSlice = [x, y, this.source.tIndex, this.source.cIndex, this.source.zIndex, null, null];
             const tile = await get(arr, tileSlice);
+
 
             let tileData;
             if (tile.data instanceof Uint8Array) {
@@ -38,7 +42,7 @@ class ZarrTile extends ImageTile {
                 console.log(tile.data);
                 throw new Error("Unsupported dtype");
             }
-    
+
             let rgbaData = new Uint8ClampedArray(tileData.length * 4);
             for (let i = 0; i < tileData.length; i++) {
                 rgbaData[i * 4] = tileData[i];     // R
@@ -46,18 +50,20 @@ class ZarrTile extends ImageTile {
                 rgbaData[i * 4 + 2] = tileData[i]; // B
                 rgbaData[i * 4 + 3] = 255;       // A (fully opaque)
             }
-    
+
             const ctx = this.image.getContext('2d', { willReadFrequently: true });
             const imageData = ctx.createImageData(this.source.tileSize, this.source.tileSize);
             imageData.data.set(rgbaData);
             ctx.putImageData(imageData, 0, 0);
-    
+
             this.state = 2; // TileState.LOADED
             this.changed(); // Notify OpenLayers
         } catch (error) {
             console.error("Error loading Zarr tile:", error);
             this.state = 3; // TileState.ERROR
         }
+
+
     }
 
     getImage() {

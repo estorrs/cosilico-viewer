@@ -40,6 +40,8 @@ export class Image {
         this.unit = this.node.attrs.unit,
         this.isLoaded = false;
 
+        this.loadGenerationCounter = 0;
+
         this.projection = new Projection({
             code: 'PIXEL',
             units: 'pixels',

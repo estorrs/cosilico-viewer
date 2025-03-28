@@ -15,3 +15,18 @@ export async function initZarr(zarrUrl) {
     }
 }
 
+export async function printZarrTree(group, prefix = "") {
+    const entries = await group.entries();
+  
+    for (const [name, entry] of entries) {
+      if (entry.kind === "group") {
+        console.log(`${prefix}${name}/`);
+        const subGroup = await group.get(name);
+        await printZarrTree(subGroup, prefix + "  ");
+      } else if (entry.kind === "array") {
+        console.log(`${prefix}${name} [array]`);
+      } else {
+        console.log(`${prefix}${name} [unknown]`);
+      }
+    }
+  }

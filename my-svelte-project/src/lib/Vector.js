@@ -9,11 +9,14 @@ import { Style } from "ol/style";
 import ZarrVectorLoader from './ZarrVectorLoader';
 import { generateColorMapping, defaultPalettes, categoricalPalettes } from './ColorHelpers';
 import { generateShape } from "./ShapeHelpers";
+import { initZarr } from "./ZarrHelpers";
 
 export class FeatureGroupVector {
     constructor(
         node,
         vectorId,
+        featureMetaToNode,
+        baseTileSize,
     ) {
         this.node = node;
 
@@ -23,7 +26,11 @@ export class FeatureGroupVector {
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
         this.sizeY = this.node.attrs.size[0];
         this.sizeX = this.node.attrs.size[1];
-        this.tileSize = this.resolutions[this.resolutions.length - 1];
+        this.tileSize = baseTileSize;
+        this.featureMetaToNode = featureMetaToNode;
+
+        this.currentFeature = undefined;
+
         this.isLoaded = false;
 
         this.projection = new Projection({
@@ -35,11 +42,7 @@ export class FeatureGroupVector {
         this.populateInitialFields();
     }
 
-    addFeature(featureName, map) {
-        // @ts-ignore
-        const featureIndex = this.featureNames.indexOf(featureName);
-        const featureGroup = this.featureGroups[featureIndex];
-
+    createLayer(featureGroup) {
         const vectorLoader = new ZarrVectorLoader(
             this.node,
             this.sizeY,
@@ -48,6 +51,7 @@ export class FeatureGroupVector {
             this.tileSize,
             this.resolutions,
             featureGroup,
+            this.featureMetaToNode
         );
 
         const vectorTileSource = vectorLoader.vectorTileSource;
@@ -62,12 +66,98 @@ export class FeatureGroupVector {
             }
         }
 
-
         const layer = new VectorTileLayer({
             preload: 0,
             source: vectorTileSource,
             style: vectorTileStyle,
+            minResolution: .01,
         });
+
+        return layer;
+    }
+
+    setFeatureMetadata(featureMetaToNode, map) {
+        this.featureMetaToNode = featureMetaToNode
+
+        for (let i = 0; i < this.vectorView.visibleFeatureNames.length; i++) {
+            const featureName = this.vectorView.visibleFeatureNames[i];
+            const featureGroup = this.vectorView.visibleFeatureGroups[i];
+            const oldLayer = this.featureNameToLayer.get(featureName);
+
+            // remove old layer
+            map.removeLayer(oldLayer);
+            this.featureNameToLayer.delete(featureName);
+
+            // add new layer
+            const layer = this.createLayer(featureGroup);
+            map.addLayer(layer);
+            this.featureNameToLayer.set(featureName, layer);
+        }
+    }
+
+    setFeatureToolTip(map, info) {
+        const displayFeatureInfo = (pixel, target) => {
+            const res = map.getView().getResolution();
+            console.log('current map resolution', res);
+            // console.log('current map z', this.vectorView.featureNameToViewtileGrid.getZForResolution(map.getView().getResolution()));
+            const feature = target.closest('.ol-control')
+                ? undefined
+                : map.forEachFeatureAtPixel(pixel, function (feature) {
+                    return feature;
+                });
+            if (feature) {
+                info.style.left = pixel[0] + 'px';
+                info.style.top = pixel[1] + 'px';
+                if (feature !== this.currentFeature) {
+                    info.style.visibility = 'visible';
+
+                    if (res < this.resolutions[this.resolutions.length - 1] / this.tileSize) {
+                        const identifier = feature.get('id')
+                        let text = `id: ${identifier}\n`;
+                        for (const [key, _] of this.featureMetaToNode) {
+                            if (key !== 'count') {
+                                const value = feature.get(key);
+                                text = text + `${key}: ${value}\n`;
+                            }
+                        }
+
+                        info.innerText = text;
+                    } else {
+                        const count = feature.get('count')
+                        info.innerText = `# entities: ${count}`;
+                    }
+                }
+            } else {
+                info.style.visibility = 'hidden';
+            }
+            this.currentFeature = feature;
+        };
+
+        map.on('pointermove', function (evt) {
+            if (evt.dragging) {
+                info.style.visibility = 'hidden';
+                this.currentFeature = undefined;
+                return;
+            }
+            displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+        });
+
+        map.on('click', function (evt) {
+            displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+        });
+
+        map.getTargetElement().addEventListener('pointerleave', function () {
+            this.currentFeature = undefined;
+            info.style.visibility = 'hidden';
+        });
+    }
+
+    addFeature(featureName, map) {
+        // @ts-ignore
+        const featureIndex = this.featureNames.indexOf(featureName);
+        const featureGroup = this.featureGroups[featureIndex];
+
+        const layer = this.createLayer(featureGroup);
 
         map.addLayer(layer);
 
@@ -91,8 +181,10 @@ export class FeatureGroupVector {
         layer.getSource().changed();
 
         map.removeLayer(layer);
-        this.featureNameToLayer.delete(featureGroup);
+        this.featureNameToLayer.delete(featureName);
     }
+
+
 
     async populateInitialFields() {
         const metaPath = '/metadata/features'

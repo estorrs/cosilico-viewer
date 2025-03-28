@@ -26,7 +26,9 @@ class ZarrTile extends ImageTile {
         try {
 
             const [z, x, y] = this.tileCoord;
+            // console.log('image: zoom is:', z);
             const tileKey = `img-${z}-${x}-${y}-${this.cIndex}-${this.zIndex}-${this.tIndex}`;
+            // console.log('image: getting tile at', tileKey);
 
             const resolution = this.source.resolutions[z];
             const arr = this.zoomArrs.get(resolution);

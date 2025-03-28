@@ -11,7 +11,6 @@ import { ZarrTile } from './ZarrTile';
 class ZarrTileSource extends TileImage {
     constructor(options) {
         const { node, fullImageHeight, fullImageWidth, tileSize = 512, resolutions, tIndex = 0, cIndex = 0, zIndex = 0 } = options;
-        
         const tileGrid = new TileGrid({
             tileSize: tileSize,
             resolutions: resolutions.map(r => r / tileSize), // Normalize resolutions to pixel space
@@ -31,6 +30,9 @@ class ZarrTileSource extends TileImage {
         this.cIndex = cIndex;
         this.zIndex = zIndex;
         this.tileSize = tileSize;
+
+        console.log('image raw resolutions', this.resolutions);
+        console.log('image normalized resolutions', resolutions.map(r => r / this.tileSize));
 
         this.loadGenerationCounter = 0;
 

@@ -24,40 +24,41 @@
         projection: projection,
         center: [sizeX / 2, sizeY / 2],
         zoom: 1,
+        // minZoom: 1,
+        // maxZoom: maxZoom
+
       }),
     });
 
-    // map.on('movestart', () => {
-    //     for (const [key, img] of images) {
-    //       for (const zts of img.imageView.zarrTileSources) { 
-    //         zts.loadGenerationCounter++;
-    //       }
-    //     }
-    // });
-
-
-    // map.on('pointermove', function (event) {
-    //   const pixel = event.pixel;  // Mouse pixel coordinates
-    //   const coordinate = event.coordinate; // Map coordinates
-    // });
   }
 
   const featureGroupUrl =
     "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip";
+  const featureCountUrl =
+    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip";
+  const featureQvUrl =
+    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip";
   const imageUrl =
     "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip";
 
   onMount(async () => {
     const imageNode = await initZarr(imageUrl);
     const featureVectorNode = await initZarr(featureGroupUrl);
+    const featureCountNode = await initZarr(featureCountUrl);
+    const featureQvNode = await initZarr(featureQvUrl);
 
     const multiplexImage = new Image(imageNode, "asdlfjk");
 
+    const featureMetaToNode = new globalThis.Map([
+      [featureCountNode.attrs.name, featureCountNode],
+      [featureQvNode.attrs.name, featureQvNode]
+    ]);
     const transcriptsVector = new FeatureGroupVector(
       featureVectorNode,
       "lsdkjf",
+      featureMetaToNode,
+      multiplexImage.tileSize,
     );
-    // vectorIsLoaded = transcriptsVector.isLoaded;
 
     images.set(multiplexImage.imageId, multiplexImage);
     featureGroupVectors.set(transcriptsVector.vectorId, transcriptsVector);
@@ -79,6 +80,10 @@
 
     // make first channel visible by default
     multiplexImage.addChannel(multiplexImage.channelNames[0], map);
+
+    //set tooltip info
+    let info = document.getElementById('info');
+    transcriptsVector.setFeatureToolTip(map, info);
   });
 
   function toggleFeature(featureName, catVector) {
@@ -116,6 +121,7 @@
 
 <!-- Map Container -->
 <div>
+  <div id="info" class="ol-tooltip hidden"></div>
   <div id="map" style="width: 100%; height: 500px; position: relative;"></div>
   {#each Array.from(images.values()) as image}
     {#if image.imageView}
@@ -201,8 +207,24 @@
   {/key}
 </div>
 
-<style>
+<style global>
   #map {
     background-color: black; /* Change this to any color you want */
+  }
+  #info {
+    position: absolute;
+    display: inline-block;
+    height: auto;
+    width: auto;
+    z-index: 100;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 4px;
+    padding: 5px;
+    left: 50%;
+    transform: translateX(3%);
+    visibility: hidden;
+    pointer-events: none;
   }
 </style>

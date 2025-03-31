@@ -1,17 +1,54 @@
 import VectorTile from 'ol/VectorTile';
 import VectorTileSource from 'ol/source/VectorTile';
-import VectorTileLayer from 'ol/layer/VectorTile';
-import { Feature } from 'ol';
-import { ZipFileStore } from "@zarrita/storage";
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
 import GeoJSON from 'ol/format/GeoJSON.js';
 import TileGrid from 'ol/tilegrid/TileGrid';
-import { printZarrTree } from './ZarrHelpers';
+
+
+function extractVertices(data, shape, strides) {
+    const [n, z, _] = shape;
+    const [sN, sZ, sXY] = strides;
+
+    const verticesX = [];
+    const verticesY = [];
+
+    for (let i = 0; i < n; i++) {
+        const xs = [];
+        const ys = [];
+        for (let j = 0; j < z; j++) {
+            const base = i * sN + j * sZ;
+            xs.push(data[base + 0 * sXY]); // x
+            ys.push(data[base + 1 * sXY]); // y
+        }
+        verticesX.push(xs);
+        verticesY.push(ys);
+    }
+
+    return { verticesX, verticesY };
+}
+
+function extract2D(data, shape, strides) {
+    const [n, d] = shape;
+    const [strideN, strideD] = strides;
+
+    const nested = [];
+
+    for (let i = 0; i < n; i++) {
+        const row = [];
+        for (let j = 0; j < d; j++) {
+            const index = i * strideN + j * strideD;
+            row.push(data[index]);
+        }
+        nested.push(row);
+    }
+
+    return nested;
+}
 
 
 
-class ZarrVectorLoader {
+export class GroupedZarrVectorLoader {
     constructor(vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, featureGroup, featureToNode) {
         this.isLoaded = false;
         this.node = vectorNode
@@ -33,11 +70,6 @@ class ZarrVectorLoader {
             resolutions: resolutions.map(r => r / this.tileSize), // Normalize resolutions to pixel space
             extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
         });
-        // this.tileGrid = new TileGrid({
-        //     tileSize: 512,
-        //     resolutions: resolutions.map(r => r / 512), // Normalize resolutions to pixel space
-        //     extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
-        // });
     
         this.vectorTileSource = this.getVectorSource();
     }
@@ -100,7 +132,6 @@ class ZarrVectorLoader {
 
                         let featureToData = new Map();
                         for (const [featureName, n] of this.featureToNode) {
-                            const group = await open(n.resolve('/object'));
                             const path = `/object/${resolution}`;
                             const arr = await open(n.resolve(path), { kind: "array" });
                             const chunk = await get(arr, [slice(minIdx, maxIdx)]);
@@ -144,4 +175,187 @@ class ZarrVectorLoader {
     }
 }
 
-export default ZarrVectorLoader;
+
+export class ZarrVectorLoader {
+    constructor(vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, metadataToNode, metadataToFields, metadataToIsSparse) {
+        this.isLoaded = false;
+        this.node = vectorNode
+        this.fullImageHeight = fullImageHeight;
+        this.fullImageWidth = fullImageWidth; 
+        this.projection = pixelProjection;
+        this.tileSize = tileSize;
+        this.resolutions = resolutions;
+        this.metadataToNode = metadataToNode;
+        this.metadataToFieldIdxs = metadataToFields;
+        this.metadataToIsSparse = metadataToIsSparse;
+
+        console.log('vector raw resolutions', this.resolutions);
+        console.log('vector normalized resolutions', resolutions.map(r => r / 512));
+
+        this.format = new GeoJSON();
+
+        this.tileGrid = new TileGrid({
+            tileSize: tileSize,
+            resolutions: resolutions.map(r => r / this.tileSize), // Normalize resolutions to pixel space
+            extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
+        });
+    
+        this.vectorTileSource = this.getVectorSource();
+    }
+
+    getVectorSource() {
+        return new VectorTileSource({
+            format: null,
+            tileGrid: this.tileGrid,
+            tileUrlFunction: function (tileCoord) {
+                return `${tileCoord[0]}/${tileCoord[1]}/${tileCoord[2]}`;
+            },
+            tileLoadFunction: async (tile, url) => {
+                if (tile instanceof VectorTile) {
+                    const pieces = url.split('/');
+                    const z = parseInt(pieces[0]);
+                    const x = parseInt(pieces[1]);
+                    const y = parseInt(pieces[2]);
+                    const resolution = this.resolutions[z];
+
+                    const groupPath = `/zooms/${resolution}/${x}_${y}`;
+                    console.log('Feature Vector: getting vector tile for', groupPath);
+
+                    const idPath = `${groupPath}/id`;
+                    const idxPath = `${groupPath}/id_idxs`;
+                    const verticesPath = `${groupPath}/vertices`;
+        
+                    let isPresent = true;
+                    try {
+                        const g = await open(this.node.resolve(groupPath), { kind: "group" });
+                    }  catch (error) {
+                        isPresent = false;
+                    }
+        
+                    let featureCollection = {
+                        "type": "FeatureCollection",
+                        "features": [
+                        ]
+                    };
+
+                    if (isPresent) {
+                        const idArr = await open(this.node.resolve(idPath), { kind: "array" });
+                        const idxArr = await open(this.node.resolve(idxPath), { kind: "array" });
+                        const verticesArr = await open(this.node.resolve(verticesPath), { kind: "array" });
+            
+                        const idChunk = await get(idArr, [null]);
+                        const idxChunk = await get(idxArr, [null]);
+                        const verticesChunk = await get(verticesArr, [null]);
+
+                        const featureIds = idChunk.data;
+                        const featureIdxs = idxChunk.data;
+                        const n_verts = verticesChunk.shape[1];
+                        const { xVertices, yVertices } = extractVertices(verticesChunk.data, verticesChunk.shape, verticesChunk.stride)
+                        
+                        const minIdx = featureIdxs[0];
+                        const maxIdx = featureIdxs[featureIdxs.length - 1];
+
+                        let metadataToData = new Map();
+                        for (const [metadataName, n] of this.metadataToNode) {
+                            const fields = this.metadataToFieldIdxs.get(metadataName);
+                            const isSparse = this.metadataToIsSparse.get(metadataName);
+                            let entities = [];
+                            if (!isSparse) {
+                                const path = `/object/${resolution}`;
+                                const arr = await open(n.resolve(path), { kind: "array" });
+                                const chunk = await get(arr, [slice(minIdx, maxIdx), null]);
+                                const data = extract2D(chunk.data, chunk.shape, chunk.stride);
+                                for (let i = 0; i < data.length; i++) {
+                                    const row = data[i];
+                                    let obj = {};
+                                    for (let j = 0; j < fields.length; j++) {
+                                        const field = fields[j];
+                                        obj[field] = row[j];
+                                    }
+                                    entities.push(obj);
+                                }
+                            } else {
+                                const mapping = new Map();
+                                const sparseIdsArr = await open(n.resolve(`${groupPath}/ids`), { kind: "array" });
+                                const sparseValuesArr = await open(n.resolve(`${groupPath}/values`), { kind: "array" });
+                                const sparseFieldsArr = await open(n.resolve(`${groupPath}/feature_indices`), { kind: "array" });
+
+                                const sparseIdsChunk = await get(sparseIdsArr, [null]);
+                                const sparseValuesChunk = await get(sparseValuesArr, [null]);
+                                const sparseFieldsChunk = await get(sparseFieldsArr, [null]);
+
+                                for (let i = 0; i < sparseIdsChunk.data.length; i++) {
+                                    const sId = sparseIdsChunk.data[i];
+                                    const sVal = sparseValuesChunk.data[i];
+                                    const sField = sparseFieldsChunk.data[i];
+
+                                    if (!mapping.has(sId)) {
+                                        mapping.set(sId, new Map());
+                                    }
+
+                                    mapping.get(sId).set(sField, sVal);
+                                }
+
+                                for (const fId of featureIds) {
+                                    let obj = {};
+                                    if (mapping.has(fId)) {
+                                        obj = mapping.get(fId);
+                                    }
+                                    entities.push(obj);
+                                }
+                            }
+                            metadataToData.set(metadataName, entities);
+                        }
+
+                        for (let i = 0; i < featureIds.length; i++) {
+                            const featXVerts = xVertices[i];
+                            const featYVerts = yVertices[i];
+                            
+                            let geometry = null;
+                            if (n_verts == 1) {
+                                geometry = {
+                                    type: 'Point',
+                                    coordinates: [featXVerts[0], this.fullImageHeight - featYVerts[0]],
+                                };
+                            } else {
+                                let coordinates = []
+                                for (let j = 0; j < featXVerts.length; j++) {
+                                    coordinates.push([featXVerts[j], this.fullImageHeight - featYVerts[j]])
+                                }
+                                geometry = {
+                                    type: 'Polygon',
+                                    coordinates: [coordinates]
+                                }
+                            }
+
+                            let props = {
+                                "id": featureIds[i],
+                            }
+                            for (const [metadataName, entities] of metadataToData) {
+                                props[metadataName] = entities[i];
+                            }
+
+                            const feature = {
+                                type: 'Feature',
+                                geometry: geometry,
+                                properties: props
+                            }
+                            featureCollection.features.push(feature);
+                        }
+                    } 
+        
+                    console.log('feature collection', z, x, y, featureCollection);
+
+                    const features = this.format.readFeatures(featureCollection, {
+                        featureProjection: this.projection,
+                        dataProjection: this.projection,
+                    });
+
+                    tile.setFeatures(features);
+                } else {
+                    console.error("Tile is not a VectorTile:", tile);
+                }
+            }
+        });
+    }
+}

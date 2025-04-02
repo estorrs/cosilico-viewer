@@ -6,13 +6,15 @@
 
   import { initZarr } from "./ZarrHelpers";
   import { Image } from "./Image";
-  import { FeatureGroupVector } from "./Vector";
+  import { FeatureGroupVector, FeatureVector } from "./Vector";
 
   let images = $state(new SvelteMap());
   let featureGroupVectors = $state(new SvelteMap());
+  let featureVectors = $state(new SvelteMap());
 
   let reloadChannelInfoKey = $state(true);
   let reloadFeatureInfoKey = $state(true);
+  let reloadCellInfoKey = $state(true);
 
   let map;
 
@@ -24,9 +26,6 @@
         projection: projection,
         center: [sizeX / 2, sizeY / 2],
         zoom: 1,
-        // minZoom: 1,
-        // maxZoom: maxZoom
-
       }),
     });
 
@@ -41,11 +40,20 @@
   const imageUrl =
     "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip";
 
+  const cellsUrl = 
+    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip";
+  const cellCatUrl =
+    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip";
+
   onMount(async () => {
     const imageNode = await initZarr(imageUrl);
     const featureVectorNode = await initZarr(featureGroupUrl);
     const featureCountNode = await initZarr(featureCountUrl);
     const featureQvNode = await initZarr(featureQvUrl);
+
+    const cellNode = await initZarr(cellsUrl);
+    const cellCatNode = await initZarr(cellCatUrl);
+
 
     const multiplexImage = new Image(imageNode, "asdlfjk");
 
@@ -59,20 +67,37 @@
       featureMetaToNode,
       multiplexImage.tileSize,
     );
+    const cellsVector = new FeatureVector(
+      cellNode,
+      "sldkfj",
+      multiplexImage.tileSize
+    );
 
     images.set(multiplexImage.imageId, multiplexImage);
     featureGroupVectors.set(transcriptsVector.vectorId, transcriptsVector);
+    featureVectors.set(cellsVector.vectorId, cellsVector);
 
     createMap(
       multiplexImage.projection,
       multiplexImage.sizeX,
       multiplexImage.sizeY,
     );
+    cellsVector.setMetadata(
+      'KNN cluster',
+      cellCatNode,
+      map
+    )
+    // wait so feature names can render to screen
+    let cellsInterval = setInterval(() => {
+        if (cellsVector.isLoaded) {
+            reloadCellInfoKey = !reloadCellInfoKey;
+            clearInterval(interval); 
+        }
+    }, 100); // Runs every 100ms (0.1s)
 
     // wait so feature names can render to screen
     let interval = setInterval(() => {
         if (transcriptsVector.isLoaded) {
-            console.log("Vector condition met! Stopping loop.");
             reloadFeatureInfoKey = !reloadFeatureInfoKey;
             clearInterval(interval); 
         }
@@ -178,6 +203,33 @@
       {/key}
     {/if}
   {/each}
+
+  <!-- Select Features for cells -->
+  {#key reloadCellInfoKey}
+  {#each Array.from(featureVectors.values()) as fVector}
+    <label>
+      Select Features ({fVector.name}):
+      <div>
+        {#if fVector.metadataFields && fVector.metadataFields.length > 0}
+          {#each fVector.metadataFields ?? [] as field}
+            <label>
+              <input
+                type="checkbox"
+                checked={fVector.vectorView.visibleFields.includes(
+                  field,
+                )}
+                onchange={() => toggleFeature(field, fVector)}
+              />
+              {field}
+            </label>
+          {/each}
+        {:else}
+          <p>Loading cell features...</p>
+        {/if}
+      </div>
+    </label>
+  {/each}
+  {/key}
 
   <!-- Select Features for Multiple Vectors -->
   {#key reloadFeatureInfoKey}

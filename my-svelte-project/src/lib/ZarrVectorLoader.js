@@ -177,7 +177,7 @@ export class GroupedZarrVectorLoader {
 
 
 export class ZarrVectorLoader {
-    constructor(vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, metadataToNode, metadataToFields, metadataToIsSparse) {
+    constructor(vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, metadataToNode, metadataToType, metadataToFieldIdxs, metadataToIsSparse) {
         this.isLoaded = false;
         this.node = vectorNode
         this.fullImageHeight = fullImageHeight;
@@ -186,7 +186,8 @@ export class ZarrVectorLoader {
         this.tileSize = tileSize;
         this.resolutions = resolutions;
         this.metadataToNode = metadataToNode;
-        this.metadataToFieldIdxs = metadataToFields;
+        this.metadataToType = metadataToType;
+        this.metadataToFieldIdxs = metadataToFieldIdxs;
         this.metadataToIsSparse = metadataToIsSparse;
 
         console.log('vector raw resolutions', this.resolutions);
@@ -259,8 +260,18 @@ export class ZarrVectorLoader {
                         for (const [metadataName, n] of this.metadataToNode) {
                             const fields = this.metadataToFieldIdxs.get(metadataName);
                             const isSparse = this.metadataToIsSparse.get(metadataName);
+                            const metadataType = this.metadataToType.get(metadataName);
+
                             let entities = [];
-                            if (!isSparse) {
+                            if (metadataType == 'categorical') {
+                                const path = `/object/${resolution}`;
+                                const arr = await open(n.resolve(path), { kind: "array" });
+                                const chunk = await get(arr, [slice(minIdx, maxIdx), null]);
+                                const data = extract2D(chunk.data, chunk.shape, chunk.stride);
+                                for (let i = 0; i < data.length; i++) {
+                                    entities.push({'category': data[i]});
+                                }
+                            } else if (!isSparse) {
                                 const path = `/object/${resolution}`;
                                 const arr = await open(n.resolve(path), { kind: "array" });
                                 const chunk = await get(arr, [slice(minIdx, maxIdx), null]);
@@ -312,11 +323,13 @@ export class ZarrVectorLoader {
                             const featYVerts = yVertices[i];
                             
                             let geometry = null;
+                            let isPoint = false;
                             if (n_verts == 1) {
                                 geometry = {
                                     type: 'Point',
                                     coordinates: [featXVerts[0], this.fullImageHeight - featYVerts[0]],
                                 };
+                                isPoint = true;
                             } else {
                                 let coordinates = []
                                 for (let j = 0; j < featXVerts.length; j++) {
@@ -330,6 +343,7 @@ export class ZarrVectorLoader {
 
                             let props = {
                                 "id": featureIds[i],
+                                'isPoint': isPoint
                             }
                             for (const [metadataName, entities] of metadataToData) {
                                 props[metadataName] = entities[i];

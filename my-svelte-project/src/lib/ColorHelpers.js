@@ -3,6 +3,7 @@ import Color from "colorjs.io";
 export const defaultPalettes = {
     imagePallete: 'multiplex',
     featurePallete: 'bright',
+	continousPalette: 'viridis'
 };
 
 export const categoricalPalettes = {

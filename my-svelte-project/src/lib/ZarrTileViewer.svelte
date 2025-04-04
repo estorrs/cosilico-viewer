@@ -28,7 +28,74 @@
         zoom: 1,
       }),
     });
+  }
 
+  
+
+  const experiment = {
+    id: 'alsdkfj',
+    name: 'Test Experiment',
+    platform: 'Xenium 5K',
+    platform_version: 'v5.1',
+    metadata: {
+      field_a: 'this is a field'
+    },
+    images: [
+      {
+        id: 'sldkfj',
+        name: 'Multiplex Image',
+        metadata: {}, // this would be ome metadata
+        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
+      }
+    ],
+    layers: [
+      {
+        id: 'sdf',
+        name: 'Transcripts',
+        is_grouped: true,
+        metadata: {}, // this would be just whatever metadata
+        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
+        layer_metadatas: [
+          {
+            id: 'sdlfkj',
+            name: 'Counts',
+            // type: 'continuous',
+            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip',
+          },
+          {
+            id: 'sdlsasfkj',
+            name: 'QV',
+            // type: 'continuous',
+            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip',
+          },
+        ]
+      },
+      {
+        id: 'sldfkjasa',
+        name: 'Cells',
+        is_grouped: false,
+        metadata: {}, // this would be just whatever metadata
+        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
+        layer_metadatas: [
+          {
+            id: 'sadf',
+            name: 'Kmeans N=10',
+            // type: 'categorical',
+            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip',
+          },
+          // {
+          //   id: 'szzadf',
+          //   name: '',
+          //   path: '',
+          // },
+          // {
+          //   id: 'szzzzadf',
+          //   name: '',
+          //   path: '',
+          // },
+        ]
+      }
+    ],
   }
 
   const featureGroupUrl =

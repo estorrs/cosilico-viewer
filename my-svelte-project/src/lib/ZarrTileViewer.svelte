@@ -8,15 +8,186 @@
   import { Image } from "./Image";
   import { FeatureGroupVector, FeatureVector } from "./Vector";
 
-  let images = $state(new SvelteMap());
-  let featureGroupVectors = $state(new SvelteMap());
-  let featureVectors = $state(new SvelteMap());
-
-  let reloadChannelInfoKey = $state(true);
-  let reloadFeatureInfoKey = $state(true);
-  let reloadCellInfoKey = $state(true);
-
+  let reloadImageInfoKey = $state(true);
+  let reloadLayerInfoKey = $state(true);
   let map;
+  let experiment = $state(null);
+
+  const experimentObj = {
+    id: 'alsdkfj',
+    name: 'Test Experiment',
+    platform: 'Xenium 5K',
+    platform_version: 'v5.1',
+    metadata: {
+      field_a: 'this is a field'
+    },
+    images: [
+      {
+        id: 'sldkfj',
+        name: 'Multiplex Image',
+        metadata: {}, // this would be ome metadata
+        view_settings: {}, // view settings eventually
+        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
+      }
+    ],
+    layers: [
+      {
+        id: 'sdf',
+        name: 'Transcripts',
+        is_grouped: true,
+        metadata: {}, // this would be just whatever metadata
+        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
+        view_settings: {},
+        layer_metadatas: [
+          {
+            id: 'sdlfkj',
+            name: 'Counts',
+            type: 'continuous',
+            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip',
+          },
+          {
+            id: 'sdlsasfkj',
+            name: 'QV',
+            type: 'continuous',
+            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip',
+          },
+        ]
+      },
+      {
+        id: 'sldfkjasa',
+        name: 'Cells',
+        is_grouped: false,
+        metadata: {}, // this would be just whatever metadata
+        view_settings: {},
+        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
+        layer_metadatas: [
+          {
+            id: 'sadf',
+            name: 'Kmeans N=10',
+            type: 'categorical',
+            view_settings: {},
+            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip',
+          },
+        ]
+      }
+    ],
+  }
+
+  class Experiment {
+    constructor(experimentObj) {
+      this.imagesLoaded = false;
+      this.layersLoaded = false;
+      this.experimentObj = experimentObj
+      this.imageOrder = [];
+      this.layerOrder = [];
+      this.layerToIsGrouped = new globalThis.Map();
+      this.images = new globalThis.Map();
+      this.layers = new globalThis.Map();
+
+      this.loadImages();
+      this.baseImage = this.images[0];
+
+      this.loadLayers();
+    }
+
+    async loadImages() {
+      for (const img of this.experimentObj.images) {
+        const node = await initZarr(img.path);
+        const obj = {
+          image: new Image(node, img.id),
+          viewSettings: img.view_settings,
+        }
+        this.images.set(img.id, obj);
+        this.imageOrder.push(img.id);
+      }
+
+      this.imagesLoaded = true;
+    }
+
+    async loadGroupedLayer(gl) {
+      const node = await initZarr(gl.path);
+
+      let featureMetaToNode = new globalThis.Map();
+      for (const mgl of gl.layer_metadatas) {
+        const metadataNode = await initZarr(mgl.path);
+        featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
+      }
+
+      const fgv = new FeatureGroupVector(
+        node,
+        gl.id,
+        featureMetaToNode,
+        this.baseImage.tileSize,
+      );
+
+      const obj = {
+        vector: fgv,
+        metadataToNode: featureMetaToNode,
+        viewSettings: gl.view_settings,
+        isGrouped: true,
+      }
+
+      this.layers.set(gl.id, obj);
+      this.layerOrder.push(gl.id);
+      this.layerToIsGrouped.set(gl.id, true);
+
+    }
+
+    async loadLayer(l) {
+      const node = await initZarr(l.path);
+
+      const fv = new FeatureVector(
+        node,
+        l.id,
+        this.baseImage.tileSize
+      );
+
+      let featureMetaToNode = new globalThis.Map();
+      for (const mgl of l.layer_metadatas) {
+        const metadataNode = await initZarr(mgl.path);
+        featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
+      }
+
+      const obj = {
+        vector: fv,
+        metadataToNode: featureMetaToNode,
+        viewSettings: l.view_settings,
+        isGrouped: false,
+      }
+
+      this.layers.set(l.id, obj);
+      this.layerOrder.push(l.id);
+      this.layerToIsGrouped.set(l.id, false);
+    }
+
+    async loadLayers() {
+      for (const l of this.experimentObj.layers) {
+        if (l.is_grouped) {
+          await this.loadGroupedLayer(l);
+        } else {
+          await this.loadLayer(l);
+        }
+      }
+
+      this.layersLoaded = true;
+    }
+
+    initializeLayerMetadata(map) {
+      for (const [v, k] of this.layers) {
+        v.vector.setMetadata(null, null, map)
+      }
+    }
+
+    isLoaded() {
+      for (const [v, k] of this.layers) {
+        if (!v.vector.isLoaded) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
 
   function createMap(projection, sizeX, sizeY) {
     // Create the new map
@@ -30,152 +201,48 @@
     });
   }
 
-  
 
-  const experiment = {
-    id: 'alsdkfj',
-    name: 'Test Experiment',
-    platform: 'Xenium 5K',
-    platform_version: 'v5.1',
-    metadata: {
-      field_a: 'this is a field'
-    },
-    images: [
-      {
-        id: 'sldkfj',
-        name: 'Multiplex Image',
-        metadata: {}, // this would be ome metadata
-        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
-      }
-    ],
-    layers: [
-      {
-        id: 'sdf',
-        name: 'Transcripts',
-        is_grouped: true,
-        metadata: {}, // this would be just whatever metadata
-        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
-        layer_metadatas: [
-          {
-            id: 'sdlfkj',
-            name: 'Counts',
-            // type: 'continuous',
-            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip',
-          },
-          {
-            id: 'sdlsasfkj',
-            name: 'QV',
-            // type: 'continuous',
-            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip',
-          },
-        ]
-      },
-      {
-        id: 'sldfkjasa',
-        name: 'Cells',
-        is_grouped: false,
-        metadata: {}, // this would be just whatever metadata
-        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
-        layer_metadatas: [
-          {
-            id: 'sadf',
-            name: 'Kmeans N=10',
-            // type: 'categorical',
-            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip',
-          },
-          // {
-          //   id: 'szzadf',
-          //   name: '',
-          //   path: '',
-          // },
-          // {
-          //   id: 'szzzzadf',
-          //   name: '',
-          //   path: '',
-          // },
-        ]
-      }
-    ],
-  }
 
-  const featureGroupUrl =
-    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip";
-  const featureCountUrl =
-    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip";
-  const featureQvUrl =
-    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip";
-  const imageUrl =
-    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip";
 
-  const cellsUrl = 
-    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip";
-  const cellCatUrl =
-    "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip";
+
+
+
+
 
   onMount(async () => {
-    const imageNode = await initZarr(imageUrl);
-    const featureVectorNode = await initZarr(featureGroupUrl);
-    const featureCountNode = await initZarr(featureCountUrl);
-    const featureQvNode = await initZarr(featureQvUrl);
-
-    const cellNode = await initZarr(cellsUrl);
-    const cellCatNode = await initZarr(cellCatUrl);
-
-
-    const multiplexImage = new Image(imageNode, "asdlfjk");
-
-    const featureMetaToNode = new globalThis.Map([
-      [featureCountNode.attrs.name, featureCountNode],
-      [featureQvNode.attrs.name, featureQvNode]
-    ]);
-    const transcriptsVector = new FeatureGroupVector(
-      featureVectorNode,
-      "lsdkjf",
-      featureMetaToNode,
-      multiplexImage.tileSize,
-    );
-    const cellsVector = new FeatureVector(
-      cellNode,
-      "sldkfj",
-      multiplexImage.tileSize
-    );
-
-    images.set(multiplexImage.imageId, multiplexImage);
-    featureGroupVectors.set(transcriptsVector.vectorId, transcriptsVector);
-    featureVectors.set(cellsVector.vectorId, cellsVector);
+    experiment = new Experiment(experimentObj);
 
     createMap(
-      multiplexImage.projection,
-      multiplexImage.sizeX,
-      multiplexImage.sizeY,
+      experiment.baseImage.projection,
+      experiment.baseImage.sizeX,
+      experiment.baseImage.sizeY,
     );
-    cellsVector.setMetadata(
-      'KNN cluster',
-      cellCatNode,
-      map
-    )
-    // wait so feature names can render to screen
-    let cellsInterval = setInterval(() => {
-        if (cellsVector.isLoaded) {
-            reloadCellInfoKey = !reloadCellInfoKey;
-            clearInterval(interval); 
-        }
-    }, 100); // Runs every 100ms (0.1s)
+    experiment.initializeLayerMetadata();
 
-    // wait so feature names can render to screen
+    // const l = experiment.layers.get('sldfkjasa');
+    // l.vector.setMetadata(
+    //   'Kmeans N=10',
+    //   l.metadataToNode.get('Kmeans N=10'),
+    //   map
+    // )
+
+    // wait so feature vectors and images can load
     let interval = setInterval(() => {
-        if (transcriptsVector.isLoaded) {
-            reloadFeatureInfoKey = !reloadFeatureInfoKey;
+        if (experiment.isLoaded()) {
+            reloadImageInfoKey = !reloadImageInfoKey;
+            reloadLayerInfoKey = !reloadLayerInfoKey;
             clearInterval(interval); 
         }
-    }, 100); // Runs every 100ms (0.1s)
+    }, 100);
 
-    // make first channel visible by default
-    multiplexImage.addChannel(multiplexImage.channelNames[0], map);
+    // first channel of first image visible by default
+    experiment.baseImage.addChannel(this.experiment.baseImage.channelNames[0], map);
 
-    //set tooltip info
-    let info = document.getElementById('info');
-    transcriptsVector.setFeatureToolTip(map, info);
+    //set tooltip info, must fix
+    for (const [layer, k] of experiment.layers) {
+      let info = document.getElementById('info'); // this needs to be fixed
+      layer.vector.setFeatureToolTip(map, info);
+    }
   });
 
   function toggleFeature(featureName, catVector) {
@@ -193,8 +260,8 @@
       image.addChannel(channelName, map);
     }
 
-    reloadChannelInfoKey = !reloadChannelInfoKey; // forces reload of channel info elements
-  } 
+    reloadImageInfoKey = !reloadImageInfoKey; // forces reload of channel info elements
+  }
 
   function updateMinValue(image, channelName, event) {
     const newValue = event.target.value;
@@ -215,20 +282,20 @@
 <div>
   <div id="info" class="ol-tooltip hidden"></div>
   <div id="map" style="width: 100%; height: 500px; position: relative;"></div>
-  {#each Array.from(images.values()) as image}
-    {#if image.imageView}
+  {#each Array.from(experiment.images.values()) as obj}
+    {#if obj.image.imageView}
       <label>
-        Select Channels ({image.name}):
+        Select Channels ({obj.image.name}):
         <div>
-          {#if image?.channelNames && image.channelNames.length > 0}
-            {#each image.channelNames ?? [] as channelName}
+          {#if obj.image?.channelNames && obj.image.channelNames.length > 0}
+            {#each obj.image.channelNames ?? [] as channelName}
               <label>
                 <input
                   type="checkbox"
-                  checked={image.imageView.visibleChannelNames.includes(
+                  checked={obj.image.imageView.visibleChannelNames.includes(
                     channelName,
                   )}
-                  onchange={() => toggleChannel(channelName, image)}
+                  onchange={() => toggleChannel(channelName, obj.image)}
                 />
                 {channelName}
               </label>
@@ -239,90 +306,88 @@
         </div>
       </label>
 
-      {#key reloadChannelInfoKey}
-        <label>
-          Min/Max Adjustment ({image.name}):
-          {#each image.imageView.visibleChannelNames as channelName, j}
-            <div>
-              <label
-                >{channelName} Min:
-                <input
-                  type="number"
-                  value={image.imageView.channelNameToView.get(channelName)
-                    .minValue}
-                  onchange={(event) =>
-                    updateMinValue(image, channelName, event)}
-                />
-              </label>
-              <label
-                >Max:
-                <input
-                  type="number"
-                  value={image.imageView.channelNameToView.get(channelName)
-                    .maxValue}
-                  onchange={(event) =>
-                    updateMaxValue(image, channelName, event)}
-                />
-              </label>
-            </div>
-          {/each}
-        </label>
+      {#key reloadImageInfoKey}
+      <label>
+        Min/Max Adjustment ({obj.image.name}):
+        {#each obj.image.imageView.visibleChannelNames as channelName, j}
+          <div>
+            <label
+              >{channelName} Min:
+              <input
+                type="number"
+                value={obj.image.imageView.channelNameToView.get(channelName)
+                  .minValue}
+                onchange={(event) =>
+                  updateMinValue(obj.image, channelName, event)}
+              />
+            </label>
+            <label
+              >Max:
+              <input
+                type="number"
+                value={obj.image.imageView.channelNameToView.get(channelName)
+                  .maxValue}
+                onchange={(event) =>
+                  updateMaxValue(obj.image, channelName, event)}
+              />
+            </label>
+          </div>
+        {/each}
+      </label>
       {/key}
     {/if}
   {/each}
 
   <!-- Select Features for cells -->
-  {#key reloadCellInfoKey}
-  {#each Array.from(featureVectors.values()) as fVector}
-    <label>
-      Select Features ({fVector.name}):
-      <div>
-        {#if fVector.metadataFields && fVector.metadataFields.length > 0}
-          {#each fVector.metadataFields ?? [] as field}
-            <label>
-              <input
-                type="checkbox"
-                checked={fVector.vectorView.visibleFields.includes(
-                  field,
-                )}
-                onchange={() => toggleFeature(field, fVector)}
-              />
-              {field}
-            </label>
-          {/each}
-        {:else}
-          <p>Loading cell features...</p>
-        {/if}
-      </div>
-    </label>
-  {/each}
-  {/key}
-
-  <!-- Select Features for Multiple Vectors -->
-  {#key reloadFeatureInfoKey}
-  {#each Array.from(featureGroupVectors.values()) as fgVector}
-    <label>
-      Select Features ({fgVector.name}):
-      <div>
-        {#if fgVector?.featureNames && fgVector.featureNames.length > 0}
-          {#each fgVector.featureNames ?? [] as featureName}
-            <label>
-              <input
-                type="checkbox"
-                checked={fgVector.vectorView.visibleFeatureNames.includes(
-                  featureName,
-                )}
-                onchange={() => toggleFeature(featureName, fgVector)}
-              />
-              {featureName}
-            </label>
-          {/each}
-        {:else}
-          <p>Loading features...</p>
-        {/if}
-      </div>
-    </label>
-  {/each}
+  {#key reloadLayerInfoKey}
+    {#each Array.from(experiment.layers.values()) as obj}
+      {#if !obj.vector.isGrouped}
+        <label>
+          Select Features ({obj.vector.name}):
+          <div>
+            {#if obj.vector.metadataFields && obj.vector.metadataFields.length > 0}
+              {#each obj.vector.metadataFields ?? [] as field}
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={obj.vector.vectorView.visibleFields.includes(
+                      field,
+                    )}
+                    onchange={() => toggleFeature(field, obj.vector)}
+                  />
+                  {field}
+                </label>
+              {/each}
+            {:else}
+              <p>Loading cell features...</p>
+            {/if}
+          </div>
+        </label>
+      {/if}
+      {#if obj.vector.isGrouped}
+      <label>
+        Select Features ({obj.vector.name}):
+        <div>
+          {#if obj.vector?.featureNames && obj.vector.featureNames.length > 0}
+            {#each obj.vector.featureNames ?? [] as featureName}
+              <label>
+                <input
+                  type="checkbox"
+                  checked={obj.vector.vectorView.visibleFeatureNames.includes(
+                    featureName,
+                  )}
+                  onchange={() => toggleFeature(featureName, obj.vector)}
+                />
+                {featureName}
+              </label>
+            {/each}
+          {:else}
+            <p>Loading features...</p>
+          {/if}
+        </div>
+      </label>
+      {/if}
+    {/each}
   {/key}
 </div>
 

@@ -268,15 +268,13 @@ export class FeatureVector {
 
         this.currentFeature = undefined;
 
-        this.isLoaded = false;
+        this.metadataIsLoaded = false;
 
         this.projection = new Projection({
             code: 'PIXEL',
             units: 'pixels',
             extent: [0, 0, this.sizeX, this.sizeY],
         });
-
-        this.populateInitialFields();
     }
 
     createLayer(useMetadata = true) {
@@ -419,41 +417,48 @@ export class FeatureVector {
     }
 
     async setMetadata(metadataName, metadataNode, map) {
-        this.isLoaded = false;
-        const path = '/metadata/fields'
-        const fieldsArr = await open(this.node.resolve(path), { kind: "array" });
-        const chunk = await get(fieldsArr, [null]);
-        this.metadataFields = chunk.data;
-
-        this.metadataName = metadataName;
-        this.metadataNode = metadataNode;
-        this.metadataIsSparse = metadataNode.attrs.is_sparse;
-        this.metadataFieldIdxs = [];
-        for (let i = 0; i < this.metadataFields.length; i++) {
-            this.metadataFieldIdxs.push(i);
-        }
-
-        this.metadataType = metadataNode.attrs.type;
-
-        if (this.metadataType == 'categorical') {
-            this.initializeCategoricalView();
+        let layer;
+        if (metadataName) {
+            this.metadataIsLoaded = false;
+            const path = '/metadata/fields'
+            const fieldsArr = await open(this.node.resolve(path), { kind: "array" });
+            const chunk = await get(fieldsArr, [null]);
+            this.metadataFields = chunk.data;
+    
+            this.metadataName = metadataName;
+            this.metadataNode = metadataNode;
+            this.metadataIsSparse = metadataNode.attrs.is_sparse;
+            this.metadataFieldIdxs = [];
+            for (let i = 0; i < this.metadataFields.length; i++) {
+                this.metadataFieldIdxs.push(i);
+            }
+    
+            this.metadataType = metadataNode.attrs.type;
+    
+            if (this.metadataType == 'categorical') {
+                this.initializeCategoricalView();
+            } else {
+                const vmin = this.metadataNode.attrs.vmin;
+                const vmax = this.metadataNode.attrs.vmax;
+                const vcenter = this.metadataNode.attrs.vcenter;
+                this.initializeContinuousView(vmin, vmax, vcenter);
+            }
+            
+            const { layer, vectorLoader } = this.createLayer();
+            this.vectorView.zarrVectorLoader = vectorLoader;
+    
+            // if categorical all fields are visible by default
+            if (this.metadataType == 'categorical') {
+                this.vectorView.visibleFieldIndices = [...this.metadataFieldIdxs];
+                this.vectorView.visibleFields = [...this.metadataFields];
+            } else { // for continuous no field is visible by default
+                this.vectorView.visibleFieldIndices = [];
+                this.vectorView.visibleFields = []
+            }
         } else {
-            const vmin = this.metadataNode.attrs.vmin;
-            const vmax = this.metadataNode.attrs.vmax;
-            const vcenter = this.metadataNode.attrs.vcenter;
-            this.initializeContinuousView(vmin, vmax, vcenter);
-        }
-        
-        const { layer, vectorLoader } = this.createLayer();
-        this.vectorView.zarrVectorLoader = vectorLoader;
-
-        // if categorical all fields are visible by default
-        if (this.metadataType == 'categorical') {
-            this.vectorView.visibleFieldIndices = [...this.metadataFieldIdxs];
-            this.vectorView.visibleFields = [...this.metadataFields];
-        } else { // for continuous no field is visible by default
-            this.vectorView.visibleFieldIndices = [];
-            this.vectorView.visibleFields = []
+            this.initializeContinuousView(null, null, null);
+            const { layer, vectorLoader } = this.createLayer(false);
+            this.vectorView.zarrVectorLoader = vectorLoader;
         }
 
         if (this.layer) {
@@ -463,9 +468,7 @@ export class FeatureVector {
         this.layer = layer;
         map.addLayer(layer);
 
-        this.isLoaded = true;
-
-
+        this.metadataIsLoaded = true;
     }
 
     setFeatureToolTip(map, info) {
@@ -536,7 +539,6 @@ export class FeatureVector {
             this.vectorView.visibleFields = [featureName];
         }
         this.layer.getSource().changed();
-        
     }
 
     removeFeature(featureName) {
@@ -546,9 +548,5 @@ export class FeatureVector {
         this.vectorView.visibleFields.splice(fieldIndex, 1);
 
         this.layer.getSource().changed();
-    }
-
-    async populateInitialFields() {
-        // this.isLoaded = true;
     }
 }

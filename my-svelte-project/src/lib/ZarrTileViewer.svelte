@@ -68,6 +68,13 @@
             view_settings: {},
             path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip",
           },
+          {
+            id: "sdfsdf",
+            name: "PCAs",
+            type: "continuous",
+            view_settings: {},
+            path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_pca10.zarr.zip",
+          },
         ],
       },
     ],
@@ -176,11 +183,11 @@
       this.layersLoaded = true;
     }
 
-    initializeLayerMetadata(map) {
+    async initializeLayerMetadata(map) {
       for (const [k, v] of this.layers) {
         if (!v.isGrouped) {
           // console.log('vector', v);
-          v.vector.setMetadata(null, null, map);
+          await v.vector.setMetadata(null, null, map);
         }
       }
     }
@@ -224,7 +231,7 @@
       experiment.baseImage.channelNames[0],
       map,
     );
-    experiment.initializeLayerMetadata(map);
+    await experiment.initializeLayerMetadata(map);
 
     //set tooltip info, must fix
     for (const [k, layer] of experiment.layers) {
@@ -232,19 +239,35 @@
       layer.vector.setFeatureToolTip(map, info);
     }
 
+    console.log('experiment', experiment);
+    // const key = 'Kmeans N=10';
+    const key = 'PCAs';
+    const l = experiment.layers.get('sldfkjasa');
+    await l.vector.setMetadata(key, l.metadataToNode.get(key), map)
+
+
     reloadImageInfoKey = !reloadImageInfoKey;
     reloadLayerInfoKey = !reloadLayerInfoKey;
-
-    console.log('map', map);
-    console.log('map layers', map.getLayers())
   });
 
-  function toggleFeature(featureName, catVector) {
-    if (catVector.vectorView.visibleFeatureNames.includes(featureName)) {
-      catVector.removeFeature(featureName, map);
+  function toggleFeature(featureName, vector) {
+    let visible;
+    if (vector instanceof FeatureVector) {
+      visible = vector.vectorView.visibleFields;
+      
+
     } else {
-      catVector.addFeature(featureName, map);
+      visible = vector.vectorView.visibleFeatureNames;
+      
     }
+    if (visible.includes(featureName)) {
+      vector.removeFeature(featureName, map);
+    } else {
+      vector.addFeature(featureName, map);
+    }
+
+    reloadLayerInfoKey = !reloadLayerInfoKey;
+    
   }
 
   function toggleChannel(channelName, image) {

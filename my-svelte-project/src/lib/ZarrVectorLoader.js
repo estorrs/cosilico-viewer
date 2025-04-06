@@ -10,8 +10,6 @@ function extractVertices(data, shape, strides) {
     const [n, z, _] = shape;
     const [sN, sZ, sXY] = strides;
 
-    console.log('vertices data', data);
-
     const verticesX = [];
     const verticesY = [];
 
@@ -20,13 +18,16 @@ function extractVertices(data, shape, strides) {
         let ys = [];
         for (let j = 0; j < z; j++) {
             const base = i * sN + j * sZ;
-            xs.push(data[base + 0 * sXY]); // x
-            ys.push(data[base + 1 * sXY]); // y
+            const x = data[base + 0 * sXY];
+            const y = data[base + 1 * sXY];
+            if (x >= 0) {
+                xs.push(x);
+                ys.push(y);
+            }
         }
         verticesX.push(xs);
         verticesY.push(ys);
     }
-    console.log('verticesX', verticesX);
 
     return { verticesX, verticesY };
 }
@@ -189,6 +190,8 @@ export class ZarrVectorLoader {
         this.metadataToFieldIdxs = metadataToFieldIdxs;
         this.metadataToIsSparse = metadataToIsSparse;
 
+        console.log(metadataToNode, metadataToIsSparse);
+
         this.format = new GeoJSON();
 
         this.tileGrid = new TileGrid({
@@ -209,6 +212,7 @@ export class ZarrVectorLoader {
             },
             tileLoadFunction: async (tile, url) => {
                 if (tile instanceof VectorTile) {
+
                     const pieces = url.split('/');
                     const z = parseInt(pieces[0]);
                     const x = parseInt(pieces[1]);
@@ -242,7 +246,7 @@ export class ZarrVectorLoader {
             
                         const idChunk = await get(idArr, [null]);
                         const idxChunk = await get(idxArr, [null]);
-                        const verticesChunk = await get(verticesArr, [null]);
+                        const verticesChunk = await get(verticesArr, [null, null, null]);
 
                         const featureIds = idChunk.data;
                         const featureIdxs = idxChunk.data;
@@ -265,8 +269,9 @@ export class ZarrVectorLoader {
                             if (metadataType == 'categorical') {
                                 const path = `/object/${resolution}`;
                                 const arr = await open(n.resolve(path), { kind: "array" });
-                                const chunk = await get(arr, [slice(minIdx, maxIdx), null]);
-                                const data = extract2D(chunk.data, chunk.shape, chunk.stride);
+                                const chunk = await get(arr, [slice(minIdx, maxIdx)]);
+                                const data = chunk.data
+                                // const data = extract2D(chunk.data, chunk.shape, chunk.stride);
                                 for (let i = 0; i < data.length; i++) {
                                     entities.push({'category': data[i]});
                                 }
@@ -275,6 +280,7 @@ export class ZarrVectorLoader {
                                 const arr = await open(n.resolve(path), { kind: "array" });
                                 const chunk = await get(arr, [slice(minIdx, maxIdx), null]);
                                 const data = extract2D(chunk.data, chunk.shape, chunk.stride);
+                                console.log('data', data);
                                 for (let i = 0; i < data.length; i++) {
                                     const row = data[i];
                                     let obj = {};
@@ -318,7 +324,6 @@ export class ZarrVectorLoader {
                         }
 
                         for (let i = 0; i < featureIds.length; i++) {
-                            // console.log('xVertices', xVertices);
                             const featXVerts = xVertices[i];
                             const featYVerts = yVertices[i];
                             
@@ -354,6 +359,11 @@ export class ZarrVectorLoader {
                                 geometry: geometry,
                                 properties: props
                             }
+
+                            // if (feature.properties.id == 'bbahjjpl-1') {
+                            //     console.log('bbahjjpl-1', feature);
+                            // }
+
                             featureCollection.features.push(feature);
                         }
                     } 

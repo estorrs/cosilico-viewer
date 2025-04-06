@@ -75,7 +75,6 @@ export class FeatureGroupVector {
             preload: 0,
             source: vectorTileSource,
             style: vectorTileStyle,
-            minResolution: .01,
         });
 
         return layer;
@@ -268,6 +267,7 @@ export class FeatureVector {
         this.metadataIsSparse = null;
         this.metadataFields = null;
         this.metadataFieldIdxs = null;
+        this.metadataToType = null;
         this.metadataType = null;
         this.layer = null;
 
@@ -292,13 +292,16 @@ export class FeatureVector {
         let metadataToNode = new Map();
         let metadataToFieldIdxs = new Map();
         let metadataToIsSparse = new Map();
+        let metadataToType = new Map();
 
         if (useMetadata) {
             metadataToNode.set(this.metadataName, this.metadataNode);
             metadataToFieldIdxs.set(this.metadataName, this.metadataFieldIdxs);
             metadataToIsSparse.set(this.metadataName, this.metadataIsSparse);
+            metadataToType.set(this.metadataName, this.metadataType);
         } 
 
+        // vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, metadataToNode, metadataToType, metadataToFieldIdxs, metadataToIsSparse
         const vectorLoader = new ZarrVectorLoader(
             this.node,
             this.sizeY,
@@ -307,6 +310,7 @@ export class FeatureVector {
             this.tileSize,
             this.resolutions,
             metadataToNode,
+            metadataToType,
             metadataToFieldIdxs,
             metadataToIsSparse,
         );
@@ -314,11 +318,15 @@ export class FeatureVector {
         const vectorTileSource = vectorLoader.vectorTileSource;
 
         const vectorTileStyle = (feature) => {
-            // console.log('rendering feature');
             const props = feature.values_;
             const v = this.vectorView;
+
+            if (props == null || props[this.metadataName] == null) {
+                return null;
+            }
+
             if (this.metadataType == 'categorical') {
-                const fieldIdx = props.category;
+                const fieldIdx = props[this.metadataName].category;
                 const field = this.metadataFields[fieldIdx];
                 const view = v.fieldToView.get(field);
                 if (this.vectorView.visibleFieldIndices.includes(fieldIdx)) {
@@ -327,10 +335,11 @@ export class FeatureVector {
                             image: view.shape
                         });
                     } else {
-                        return new Style({
+                        const style = new Style({
                             fill: new Fill({color: view.fillColor}),
                             stroke: new Stroke({color: view.strokeColor, width: view.strokeWidth})
                         });
+                        return style
                     }
                 }
             } else {
@@ -349,8 +358,11 @@ export class FeatureVector {
                     
                 } else {
                     const visibleIdx = v.visibleFieldIndices[0];
-                    if (visibleIdx in props) {
-                        const value = props[visibleIdx];
+                    const obj = props[this.metadataName];
+                    console.log('visibleIdx', visibleIdx);
+                    console.log('props', props);
+                    if (visibleIdx in obj) {
+                        const value = obj[visibleIdx];
                         const fillColor = valueToColor(
                             v.palette, value, v.vMin, v.vMax, v.vCenter
                         )
@@ -375,7 +387,6 @@ export class FeatureVector {
             preload: 0,
             source: vectorTileSource,
             style: vectorTileStyle,
-            minResolution: .01,
         });
 
         return { layer, vectorLoader };
@@ -427,10 +438,11 @@ export class FeatureVector {
     }
 
     async setMetadata(metadataName, metadataNode, map) {
+        console.log('adding metadata', metadataName);
         let obj;
         if (metadataName) {
             const path = '/metadata/fields'
-            const fieldsArr = await open(this.node.resolve(path), { kind: "array" });
+            const fieldsArr = await open(metadataNode.resolve(path), { kind: "array" });
             const chunk = await get(fieldsArr, [null]);
             this.metadataFields = chunk.data;
     
@@ -471,16 +483,12 @@ export class FeatureVector {
         }
 
         if (this.layer) {
+            console.log('layer found, removing');
             map.removeLayer(this.layer);
         }
 
         this.layer = obj.layer;
-        // console.log('adding feature layer', obj.layer);
-        // console.log('map layers before adding', map.getLayers());
-        console.log('number of layers before adding', map.getLayers().values_.length);
         map.addLayer(obj.layer);
-        // console.log('map layers after adding', map.getLayers());
-        console.log('number of layers after adding', map.getLayers().values_.length);
 
     }
 

@@ -10,12 +10,14 @@ function extractVertices(data, shape, strides) {
     const [n, z, _] = shape;
     const [sN, sZ, sXY] = strides;
 
+    console.log('vertices data', data);
+
     const verticesX = [];
     const verticesY = [];
 
     for (let i = 0; i < n; i++) {
-        const xs = [];
-        const ys = [];
+        let xs = [];
+        let ys = [];
         for (let j = 0; j < z; j++) {
             const base = i * sN + j * sZ;
             xs.push(data[base + 0 * sXY]); // x
@@ -24,6 +26,7 @@ function extractVertices(data, shape, strides) {
         verticesX.push(xs);
         verticesY.push(ys);
     }
+    console.log('verticesX', verticesX);
 
     return { verticesX, verticesY };
 }
@@ -60,9 +63,6 @@ export class GroupedZarrVectorLoader {
         this.featureGroup = featureGroup.split(',');
         this.featureToNode = featureToNode;
 
-        console.log('vector raw resolutions', this.resolutions);
-        console.log('vector normalized resolutions', resolutions.map(r => r / 512));
-
         this.format = new GeoJSON();
 
         this.tileGrid = new TileGrid({
@@ -90,13 +90,10 @@ export class GroupedZarrVectorLoader {
                     const resolution = this.resolutions[z];
                     const fg = this.featureGroup[z];
 
-                    console.log('vector: zoom is:', z);
-
                     const groupPath = `/zooms/${resolution}/${x}_${y}/${fg}`;
-                    console.log('Vector: getting vector tile for', groupPath);
-                    const countPath = `${groupPath}/count`;
                     const featureIndexPath = `${groupPath}/feature_index`;
                     const idPath = `${groupPath}/id`;
+                    const idIdxsPath = `${groupPath}/id_idxs`;
                     const locationPath = `${groupPath}/location`;
         
                     let isPresent = true;
@@ -115,20 +112,23 @@ export class GroupedZarrVectorLoader {
                     if (isPresent) {
                         const featureIndexArr = await open(this.node.resolve(featureIndexPath), { kind: "array" });
                         const idArr = await open(this.node.resolve(idPath), { kind: "array" });
+                        const idIdxsArr = await open(this.node.resolve(idIdxsPath), { kind: "array" });
                         const locationArr = await open(this.node.resolve(locationPath), { kind: "array" });
             
                         const featureIndiciesChunk = await get(featureIndexArr, [null]);
                         const idsChunk = await get(idArr, [null]);
+                        const idIdxsChunk = await get(idIdxsArr, [null]);
                         const locationsXChunk = await get(locationArr, [null, 0]);
                         const locationsYChunk = await get(locationArr, [null, 1]);
 
                         const featureIndices = featureIndiciesChunk.data;
                         const featureIds = idsChunk.data;
+                        const idIdxs = idIdxsChunk.data;
                         const locationsX = locationsXChunk.data;
                         const locationsY = locationsYChunk.data;
 
-                        const minIdx = featureIndices[0];
-                        const maxIdx = featureIndices[featureIndices.length - 1];
+                        const minIdx = idIdxs[0];
+                        const maxIdx = idIdxs[idIdxs.length - 1];
 
                         let featureToData = new Map();
                         for (const [featureName, n] of this.featureToNode) {
@@ -156,15 +156,14 @@ export class GroupedZarrVectorLoader {
                             }
                             featureCollection.features.push(feature);
                         }
-                    } 
-        
-                    console.log('feature collection', z, x, y, featureCollection);
-        
+                    }         
 
                     const features = this.format.readFeatures(featureCollection, {
                         featureProjection: this.projection,
                         dataProjection: this.projection,
                     });
+
+                    console.log('feature collection', features);
 
                     tile.setFeatures(features); // Manually set features
                 } else {
@@ -189,9 +188,6 @@ export class ZarrVectorLoader {
         this.metadataToType = metadataToType;
         this.metadataToFieldIdxs = metadataToFieldIdxs;
         this.metadataToIsSparse = metadataToIsSparse;
-
-        console.log('vector raw resolutions', this.resolutions);
-        console.log('vector normalized resolutions', resolutions.map(r => r / 512));
 
         this.format = new GeoJSON();
 
@@ -251,7 +247,10 @@ export class ZarrVectorLoader {
                         const featureIds = idChunk.data;
                         const featureIdxs = idxChunk.data;
                         const n_verts = verticesChunk.shape[1];
-                        const { xVertices, yVertices } = extractVertices(verticesChunk.data, verticesChunk.shape, verticesChunk.stride)
+                        const verts = extractVertices(verticesChunk.data, verticesChunk.shape, verticesChunk.stride)
+                        const xVertices = verts.verticesX;
+                        const yVertices = verts.verticesY;
+
                         
                         const minIdx = featureIdxs[0];
                         const maxIdx = featureIdxs[featureIdxs.length - 1];
@@ -319,6 +318,7 @@ export class ZarrVectorLoader {
                         }
 
                         for (let i = 0; i < featureIds.length; i++) {
+                            // console.log('xVertices', xVertices);
                             const featXVerts = xVertices[i];
                             const featYVerts = yVertices[i];
                             

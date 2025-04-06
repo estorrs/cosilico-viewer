@@ -31,9 +31,6 @@ class ZarrTileSource extends TileImage {
         this.zIndex = zIndex;
         this.tileSize = tileSize;
 
-        console.log('image raw resolutions', this.resolutions);
-        console.log('image normalized resolutions', resolutions.map(r => r / this.tileSize));
-
         this.loadGenerationCounter = 0;
 
         this.initializeArrs();

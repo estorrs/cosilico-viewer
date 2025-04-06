@@ -16,7 +16,7 @@ export class FeatureGroupVector {
         node,
         vectorId,
         featureMetaToNode,
-        baseTileSize,
+        baseImage,
     ) {
         this.node = node;
 
@@ -24,22 +24,27 @@ export class FeatureGroupVector {
         this.name = node.attrs.name;
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
-        this.sizeY = this.node.attrs.size[0];
-        this.sizeX = this.node.attrs.size[1];
-        this.tileSize = baseTileSize;
+        this.sizeY = baseImage.sizeY;
+        this.sizeX = baseImage.sizeX;
+        this.tileSize = baseImage.tileSize;
         this.featureMetaToNode = featureMetaToNode;
 
         this.currentFeature = undefined;
 
         this.isLoaded = false;
 
-        this.projection = new Projection({
-            code: 'PIXEL',
-            units: 'pixels',
-            extent: [0, 0, this.sizeX, this.sizeY],
-        });
+        this.projection = baseImage.projection
 
-        this.populateInitialFields();
+    }
+
+    async init() {
+        await this.populateInitialFields();
+        return this;
+    }
+
+    static async create(node, vectorId, featureMetaToNode, baseImage) {
+        const instance = new FeatureGroupVector(node, vectorId, featureMetaToNode, baseImage);
+        return await instance.init();
     }
 
     createLayer(featureGroup) {
@@ -98,7 +103,7 @@ export class FeatureGroupVector {
     setFeatureToolTip(map, info) {
         const displayFeatureInfo = (pixel, target) => {
             const res = map.getView().getResolution();
-            console.log('current map resolution', res);
+            // console.log('current map resolution', res);
             // console.log('current map z', this.vectorView.featureNameToViewtileGrid.getZForResolution(map.getView().getResolution()));
             const feature = target.closest('.ol-control')
                 ? undefined
@@ -247,7 +252,7 @@ export class FeatureVector {
     constructor(
         node,
         vectorId,
-        baseTileSize,
+        baseImage,
     ) {
         this.node = node;
 
@@ -255,9 +260,9 @@ export class FeatureVector {
         this.name = node.attrs.name;
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
-        this.sizeY = this.node.attrs.size[0];
-        this.sizeX = this.node.attrs.size[1];
-        this.tileSize = baseTileSize;
+        this.sizeX = baseImage.sizeX;
+        this.sizeY = baseImage.sizeY;
+        this.tileSize = baseImage.tileSize;
         this.metadataName = null;
         this.metadataNode = null;
         this.metadataIsSparse = null;
@@ -270,11 +275,17 @@ export class FeatureVector {
 
         this.metadataIsLoaded = false;
 
-        this.projection = new Projection({
-            code: 'PIXEL',
-            units: 'pixels',
-            extent: [0, 0, this.sizeX, this.sizeY],
-        });
+        this.projection = baseImage.projection
+    }
+
+    async init() {
+        // await this.xx(), eventually put async here if you need
+        return this;
+    }
+
+    static async create(node, vectorId, baseImage) {
+        const instance = new FeatureVector(node, vectorId, baseImage);
+        return await instance.init();
     }
 
     createLayer(useMetadata = true) {
@@ -303,6 +314,7 @@ export class FeatureVector {
         const vectorTileSource = vectorLoader.vectorTileSource;
 
         const vectorTileStyle = (feature) => {
+            // console.log('rendering feature');
             const props = feature.values_;
             const v = this.vectorView;
             if (this.metadataType == 'categorical') {
@@ -387,7 +399,6 @@ export class FeatureVector {
             vMax: vmax,
             vCenter: vcenter,
             palette: defaultPalettes.continousPalette,
-            ZarrVectorLoader: null
         }
     }
 
@@ -399,7 +410,6 @@ export class FeatureVector {
             strokeOpacity: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
-            zarrVectorLoader: null,
         };
 
         for (let i = 0; i < this.metadataFields.length; i++) {
@@ -417,9 +427,8 @@ export class FeatureVector {
     }
 
     async setMetadata(metadataName, metadataNode, map) {
-        let layer;
+        let obj;
         if (metadataName) {
-            this.metadataIsLoaded = false;
             const path = '/metadata/fields'
             const fieldsArr = await open(this.node.resolve(path), { kind: "array" });
             const chunk = await get(fieldsArr, [null]);
@@ -444,8 +453,8 @@ export class FeatureVector {
                 this.initializeContinuousView(vmin, vmax, vcenter);
             }
             
-            const { layer, vectorLoader } = this.createLayer();
-            this.vectorView.zarrVectorLoader = vectorLoader;
+            obj = this.createLayer();
+            this.vectorView.zarrVectorLoader = obj.vectorLoader;
     
             // if categorical all fields are visible by default
             if (this.metadataType == 'categorical') {
@@ -457,18 +466,22 @@ export class FeatureVector {
             }
         } else {
             this.initializeContinuousView(null, null, null);
-            const { layer, vectorLoader } = this.createLayer(false);
-            this.vectorView.zarrVectorLoader = vectorLoader;
+            obj = this.createLayer(false);
+            this.vectorView.zarrVectorLoader = obj.vectorLoader;
         }
 
         if (this.layer) {
             map.removeLayer(this.layer);
         }
 
-        this.layer = layer;
-        map.addLayer(layer);
+        this.layer = obj.layer;
+        // console.log('adding feature layer', obj.layer);
+        // console.log('map layers before adding', map.getLayers());
+        console.log('number of layers before adding', map.getLayers().values_.length);
+        map.addLayer(obj.layer);
+        // console.log('map layers after adding', map.getLayers());
+        console.log('number of layers after adding', map.getLayers().values_.length);
 
-        this.metadataIsLoaded = true;
     }
 
     setFeatureToolTip(map, info) {

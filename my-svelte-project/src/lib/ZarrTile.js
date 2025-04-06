@@ -41,7 +41,7 @@ class ZarrTile extends ImageTile {
             if (tile.data instanceof Uint8Array) {
                 tileData = new Uint8ClampedArray(tile.data);
             } else {
-                console.log(tile.data);
+                // console.log(tile.data);
                 throw new Error("Unsupported dtype");
             }
 

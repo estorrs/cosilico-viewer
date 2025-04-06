@@ -14,80 +14,87 @@
   let experiment = $state(null);
 
   const experimentObj = {
-    id: 'alsdkfj',
-    name: 'Test Experiment',
-    platform: 'Xenium 5K',
-    platform_version: 'v5.1',
+    id: "alsdkfj",
+    name: "Test Experiment",
+    platform: "Xenium 5K",
+    platform_version: "v5.1",
     metadata: {
-      field_a: 'this is a field'
+      field_a: "this is a field",
     },
     images: [
       {
-        id: 'sldkfj',
-        name: 'Multiplex Image',
+        id: "sldkfj",
+        name: "Multiplex Image",
         metadata: {}, // this would be ome metadata
         view_settings: {}, // view settings eventually
-        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
-      }
+        path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip",
+      },
     ],
     layers: [
       {
-        id: 'sdf',
-        name: 'Transcripts',
+        id: "sdf",
+        name: "Transcripts",
         is_grouped: true,
         metadata: {}, // this would be just whatever metadata
-        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
+        path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip",
         view_settings: {},
         layer_metadatas: [
           {
-            id: 'sdlfkj',
-            name: 'Counts',
-            type: 'continuous',
-            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip',
+            id: "sdlfkj",
+            name: "Counts",
+            type: "continuous",
+            path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip",
           },
           {
-            id: 'sdlsasfkj',
-            name: 'QV',
-            type: 'continuous',
-            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip',
+            id: "sdlsasfkj",
+            name: "QV",
+            type: "continuous",
+            path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip",
           },
-        ]
+        ],
       },
       {
-        id: 'sldfkjasa',
-        name: 'Cells',
+        id: "sldfkjasa",
+        name: "Cells",
         is_grouped: false,
         metadata: {}, // this would be just whatever metadata
         view_settings: {},
-        path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
+        path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip",
         layer_metadatas: [
           {
-            id: 'sadf',
-            name: 'Kmeans N=10',
-            type: 'categorical',
+            id: "sadf",
+            name: "Kmeans N=10",
+            type: "categorical",
             view_settings: {},
-            path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip',
+            path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip",
           },
-        ]
-      }
+        ],
+      },
     ],
-  }
+  };
 
   class Experiment {
     constructor(experimentObj) {
       this.imagesLoaded = false;
       this.layersLoaded = false;
-      this.experimentObj = experimentObj
+      this.baseImage = null;
+      this.experimentObj = experimentObj;
       this.imageOrder = [];
       this.layerOrder = [];
       this.layerToIsGrouped = new globalThis.Map();
       this.images = new globalThis.Map();
       this.layers = new globalThis.Map();
+    }
 
-      this.loadImages();
-      this.baseImage = this.images[0];
+    async init() {
+      await this.loadImages();
+      await this.loadLayers();
+      return this;
+    }
 
-      this.loadLayers();
+    static async create(obj) {
+      const instance = new Experiment(obj);
+      return await instance.init();
     }
 
     async loadImages() {
@@ -96,10 +103,12 @@
         const obj = {
           image: new Image(node, img.id),
           viewSettings: img.view_settings,
-        }
+        };
         this.images.set(img.id, obj);
         this.imageOrder.push(img.id);
       }
+
+      this.baseImage = this.images.get(this.imageOrder[0]).image;
 
       this.imagesLoaded = true;
     }
@@ -113,11 +122,11 @@
         featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
       }
 
-      const fgv = new FeatureGroupVector(
+      const fgv = await FeatureGroupVector.create(
         node,
         gl.id,
         featureMetaToNode,
-        this.baseImage.tileSize,
+        this.baseImage,
       );
 
       const obj = {
@@ -125,22 +134,17 @@
         metadataToNode: featureMetaToNode,
         viewSettings: gl.view_settings,
         isGrouped: true,
-      }
+      };
 
       this.layers.set(gl.id, obj);
       this.layerOrder.push(gl.id);
       this.layerToIsGrouped.set(gl.id, true);
-
     }
 
     async loadLayer(l) {
       const node = await initZarr(l.path);
 
-      const fv = new FeatureVector(
-        node,
-        l.id,
-        this.baseImage.tileSize
-      );
+      const fv =  await FeatureVector.create(node, l.id, this.baseImage);
 
       let featureMetaToNode = new globalThis.Map();
       for (const mgl of l.layer_metadatas) {
@@ -153,7 +157,7 @@
         metadataToNode: featureMetaToNode,
         viewSettings: l.view_settings,
         isGrouped: false,
-      }
+      };
 
       this.layers.set(l.id, obj);
       this.layerOrder.push(l.id);
@@ -173,21 +177,15 @@
     }
 
     initializeLayerMetadata(map) {
-      for (const [v, k] of this.layers) {
-        v.vector.setMetadata(null, null, map)
-      }
-    }
-
-    isLoaded() {
-      for (const [v, k] of this.layers) {
-        if (!v.vector.isLoaded) {
-          return false;
+      for (const [k, v] of this.layers) {
+        if (!v.isGrouped) {
+          // console.log('vector', v);
+          v.vector.setMetadata(null, null, map);
         }
       }
-      return true;
     }
-  }
 
+  }
 
   function createMap(projection, sizeX, sizeY) {
     // Create the new map
@@ -201,48 +199,44 @@
     });
   }
 
-
-
-
-
-
-
-
-
   onMount(async () => {
-    experiment = new Experiment(experimentObj);
+    experiment = await Experiment.create(experimentObj);
 
     createMap(
       experiment.baseImage.projection,
       experiment.baseImage.sizeX,
       experiment.baseImage.sizeY,
     );
-    experiment.initializeLayerMetadata();
-
-    // const l = experiment.layers.get('sldfkjasa');
-    // l.vector.setMetadata(
-    //   'Kmeans N=10',
-    //   l.metadataToNode.get('Kmeans N=10'),
-    //   map
-    // )
 
     // wait so feature vectors and images can load
-    let interval = setInterval(() => {
-        if (experiment.isLoaded()) {
-            reloadImageInfoKey = !reloadImageInfoKey;
-            reloadLayerInfoKey = !reloadLayerInfoKey;
-            clearInterval(interval); 
-        }
-    }, 100);
+    // console.log('experiment', experiment);
+    // let interval = setInterval(() => {
+    //   if (experiment.isLoaded()) {
+    //     reloadImageInfoKey = !reloadImageInfoKey;
+    //     reloadLayerInfoKey = !reloadLayerInfoKey;
+    //     clearInterval(interval);
+    //   }
+    // }, 100);
 
     // first channel of first image visible by default
-    experiment.baseImage.addChannel(this.experiment.baseImage.channelNames[0], map);
+    // console.log('base image', experiment.baseImage);
+    experiment.baseImage.addChannel(
+      experiment.baseImage.channelNames[0],
+      map,
+    );
+    experiment.initializeLayerMetadata(map);
 
     //set tooltip info, must fix
-    for (const [layer, k] of experiment.layers) {
-      let info = document.getElementById('info'); // this needs to be fixed
+    for (const [k, layer] of experiment.layers) {
+      let info = document.getElementById("info"); // this needs to be fixed
       layer.vector.setFeatureToolTip(map, info);
     }
+
+    reloadImageInfoKey = !reloadImageInfoKey;
+    reloadLayerInfoKey = !reloadLayerInfoKey;
+
+    console.log('map', map);
+    console.log('map layers', map.getLayers())
   });
 
   function toggleFeature(featureName, catVector) {
@@ -282,113 +276,121 @@
 <div>
   <div id="info" class="ol-tooltip hidden"></div>
   <div id="map" style="width: 100%; height: 500px; position: relative;"></div>
-  {#each Array.from(experiment.images.values()) as obj}
-    {#if obj.image.imageView}
-      <label>
-        Select Channels ({obj.image.name}):
-        <div>
-          {#if obj.image?.channelNames && obj.image.channelNames.length > 0}
-            {#each obj.image.channelNames ?? [] as channelName}
-              <label>
-                <input
-                  type="checkbox"
-                  checked={obj.image.imageView.visibleChannelNames.includes(
-                    channelName,
-                  )}
-                  onchange={() => toggleChannel(channelName, obj.image)}
-                />
-                {channelName}
-              </label>
-            {/each}
-          {:else}
-            <p>Loading channels...</p>
-          {/if}
-        </div>
-      </label>
-
-      {#key reloadImageInfoKey}
-      <label>
-        Min/Max Adjustment ({obj.image.name}):
-        {#each obj.image.imageView.visibleChannelNames as channelName, j}
-          <div>
-            <label
-              >{channelName} Min:
-              <input
-                type="number"
-                value={obj.image.imageView.channelNameToView.get(channelName)
-                  .minValue}
-                onchange={(event) =>
-                  updateMinValue(obj.image, channelName, event)}
-              />
-            </label>
-            <label
-              >Max:
-              <input
-                type="number"
-                value={obj.image.imageView.channelNameToView.get(channelName)
-                  .maxValue}
-                onchange={(event) =>
-                  updateMaxValue(obj.image, channelName, event)}
-              />
-            </label>
-          </div>
-        {/each}
-      </label>
-      {/key}
-    {/if}
-  {/each}
-
-  <!-- Select Features for cells -->
-  {#key reloadLayerInfoKey}
-    {#each Array.from(experiment.layers.values()) as obj}
-      {#if !obj.vector.isGrouped}
+  <!-- {#key reloadImageInfoKey} -->
+  <!-- {console.log(experiment)}; -->
+  {#if experiment}
+    {#each Array.from(experiment.images.values()) as obj}
+      <!-- {console.log("image obj", obj)} -->
         <label>
-          Select Features ({obj.vector.name}):
+          Select Channels ({obj.image.name}):
           <div>
-            {#if obj.vector.metadataFields && obj.vector.metadataFields.length > 0}
-              {#each obj.vector.metadataFields ?? [] as field}
+            {#if obj.image?.channelNames && obj.image.channelNames.length > 0}
+              {#each obj.image.channelNames ?? [] as channelName}
                 <label>
                   <input
                     type="checkbox"
-                    checked={obj.vector.vectorView.visibleFields.includes(
-                      field,
+                    checked={obj.image.imageView.visibleChannelNames.includes(
+                      channelName,
                     )}
-                    onchange={() => toggleFeature(field, obj.vector)}
+                    onchange={() => toggleChannel(channelName, obj.image)}
                   />
-                  {field}
+                  {channelName}
                 </label>
               {/each}
             {:else}
-              <p>Loading cell features...</p>
+              <p>Loading channels...</p>
             {/if}
           </div>
         </label>
-      {/if}
-      {#if obj.vector.isGrouped}
-      <label>
-        Select Features ({obj.vector.name}):
-        <div>
-          {#if obj.vector?.featureNames && obj.vector.featureNames.length > 0}
-            {#each obj.vector.featureNames ?? [] as featureName}
-              <label>
-                <input
-                  type="checkbox"
-                  checked={obj.vector.vectorView.visibleFeatureNames.includes(
-                    featureName,
-                  )}
-                  onchange={() => toggleFeature(featureName, obj.vector)}
-                />
-                {featureName}
-              </label>
+
+        {#key reloadImageInfoKey}
+          <label>
+            Min/Max Adjustment ({obj.image.name}):
+            {#each obj.image.imageView.visibleChannelNames as channelName, j}
+              <div>
+                <label
+                  >{channelName} Min:
+                  <input
+                    type="number"
+                    value={obj.image.imageView.channelNameToView.get(
+                      channelName,
+                    ).minValue}
+                    onchange={(event) =>
+                      updateMinValue(obj.image, channelName, event)}
+                  />
+                </label>
+                <label
+                  >Max:
+                  <input
+                    type="number"
+                    value={obj.image.imageView.channelNameToView.get(
+                      channelName,
+                    ).maxValue}
+                    onchange={(event) =>
+                      updateMaxValue(obj.image, channelName, event)}
+                  />
+                </label>
+              </div>
             {/each}
-          {:else}
-            <p>Loading features...</p>
-          {/if}
-        </div>
-      </label>
-      {/if}
+          </label>
+        {/key}
+      <!-- {/if} -->
     {/each}
-  {/key}
+    <!-- {/key} -->
+
+    <!-- Select Features for cells -->
+    {#key reloadLayerInfoKey}
+      {#each Array.from(experiment.layers.values()) as obj}
+      <!-- {console.log('layer obj', obj)} -->
+        {#if !obj.isGrouped}
+          <label>
+            Select Features ({obj.vector.name}):
+            <div>
+              {#if obj.vector.metadataFields && obj.vector.metadataFields.length > 0}
+                {#each obj.vector.metadataFields ?? [] as field}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={obj.vector.vectorView.visibleFields.includes(
+                        field,
+                      )}
+                      onchange={() => toggleFeature(field, obj.vector)}
+                    />
+                    {field}
+                  </label>
+                {/each}
+              {:else}
+                <p>Loading cell features...</p>
+              {/if}
+            </div>
+          </label>
+        {/if}
+        {#if obj.isGrouped}
+          <label>
+            Select Features ({obj.vector.name}):
+            <div>
+              {#if obj.vector?.featureNames && obj.vector.featureNames.length > 0}
+                {#each obj.vector.featureNames ?? [] as featureName}
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={obj.vector.vectorView.visibleFeatureNames.includes(
+                        featureName,
+                      )}
+                      onchange={() => toggleFeature(featureName, obj.vector)}
+                    />
+                    {featureName}
+                  </label>
+                {/each}
+              {:else}
+                <p>Loading features...</p>
+              {/if}
+            </div>
+          </label>
+        {/if}
+      {/each}
+    {/key}
+  {/if}
 </div>
 
 <style global>

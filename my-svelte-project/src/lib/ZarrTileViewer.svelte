@@ -75,6 +75,13 @@
             view_settings: {},
             path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_pca10.zarr.zip",
           },
+          {
+            id: "ggfg",
+            name: "Transcript Counts",
+            type: "continuous",
+            view_settings: {},
+            path: "https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_transcriptcounts.zarr.zip",
+          },
         ],
       },
     ],
@@ -215,16 +222,6 @@
       experiment.baseImage.sizeY,
     );
 
-    // wait so feature vectors and images can load
-    // console.log('experiment', experiment);
-    // let interval = setInterval(() => {
-    //   if (experiment.isLoaded()) {
-    //     reloadImageInfoKey = !reloadImageInfoKey;
-    //     reloadLayerInfoKey = !reloadLayerInfoKey;
-    //     clearInterval(interval);
-    //   }
-    // }, 100);
-
     // first channel of first image visible by default
     // console.log('base image', experiment.baseImage);
     experiment.baseImage.addChannel(
@@ -241,7 +238,8 @@
 
     console.log('experiment', experiment);
     // const key = 'Kmeans N=10';
-    const key = 'PCAs';
+    // const key = 'PCAs';
+    const key = 'Transcript Counts';
     const l = experiment.layers.get('sldfkjasa');
     await l.vector.setMetadata(key, l.metadataToNode.get(key), map)
 
@@ -364,7 +362,7 @@
     <!-- Select Features for cells -->
     {#key reloadLayerInfoKey}
       {#each Array.from(experiment.layers.values()) as obj}
-      <!-- {console.log('layer obj', obj)} -->
+      {console.log('layer obj', obj)}
         {#if !obj.isGrouped}
           <label>
             Select Features ({obj.vector.name}):

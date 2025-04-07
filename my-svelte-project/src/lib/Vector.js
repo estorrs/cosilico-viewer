@@ -355,29 +355,50 @@ export class FeatureVector {
                             stroke: new Stroke({color: v.featureView.strokeColor, width: v.featureView.strokeWidth})
                         });
                     }
-                    
                 } else {
                     const visibleIdx = v.visibleFieldIndices[0];
                     const obj = props[this.metadataName];
-                    console.log('visibleIdx', visibleIdx);
-                    console.log('props', props);
-                    if (visibleIdx in obj) {
-                        const value = obj[visibleIdx];
-                        const fillColor = valueToColor(
-                            v.palette, value, v.vMin, v.vMax, v.vCenter
-                        )
-
-                        if (props.isPoint) {
-                            const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, fillColor);
-                            return new Style({
-                                image: shape
-                            });
+                    const vInfo = this.metadataFieldToVInfo.get(visibleIdx);
+                    let value;
+                    if (this.metadataIsSparse) {
+                        if (!(obj instanceof Map)) {
+                            return null;
+                        } else if (obj.has(visibleIdx)) {
+                            value = obj.get(visibleIdx);
                         } else {
-                            return new Style({
-                                fill: new Fill({color: fillColor}),
-                                stroke: new Stroke({color: v.featureView.strokeColor, width: v.featureView.strokeWidth})
-                            });
+                            value = vInfo.vMin;
                         }
+
+                    } else {
+                        if (visibleIdx in obj) {
+                            value = obj[visibleIdx];
+                        } else {
+                            throw new Error('metadata is not sparse and visible idx not found');
+                        }
+                    }
+
+                    const fillColor = valueToColor(
+                        v.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
+                    );
+                    // const fillColor = valueToColor(
+                    //     v.palette, value, 0, 5, null
+                    // );
+
+                    if (props.id == 'cakalhjn-1') {
+                        console.log('visibleIdx, obj, vinfo, value, fillcolor', visibleIdx, obj, vInfo, value, fillColor);
+                    }
+                    
+
+                    if (props.isPoint) {
+                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, fillColor);
+                        return new Style({
+                            image: shape
+                        });
+                    } else {
+                        return new Style({
+                            fill: new Fill({color: fillColor}),
+                            stroke: new Stroke({color: v.featureView.strokeColor, width: v.featureView.strokeWidth})
+                        });
                     }
                 }
             }
@@ -392,7 +413,7 @@ export class FeatureVector {
         return { layer, vectorLoader };
     }
 
-    initializeContinuousView(vmin, vmax, vcenter) {
+    initializeContinuousView() {
         const contFeatureView = {
             shapeType: 'circle',
             strokeWidth: 1.,
@@ -406,9 +427,9 @@ export class FeatureVector {
             strokeOpacity: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
-            vMin: vmin,
-            vMax: vmax,
-            vCenter: vcenter,
+            vMin: null,
+            vMax: null,
+            vCenter: null,
             palette: defaultPalettes.continousPalette,
         }
     }
@@ -459,10 +480,33 @@ export class FeatureVector {
             if (this.metadataType == 'categorical') {
                 this.initializeCategoricalView();
             } else {
-                const vmin = this.metadataNode.attrs.vmin;
-                const vmax = this.metadataNode.attrs.vmax;
-                const vcenter = this.metadataNode.attrs.vcenter;
-                this.initializeContinuousView(vmin, vmax, vcenter);
+                let chunk;
+                chunk = await get(await open(metadataNode.resolve('/metadata/vmins'), { kind: "array" }), [null]);
+                const vmins = chunk.data;
+                chunk = await get(await open(metadataNode.resolve('/metadata/vmaxs'), { kind: "array" }), [null]);
+                const vmaxs = chunk.data;
+                chunk = await get(await open(metadataNode.resolve('/metadata/vcenters'), { kind: "array" }), [null]);
+                const vcenters = chunk.data;
+
+                this.metadataFieldToVInfo = new Map();
+                for (let i = 0; i < vmins.length; i++) {
+                    let vCenter;
+                    if (vcenters[i] == -99999) {
+                        vCenter = null;
+                    } else {
+                        vCenter = vcenters[i];
+                    }
+                    this.metadataFieldToVInfo.set(
+                        this.metadataFieldIdxs[i],
+                        {
+                            vMin: vmins[i],
+                            vMax: vmaxs[i],
+                            vCenter: vCenter,
+                        }
+                    );
+                }
+
+                this.initializeContinuousView();
             }
             
             obj = this.createLayer();
@@ -477,7 +521,7 @@ export class FeatureVector {
                 this.vectorView.visibleFields = []
             }
         } else {
-            this.initializeContinuousView(null, null, null);
+            this.initializeContinuousView();
             obj = this.createLayer(false);
             this.vectorView.zarrVectorLoader = obj.vectorLoader;
         }

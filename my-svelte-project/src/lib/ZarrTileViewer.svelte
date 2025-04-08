@@ -3,6 +3,8 @@
   import Map from "ol/Map";
   import View from "ol/View";
   import { SvelteMap } from "svelte/reactivity";
+  import OverviewMap from 'ol/control/OverviewMap.js';
+  import {defaults as defaultControls} from 'ol/control/defaults.js';
 
   import { initZarr } from "./ZarrHelpers";
   import { Image } from "./Image";
@@ -115,7 +117,7 @@
       for (const img of this.experimentObj.images) {
         const node = await initZarr(img.path);
         const obj = {
-          image: new Image(node, img.id),
+          image: new Image(node, img.id, false),
           viewSettings: img.view_settings,
         };
         this.images.set(img.id, obj);
@@ -123,6 +125,7 @@
       }
 
       this.baseImage = this.images.get(this.imageOrder[0]).image;
+      this.baseImage.isBaseImage = true;
 
       this.imagesLoaded = true;
     }
@@ -158,7 +161,7 @@
     async loadLayer(l) {
       const node = await initZarr(l.path);
 
-      const fv =  await FeatureVector.create(node, l.id, this.baseImage);
+      const fv = await FeatureVector.create(node, l.id, this.baseImage);
 
       let featureMetaToNode = new globalThis.Map();
       for (const mgl of l.layer_metadatas) {
@@ -198,7 +201,6 @@
         }
       }
     }
-
   }
 
   function createMap(projection, sizeX, sizeY) {
@@ -224,10 +226,7 @@
 
     // first channel of first image visible by default
     // console.log('base image', experiment.baseImage);
-    experiment.baseImage.addChannel(
-      experiment.baseImage.channelNames[0],
-      map,
-    );
+    experiment.baseImage.addChannel(experiment.baseImage.channelNames[0], map);
     await experiment.initializeLayerMetadata(map);
 
     //set tooltip info, must fix
@@ -236,13 +235,18 @@
       layer.vector.setFeatureToolTip(map, info);
     }
 
-    console.log('experiment', experiment);
+
+    console.log("experiment", experiment);
     // const key = 'Kmeans N=10';
     // const key = 'PCAs';
-    const key = 'Transcript Counts';
-    const l = experiment.layers.get('sldfkjasa');
-    await l.vector.setMetadata(key, l.metadataToNode.get(key), map)
+    const key = "Transcript Counts";
+    const l = experiment.layers.get("sldfkjasa");
+    await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
 
+    // setTimeout(() => {
+    //   console.log('updating size');
+    //   experiment.baseImage.overviewControl.getOverviewMap().updateSize();
+    // }, 10000);
 
     reloadImageInfoKey = !reloadImageInfoKey;
     reloadLayerInfoKey = !reloadLayerInfoKey;
@@ -252,11 +256,8 @@
     let visible;
     if (vector instanceof FeatureVector) {
       visible = vector.vectorView.visibleFields;
-      
-
     } else {
       visible = vector.vectorView.visibleFeatureNames;
-      
     }
     if (visible.includes(featureName)) {
       vector.removeFeature(featureName, map);
@@ -265,7 +266,6 @@
     }
 
     reloadLayerInfoKey = !reloadLayerInfoKey;
-    
   }
 
   function toggleChannel(channelName, image) {
@@ -283,6 +283,9 @@
     const channelView = image.imageView.channelNameToView.get(channelName);
     channelView.minValue = Number(newValue);
     image.updateBeforeOperations();
+    if (image.isBaseImage) {
+      image.updateOverviewMapLayerOperations();
+    }
   }
 
   function updateMaxValue(image, channelName, event) {
@@ -290,71 +293,72 @@
     const channelView = image.imageView.channelNameToView.get(channelName);
     channelView.maxValue = Number(newValue);
     image.updateBeforeOperations();
+    if (image.isBaseImage) {
+      image.updateOverviewMapLayerOperations();
+    }
   }
 </script>
 
 <!-- Map Container -->
 <div>
   <div id="info" class="ol-tooltip hidden"></div>
-  <div id="map" style="width: 100%; height: 500px; position: relative;"></div>
+  <div id="map" ></div>
   <!-- {#key reloadImageInfoKey} -->
   <!-- {console.log(experiment)}; -->
   {#if experiment}
     {#each Array.from(experiment.images.values()) as obj}
       <!-- {console.log("image obj", obj)} -->
-        <label>
-          Select Channels ({obj.image.name}):
-          <div>
-            {#if obj.image?.channelNames && obj.image.channelNames.length > 0}
-              {#each obj.image.channelNames ?? [] as channelName}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={obj.image.imageView.visibleChannelNames.includes(
-                      channelName,
-                    )}
-                    onchange={() => toggleChannel(channelName, obj.image)}
-                  />
-                  {channelName}
-                </label>
-              {/each}
-            {:else}
-              <p>Loading channels...</p>
-            {/if}
-          </div>
-        </label>
-
-        {#key reloadImageInfoKey}
-          <label>
-            Min/Max Adjustment ({obj.image.name}):
-            {#each obj.image.imageView.visibleChannelNames as channelName, j}
-              <div>
-                <label
-                  >{channelName} Min:
-                  <input
-                    type="number"
-                    value={obj.image.imageView.channelNameToView.get(
-                      channelName,
-                    ).minValue}
-                    onchange={(event) =>
-                      updateMinValue(obj.image, channelName, event)}
-                  />
-                </label>
-                <label
-                  >Max:
-                  <input
-                    type="number"
-                    value={obj.image.imageView.channelNameToView.get(
-                      channelName,
-                    ).maxValue}
-                    onchange={(event) =>
-                      updateMaxValue(obj.image, channelName, event)}
-                  />
-                </label>
-              </div>
+      <label>
+        Select Channels ({obj.image.name}):
+        <div>
+          {#if obj.image?.channelNames && obj.image.channelNames.length > 0}
+            {#each obj.image.channelNames ?? [] as channelName}
+              <label>
+                <input
+                  type="checkbox"
+                  checked={obj.image.imageView.visibleChannelNames.includes(
+                    channelName,
+                  )}
+                  onchange={() => toggleChannel(channelName, obj.image)}
+                />
+                {channelName}
+              </label>
             {/each}
-          </label>
-        {/key}
+          {:else}
+            <p>Loading channels...</p>
+          {/if}
+        </div>
+      </label>
+
+      {#key reloadImageInfoKey}
+        <label>
+          Min/Max Adjustment ({obj.image.name}):
+          {#each obj.image.imageView.visibleChannelNames as channelName, j}
+            <div>
+              <label
+                >{channelName} Min:
+                <input
+                  type="number"
+                  value={obj.image.imageView.channelNameToView.get(channelName)
+                    .minValue}
+                  onchange={(event) =>
+                    updateMinValue(obj.image, channelName, event)}
+                />
+              </label>
+              <label
+                >Max:
+                <input
+                  type="number"
+                  value={obj.image.imageView.channelNameToView.get(channelName)
+                    .maxValue}
+                  onchange={(event) =>
+                    updateMaxValue(obj.image, channelName, event)}
+                />
+              </label>
+            </div>
+          {/each}
+        </label>
+      {/key}
       <!-- {/if} -->
     {/each}
     <!-- {/key} -->
@@ -362,7 +366,7 @@
     <!-- Select Features for cells -->
     {#key reloadLayerInfoKey}
       {#each Array.from(experiment.layers.values()) as obj}
-      {console.log('layer obj', obj)}
+        {console.log("layer obj", obj)}
         {#if !obj.isGrouped}
           <label>
             Select Features ({obj.vector.name}):
@@ -417,6 +421,9 @@
 <style global>
   #map {
     background-color: black; /* Change this to any color you want */
+    width: 100%;
+    height: 500px;
+    position: relative;
   }
   #info {
     position: absolute;
@@ -433,5 +440,48 @@
     transform: translateX(3%);
     visibility: hidden;
     pointer-events: none;
+  }
+  /* :global(.map .ol-custom-overviewmap),
+  :global(.map .ol-custom-overviewmap.ol-uncollapsible) {
+    bottom: auto;
+    left: auto;
+    right: 0;
+    top: 0;
+  }
+
+  :global(.map .ol-custom-overviewmap:not(.ol-collapsed)) {
+    border: 1px solid black;
+  }
+
+  :global(.map .ol-custom-overviewmap .ol-overviewmap-map) {
+    border: none;
+    width: 300px;
+    height: 300px;
+  }
+
+  :global(.map .ol-custom-overviewmap .ol-overviewmap-box) {
+    border: 2px solid red;
+  }
+
+  :global(.map .ol-custom-overviewmap:not(.ol-collapsed) button) {
+    bottom: auto;
+    left: auto;
+    right: 1px;
+    top: 1px;
+  }
+
+  :global(.map .ol-rotate) {
+    top: 170px;
+    right: 0;
+  } */
+  :global(.ol-overviewmap),
+  :global(.ol-overviewmap-map) {
+    width: 200px;
+    height: 200px;
+    /* min-width: 150px;
+    min-height: 150px; */
+  }
+  :global(.ol-overviewmap-box) {
+    border: 2px solid red;
   }
 </style>

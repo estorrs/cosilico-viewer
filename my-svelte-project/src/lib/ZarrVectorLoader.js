@@ -164,8 +164,6 @@ export class GroupedZarrVectorLoader {
                         dataProjection: this.projection,
                     });
 
-                    console.log('feature collection', features);
-
                     tile.setFeatures(features); // Manually set features
                 } else {
                     console.error("Tile is not a VectorTile:", tile);
@@ -189,8 +187,6 @@ export class ZarrVectorLoader {
         this.metadataToType = metadataToType;
         this.metadataToFieldIdxs = metadataToFieldIdxs;
         this.metadataToIsSparse = metadataToIsSparse;
-
-        console.log(metadataToNode, metadataToIsSparse);
 
         this.format = new GeoJSON();
 
@@ -220,7 +216,7 @@ export class ZarrVectorLoader {
                     const resolution = this.resolutions[z];
 
                     const groupPath = `/zooms/${resolution}/${x}_${y}`;
-                    console.log('Feature Vector: getting vector tile for', groupPath);
+                    // console.log('Feature Vector: getting vector tile for', groupPath);
 
                     const idPath = `${groupPath}/id`;
                     const idxPath = `${groupPath}/id_idxs`;
@@ -280,7 +276,6 @@ export class ZarrVectorLoader {
                                 const arr = await open(n.resolve(path), { kind: "array" });
                                 const chunk = await get(arr, [slice(minIdx, maxIdx), null]);
                                 const data = extract2D(chunk.data, chunk.shape, chunk.stride);
-                                console.log('data', data);
                                 for (let i = 0; i < data.length; i++) {
                                     const row = data[i];
                                     let obj = {};
@@ -368,8 +363,6 @@ export class ZarrVectorLoader {
                         }
                     } 
         
-                    console.log('feature collection', z, x, y, featureCollection);
-
                     const features = this.format.readFeatures(featureCollection, {
                         featureProjection: this.projection,
                         dataProjection: this.projection,

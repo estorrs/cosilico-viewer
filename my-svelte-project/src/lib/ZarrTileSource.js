@@ -33,8 +33,18 @@ class ZarrTileSource extends TileImage {
 
         this.loadGenerationCounter = 0;
 
-        this.initializeArrs();
+        // this.initializeArrs();
 
+    }
+
+    async init() {
+        await this.initializeArrs();
+        return this;
+    }
+
+    static async create(options) {
+        const instance = new ZarrTileSource(options);
+        return await instance.init();
     }
 
     async initializeArrs() {

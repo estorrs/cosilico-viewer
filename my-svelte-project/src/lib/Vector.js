@@ -384,9 +384,6 @@ export class FeatureVector {
                     //     v.palette, value, 0, 5, null
                     // );
 
-                    if (props.id == 'cakalhjn-1') {
-                        console.log('visibleIdx, obj, vinfo, value, fillcolor', visibleIdx, obj, vInfo, value, fillColor);
-                    }
                     
 
                     if (props.isPoint) {
@@ -459,7 +456,6 @@ export class FeatureVector {
     }
 
     async setMetadata(metadataName, metadataNode, map) {
-        console.log('adding metadata', metadataName);
         let obj;
         if (metadataName) {
             const path = '/metadata/fields'
@@ -527,7 +523,6 @@ export class FeatureVector {
         }
 
         if (this.layer) {
-            console.log('layer found, removing');
             map.removeLayer(this.layer);
         }
 

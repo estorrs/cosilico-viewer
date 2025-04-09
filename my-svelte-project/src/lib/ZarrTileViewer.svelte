@@ -226,7 +226,7 @@
 
     // first channel of first image visible by default
     // console.log('base image', experiment.baseImage);
-    experiment.baseImage.addChannel(experiment.baseImage.channelNames[0], map);
+    await experiment.baseImage.addChannel(experiment.baseImage.channelNames[0], map);
     await experiment.initializeLayerMetadata(map);
 
     //set tooltip info, must fix
@@ -236,7 +236,6 @@
     }
 
 
-    console.log("experiment", experiment);
     // const key = 'Kmeans N=10';
     // const key = 'PCAs';
     const key = "Transcript Counts";
@@ -263,11 +262,11 @@
     reloadLayerInfoKey = !reloadLayerInfoKey;
   }
 
-  function toggleChannel(channelName, image) {
+  async function toggleChannel(channelName, image) {
     if (image.imageView.visibleChannelNames.includes(channelName)) {
-      image.removeChannel(channelName, map);
+      await image.removeChannel(channelName, map);
     } else {
-      image.addChannel(channelName, map);
+      await image.addChannel(channelName, map);
     }
 
     image.updateBeforeOperations();
@@ -306,6 +305,7 @@
   <!-- {#key reloadImageInfoKey} -->
   <!-- {console.log(experiment)}; -->
   {#if experiment}
+  {#key reloadImageInfoKey}
     {#each Array.from(experiment.images.values()) as obj}
       <!-- {console.log("image obj", obj)} -->
       <label>
@@ -330,7 +330,7 @@
         </div>
       </label>
 
-      {#key reloadImageInfoKey}
+      
         <label>
           Min/Max Adjustment ({obj.image.name}):
           {#each obj.image.imageView.visibleChannelNames as channelName, j}
@@ -358,15 +358,14 @@
             </div>
           {/each}
         </label>
-      {/key}
+      <!-- {/key} -->
       <!-- {/if} -->
     {/each}
-    <!-- {/key} -->
+    {/key}
 
     <!-- Select Features for cells -->
     {#key reloadLayerInfoKey}
       {#each Array.from(experiment.layers.values()) as obj}
-        {console.log("layer obj", obj)}
         {#if !obj.isGrouped}
           <label>
             Select Features ({obj.vector.name}):

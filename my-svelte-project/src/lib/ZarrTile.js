@@ -64,6 +64,7 @@ class ZarrTile extends ImageTile {
             console.error("Error loading Zarr tile:", error);
             this.state = 3; // TileState.ERROR
         }
+        
 
 
     }

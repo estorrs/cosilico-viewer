@@ -46,6 +46,7 @@ export class Image {
       this.unit = this.node.attrs.unit,
       this.overviewLayer = null;
       this.overviewControl = null;
+      // this.overviewSources = [];
       this.isLoaded = false;
 
     this.loadGenerationCounter = 0;
@@ -60,12 +61,12 @@ export class Image {
     this.populateInitialFields();
   }
 
-  updateOverviewControl(map) {
+  async updateOverviewControl(map) {
     let sources = [];
 
     for (const source of this.imageView.zarrTileSources) {
       const cIndex = source.cIndex;
-      const newSource = new ZarrTileSource({
+      const newSource = await ZarrTileSource.create({
         node: this.node,
         fullImageHeight: this.sizeY,
         fullImageWidth: this.sizeX,
@@ -91,6 +92,8 @@ export class Image {
       });
 
     map.addControl(this.overviewControl);
+
+
 
 
 
@@ -175,9 +178,9 @@ export class Image {
     }
   }
 
-  addChannel(channelName, map) {
+  async addChannel(channelName, map) {
     const cIndex = this.channelNames.indexOf(channelName);
-    const newSource = new ZarrTileSource({
+    const newSource = await ZarrTileSource.create({
       node: this.node,
       fullImageHeight: this.sizeY,
       fullImageWidth: this.sizeX,
@@ -194,11 +197,11 @@ export class Image {
     this.updateRasterSource(map);
 
     if (this.isBaseImage) {
-      this.updateOverviewControl(map);
+      await this.updateOverviewControl(map);
     }
   }
 
-  removeChannel(channelName, map) {
+  async removeChannel(channelName, map) {
 
     const removalIndex = this.imageView.visibleChannelNames.indexOf(channelName);
 
@@ -208,10 +211,9 @@ export class Image {
     this.updateRasterSource(map);
 
     if (this.isBaseImage) {
-      this.updateOverviewControl(map);
+      await this.updateOverviewControl(map);
     }
 
-    // rasterLayer.setSource(rasterSource);
   }
 
   populateInitialFields() {

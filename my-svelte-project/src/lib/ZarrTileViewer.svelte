@@ -1,4 +1,5 @@
 <script>
+  import "../app.css";
   import { onMount } from "svelte";
   import Map from "ol/Map";
   import View from "ol/View";
@@ -301,13 +302,12 @@
 <!-- Map Container -->
 <div>
   <div id="info" class="ol-tooltip hidden"></div>
-  <div id="map" ></div>
+  <div id="map"></div>
   <!-- {#key reloadImageInfoKey} -->
   <!-- {console.log(experiment)}; -->
   {#if experiment}
   {#key reloadImageInfoKey}
     {#each Array.from(experiment.images.values()) as obj}
-      <!-- {console.log("image obj", obj)} -->
       <label>
         Select Channels ({obj.image.name}):
         <div>
@@ -446,8 +446,6 @@
   :global(.ol-overviewmap-map) {
     width: 200px;
     height: 200px;
-    /* min-width: 150px;
-    min-height: 150px; */
   }
   :global(.ol-overviewmap-box) {
     border: 2px solid red;
@@ -456,12 +454,15 @@
     display: none !important;
   }
   :global(.ol-overviewmap) {
+    all: unset;
+  all: initial;
+  box-sizing: content-box;
+    border-style: none;
     position: absolute !important;
     bottom: 0px;
     left: 0px;
     top: auto !important;
     right: auto !important;
-    z-index: 1000;
-    border: 2px solid yellow; /* 🔴 Change color & thickness as needed */
+    border: 2px solid yellow;
   }
 </style>

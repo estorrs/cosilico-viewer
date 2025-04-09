@@ -243,11 +243,6 @@
     const l = experiment.layers.get("sldfkjasa");
     await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
 
-    // setTimeout(() => {
-    //   console.log('updating size');
-    //   experiment.baseImage.overviewControl.getOverviewMap().updateSize();
-    // }, 10000);
-
     reloadImageInfoKey = !reloadImageInfoKey;
     reloadLayerInfoKey = !reloadLayerInfoKey;
   });
@@ -273,6 +268,11 @@
       image.removeChannel(channelName, map);
     } else {
       image.addChannel(channelName, map);
+    }
+
+    image.updateBeforeOperations();
+    if (image.isBaseImage) {
+      image.updateOverviewMapLayerOperations();
     }
 
     reloadImageInfoKey = !reloadImageInfoKey; // forces reload of channel info elements
@@ -441,39 +441,8 @@
     visibility: hidden;
     pointer-events: none;
   }
-  /* :global(.map .ol-custom-overviewmap),
-  :global(.map .ol-custom-overviewmap.ol-uncollapsible) {
-    bottom: auto;
-    left: auto;
-    right: 0;
-    top: 0;
-  }
 
-  :global(.map .ol-custom-overviewmap:not(.ol-collapsed)) {
-    border: 1px solid black;
-  }
 
-  :global(.map .ol-custom-overviewmap .ol-overviewmap-map) {
-    border: none;
-    width: 300px;
-    height: 300px;
-  }
-
-  :global(.map .ol-custom-overviewmap .ol-overviewmap-box) {
-    border: 2px solid red;
-  }
-
-  :global(.map .ol-custom-overviewmap:not(.ol-collapsed) button) {
-    bottom: auto;
-    left: auto;
-    right: 1px;
-    top: 1px;
-  }
-
-  :global(.map .ol-rotate) {
-    top: 170px;
-    right: 0;
-  } */
   :global(.ol-overviewmap),
   :global(.ol-overviewmap-map) {
     width: 200px;
@@ -483,5 +452,17 @@
   }
   :global(.ol-overviewmap-box) {
     border: 2px solid red;
+  }
+  :global(.ol-overviewmap.ol-uncollapsible button) {
+    display: none !important;
+  }
+  :global(.ol-overviewmap) {
+    position: absolute !important;
+    bottom: 0px;
+    left: 0px;
+    top: auto !important;
+    right: auto !important;
+    z-index: 1000;
+    border: 2px solid yellow; /* 🔴 Change color & thickness as needed */
   }
 </style>

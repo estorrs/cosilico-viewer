@@ -77,7 +77,6 @@ export class Image {
       });
       sources.push(newSource);
     }
-    // const sources = this.imageView.zarrTileSources;
 
     this.overviewLayer = this.updateRasterSource(null, sources, false);
 
@@ -87,24 +86,34 @@ export class Image {
 
     this.overviewControl = new OverviewMap({
         collapsed: false,
+        collapsible: false,
         layers: [this.overviewLayer],
-        view: new View({
-          extent: [0, 0, this.sizeX, this.sizeY], // 👈 full extent of your data
-          projection: this.projection,
-          center: [this.sizeX / 2, this.sizeY / 2],
-          zoom: 0,
-        }),
       });
 
     map.addControl(this.overviewControl);
-    // const overviewMap = this.overviewControl.getOverviewMap();
-    // const imageExtent = [0, 0, this.sizeX, this.sizeY]; // e.g. [0, 0, 8000, 4000]
 
-    // overviewMap.getView().fit(imageExtent, {
-    //   size: overviewMap.getSize(), // 👈 important!
-    //   constrainResolution: false   // allows smooth zoom
+
+
+    // this.overviewLayer.getSource().once('change', () => {
+    //   if (this.overviewLayer.getSource().getState() === 'ready') {
+    //     console.log('everything is ready');
+    //     this.overviewLayer.changed()
+    //     this.overviewLayer.getSource().changed();
+    //   }
     // });
-    // this.overviewControl.getOverviewMap().updateSize();
+
+    // setTimeout(() => {
+    //   console.log('forcing overview map change');
+      
+    //   this.overviewLayer.changed()
+    //   this.overviewLayer.getSource().changed();
+    // }, 10000);
+
+    // const ovMap = overviewControl.getOverviewMap();
+    // const ovLayer = ovMap.getLayers().item(0); // assuming only one layer
+
+    // ovLayer.changed();                // ✅ re-renders the layer
+    // ovLayer.getSource().changed();
 
   }
 
@@ -160,7 +169,7 @@ export class Image {
     } else {
       this.updateBeforeOperations(rasterSource)
       const rasterLayer = new ImageLayer({
-        source: this.rasterSource,
+        source: rasterSource,
       });
       return rasterLayer;
     }

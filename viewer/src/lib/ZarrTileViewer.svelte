@@ -1,5 +1,4 @@
 <script>
-  // import "../app.css";
   import { onMount } from "svelte";
   import Map from "ol/Map";
   import View from "ol/View";
@@ -7,9 +6,10 @@
   import OverviewMap from 'ol/control/OverviewMap.js';
   import {defaults as defaultControls} from 'ol/control/defaults.js';
 
-  import { initZarr } from "./ZarrHelpers";
-  import { Image } from "./Image";
-  import { FeatureGroupVector, FeatureVector } from "./Vector";
+  import { initZarr } from "./openlayers/ZarrHelpers";
+  import { Image } from "./openlayers/Image";
+  import { FeatureGroupVector, FeatureVector } from "./openlayers/Vector";
+
 
   let reloadImageInfoKey = $state(true);
   let reloadLayerInfoKey = $state(true);

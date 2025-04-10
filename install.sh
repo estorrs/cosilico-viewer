@@ -4,3 +4,6 @@ npx shadcn-svelte@latest init
 npx shadcn-svelte@latest add button // add button for instance
 
 npm install ol
+npm install svelte-awesome-color-picker
+
+npm run build

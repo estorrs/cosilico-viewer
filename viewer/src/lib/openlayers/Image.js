@@ -25,10 +25,11 @@ export class Image {
   constructor(
     node,
     imageId,
-    isBaseImage
+    isBaseImage,
   ) {
     this.node = node;
     this.isBaseImage = isBaseImage;
+    this.isVisible = true;
 
     this.version = node.attrs.version;
     this.name = node.attrs.name;

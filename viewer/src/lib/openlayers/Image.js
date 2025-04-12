@@ -2,7 +2,7 @@ import ImageLayer from 'ol/layer/Image';
 import RasterSource from 'ol/source/Raster';
 import { Projection } from 'ol/proj';
 import OverviewMap from 'ol/control/OverviewMap.js';
-import {defaults as defaultControls} from 'ol/control/defaults.js';
+import { defaults as defaultControls } from 'ol/control/defaults.js';
 import View from "ol/View";
 
 
@@ -34,20 +34,22 @@ export class Image {
     this.version = node.attrs.version;
     this.name = node.attrs.name;
     this.imageId = imageId;
-    this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a), //remember to sort
-      this.ome = this.node.attrs.ome,
-      this.tileSize = this.node.attrs.tile_size,
-      this.sizeY = this.node.attrs.ome.images[0].pixels.size_y,
-      this.sizeX = this.node.attrs.ome.images[0].pixels.size_x,
-      this.sizeC = this.node.attrs.ome.images[0].pixels.size_c,
-      this.sizeT = this.node.attrs.ome.images[0].pixels.size_t,
-      this.sizeZ = this.node.attrs.ome.images[0].pixels.size_z,
-      this.upp = this.node.attrs.upp,
-      this.unit = this.node.attrs.unit,
-      this.overviewLayer = null;
-      this.overviewControl = null;
-      // this.overviewSources = [];
-      this.isLoaded = false;
+    this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
+    this.ome = this.node.attrs.ome;
+    this.tileSize = this.node.attrs.tile_size;
+    this.sizeY = this.node.attrs.ome.images[0].pixels.size_y;
+    this.sizeX = this.node.attrs.ome.images[0].pixels.size_x;
+    this.sizeC = this.node.attrs.ome.images[0].pixels.size_c;
+    this.sizeT = this.node.attrs.ome.images[0].pixels.size_t;
+    this.sizeZ = this.node.attrs.ome.images[0].pixels.size_z;
+    this.upp = this.node.attrs.upp;
+    this.unit = this.node.attrs.unit;
+    this.dtypeMax = 255;
+    this.dtypeMin = 0;
+    this.overviewLayer = null;
+    this.overviewControl = null;
+    // this.overviewSources = [];
+    this.isLoaded = false;
 
     this.loadGenerationCounter = 0;
 
@@ -86,37 +88,12 @@ export class Image {
     }
 
     this.overviewControl = new OverviewMap({
-        collapsed: false,
-        collapsible: false,
-        layers: [this.overviewLayer],
-      });
+      collapsed: false,
+      collapsible: false,
+      layers: [this.overviewLayer],
+    });
 
     map.addControl(this.overviewControl);
-
-
-
-
-
-    // this.overviewLayer.getSource().once('change', () => {
-    //   if (this.overviewLayer.getSource().getState() === 'ready') {
-    //     console.log('everything is ready');
-    //     this.overviewLayer.changed()
-    //     this.overviewLayer.getSource().changed();
-    //   }
-    // });
-
-    // setTimeout(() => {
-    //   console.log('forcing overview map change');
-      
-    //   this.overviewLayer.changed()
-    //   this.overviewLayer.getSource().changed();
-    // }, 10000);
-
-    // const ovMap = overviewControl.getOverviewMap();
-    // const ovLayer = ovMap.getLayers().item(0); // assuming only one layer
-
-    // ovLayer.changed();                // ✅ re-renders the layer
-    // ovLayer.getSource().changed();
 
   }
 
@@ -232,8 +209,8 @@ export class Image {
     for (let i = 0; i < this.channelNames.length; i++) {
       const channelName = this.channelNames[i];
       const channelView = {
-        minValue: 0,
-        maxValue: 255,
+        minValue: this.dtypeMin,
+        maxValue: this.dtypeMax,
         gamma: 1.,
         color: this.channelToColor.get(channelName)
       };

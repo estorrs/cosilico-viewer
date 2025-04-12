@@ -6,20 +6,21 @@
 	import OverviewMap from 'ol/control/OverviewMap.js';
 	import { defaults as defaultControls } from 'ol/control/defaults.js';
 
-  import * as Accordion from "$lib/components/ui/accordion";
-  import * as Card from "$lib/components/ui/card";
-  import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
-  
+	import * as Accordion from '$lib/components/ui/accordion';
+	import * as Card from '$lib/components/ui/card';
+	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
 
 	import { initZarr } from './openlayers/ZarrHelpers';
 	import { Image } from './openlayers/Image';
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
+	import Check from 'lucide-svelte/icons/check';
 
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
 	let map;
 	let experiment = $state(null);
+  let mirrors = $state(null);
 
 	const experimentObj = {
 		id: 'alsdkfj',
@@ -216,6 +217,59 @@
 		});
 	}
 
+	function initializeMirrors() {
+		// channel view info
+		mirrors = new SvelteMap();
+
+		let imageDisplayInfo = $state(new SvelteMap());
+		for (const [imageId, obj] of experiment.images) {
+			let channelToInfo = $state(new SvelteMap());
+			for (const [channelName, view] of obj.image.imageView.channelNameToView) {
+				let info = $state({
+					minValue: view.minValue,
+					maxValue: view.maxValue,
+					gamma: view.gamma,
+					color: view.color
+				});
+				channelToInfo.set(channelName, info);
+			}
+			imageDisplayInfo.set(imageId, channelToInfo);
+		}
+
+    let imageVisibilityInfo = $state(new SvelteMap());
+		for (const [imageId, obj] of experiment.images) {
+      imageVisibilityInfo.set(imageId, obj.image.isVisible);
+    }
+
+
+		mirrors.set('imageDisplayInfo', imageDisplayInfo);
+    mirrors.set('imageVisabilityInfo', imageVisibilityInfo);
+
+	}
+
+	$effect(() => {
+		if (mirrors != null) {
+			const displayInfo = mirrors.get('imageDisplayInfo');
+			for (const [imageId, channelToInfo] of displayInfo) {
+				for (const [channelName, info] of channelToInfo) {
+					let view = experiment.images
+						.get(imageId)
+						.image.imageView.channelNameToView.get(channelName);
+					view.minValue = info.minValue;
+					view.maxValue = info.maxValue;
+					view.gamma = info.gamma;
+					view.color = info.color;
+				}
+			}
+
+      const visibilityInfo = mirrors.get('imageVisabilityInfo');
+			for (const [imageId, isVisible] of visibilityInfo) {
+        let image = experiment.images.get(imageId);
+        image.isVisible = isVisible;
+      }
+		}
+	});
+
 	onMount(async () => {
 		experiment = await Experiment.create(experimentObj);
 
@@ -226,7 +280,6 @@
 		);
 
 		// first channel of first image visible by default
-		// console.log('base image', experiment.baseImage);
 		await experiment.baseImage.addChannel(experiment.baseImage.channelNames[0], map);
 		await experiment.initializeLayerMetadata(map);
 
@@ -242,22 +295,21 @@
 		const l = experiment.layers.get('sldfkjasa');
 		await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
 
+		initializeMirrors();
+
 		reloadImageInfoKey = !reloadImageInfoKey;
 		reloadLayerInfoKey = !reloadLayerInfoKey;
 	});
 
-  async function toggleImage(imageId, image) {
-		if (image.isVisible) {
-      // hide layers logic here
-      ///
-
-			image.isVisible = false;
+	async function toggleImage(image, value) {
+		if (value) {
+			// show layers logic here
+			///
 		} else {
-      // show layers logic here
-      ///
-
-			image.isVisible = true;
+			// hide layers logic here
+			///
 		}
+		image.isVisible = value;
 
 		// reloadImageInfoKey = !reloadImageInfoKey; // forces reload of image elements
 	}
@@ -290,7 +342,7 @@
 			image.updateOverviewMapLayerOperations();
 		}
 
-		reloadImageInfoKey = !reloadImageInfoKey; // forces reload of channel info elements
+		// reloadImageInfoKey = !reloadImageInfoKey; // forces reload of channel info elements
 	}
 
 	function updateMinValue(image, channelName, event) {
@@ -314,111 +366,103 @@
 	}
 </script>
 
-<Accordion.Item value="item-z">
-  <div class="grid grid-cols-[auto_1fr] items-center w-full gap-2">
-      <Checkbox
-          id="terms"
-          aria-labelledby="terms-label"
-      />    
-      <Accordion.Trigger>
-          <span id="terms-label" class="text-left">channel name</span>
-      </Accordion.Trigger>
-  </div>
-  <Accordion.Content>
-      Yes. It adheres to the WAI-ARIA design pattern.
-  </Accordion.Content>
-</Accordion.Item>
-
-<Card.Root>
-  <Card.Header>
-    <Card.Title>Images</Card.Title>
-    <!-- <Card.Description>Card Description</Card.Description> -->
-  </Card.Header>
-  <Card.Content>
-    <Accordion.Root type="single">
-      {#each Array.from(experiment.images.values()) as obj}
-        <Accordion.Item>
-          <div class="grid grid-cols-[auto_1fr] items-center w-full gap-2">
-            <Checkbox id="{obj.image.id}-checkbox" onCheckedChange={obj.image.isVisible}/>    
-            <Accordion.Trigger>{obj.image.name}</Accordion.Trigger>
-          </div>
-          <Accordion.Content>
-            <Accordion.Root>
-              {#each obj.image.channelNames as channelName}
-                <Accordion.Item>
-                  <Accordion.Trigger>{channelName}</Accordion.Trigger>
-                  <Accordion.Content>
-                    Yes. It adheres to the WAI-ARIA design pattern.
-                  </Accordion.Content>
-                </Accordion.Item>
-              {/each}
-            </Accordion.Root>
-          </Accordion.Content>
-        </Accordion.Item>
-      {/each}
-    </Accordion.Root>
-  </Card.Content>
-  <!-- <Card.Footer>
-    <p>Card Footer</p>
-  </Card.Footer> -->
-</Card.Root>
-
-
 <!-- Map Container -->
 <div>
 	<div id="info" class="ol-tooltip hidden"></div>
 	<div id="map"></div>
-	{#if experiment}
+	{#if experiment && mirrors != null}
 		{#key reloadImageInfoKey}
-			<!-- {#each Array.from(experiment.images.values()) as obj} -->
-				<!-- <label>
-					Select Channels ({obj.image.name}):
-					<div>
-						{#if obj.image?.channelNames && obj.image.channelNames.length > 0}
-							{#each obj.image.channelNames ?? [] as channelName}
-								<label>
-									<input
-										type="checkbox"
-										checked={obj.image.imageView.visibleChannelNames.includes(channelName)}
-										onchange={() => toggleChannel(channelName, obj.image)}
-									/>
-									{channelName}
-								</label>
-							{/each}
-						{:else}
-							<p>Loading channels...</p>
-						{/if}
-					</div>
-				</label> -->
-<!-- 
-				<label>
-					Min/Max Adjustment ({obj.image.name}):
-					{#each obj.image.imageView.visibleChannelNames as channelName, j}
-						<div>
-							<label
-								>{channelName} Min:
-								<input
-									type="number"
-									value={obj.image.imageView.channelNameToView.get(channelName).minValue}
-									onchange={(event) => updateMinValue(obj.image, channelName, event)}
-								/>
-							</label>
-							<label
-								>Max:
-								<input
-									type="number"
-									value={obj.image.imageView.channelNameToView.get(channelName).maxValue}
-									onchange={(event) => updateMaxValue(obj.image, channelName, event)}
-								/>
-							</label>
-						</div>
-					{/each}
-				</label> -->
-			<!-- {/each} -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>Images</Card.Title>
+				</Card.Header>
+				<Card.Content>
+					<Accordion.Root type="single">
+						{#each Array.from(experiment.images.values()) as obj}
+							<Accordion.Item>
+								<!-- <div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+                  {console.log('mirror is', mirrors)}
+                  {console.log('value is', mirrors.get('imageVisabilityInfo').get(obj.image.imageId))}
+									<Checkbox
+										checked={mirrors.get('imageVisabilityInfo').get(obj.image.imageId)}
+										id="{obj.image.imageId}-checkbox"
+										onCheckedChange={(v) => toggleImage(obj.image, v)}
+									/> -->
+                <Accordion.Trigger>
+                  <span id="{obj.image.name}-text" class="text-left">{obj.image.name}</span>
+                </Accordion.Trigger>
+								<!-- </div> -->
+								<Accordion.Content>
+                  <p>hello</p>
+									<!-- <Accordion.Root>
+										{#each obj.image.channelNames as channelName}
+                    {console.log('putting in channel card', channelName)}
+											<Accordion.Item value="{obj.image.imageId}-{channelName}">
+												<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+													<Checkbox
+														bind:checked={
+															() => obj.image.imageView.visibleChannelNames.includes(channelName),
+															(v) => toggleChannel(channelName, obj.image)
+														}
+														id="{obj.image.imageId}-{channelName}-checkbox"
+													/>
+													<Accordion.Trigger>
+														<span id="{obj.image.imageId}-{channelName}-text" class="text-left">{channelName}</span>
+													</Accordion.Trigger>
+												</div>
+												<Accordion.Content>
+													<Card.Root>
+														<Card.Header>
+															<Card.Title>Intensity Threshold</Card.Title>
+														</Card.Header>
+														<Card.Content>
+															<div class="flex w-full items-center gap-2">
+																<Input
+																	type="number"
+																	value={mirrors
+																		.get('imageDisplayInfo')
+																		.get(imageId)
+																		.get(channelName).minValue}
+																	on:change={(e) => updateMinValue(image, channelName, e)}
+																	class="w-[70px] text-left"
+																/>
+																<Slider
+																	value={[
+																		mirrors.get('imageDisplayInfo').get(imageId).get(channelName)
+																			.minValue,
+																		mirrors.get('imageDisplayInfo').get(imageId).get(channelName)
+																			.maxValue
+																	]}
+																	min={obj.image.dtypeMin}
+																	max={obj.image.dtypeMax}
+																	step={1}
+																	class="flex-1"
+																/>
+																<Input
+																	type="number"
+																	value={mirrors
+																		.get('imageDisplayInfo')
+																		.get(imageId)
+																		.get(channelName).maxValue}
+																	on:change={(e) => updateMaxValue(image, channelName, e)}
+																	class="w-[70px] text-left"
+																/>
+															</div>
+														</Card.Content>
+													</Card.Root>
+												</Accordion.Content>
+											</Accordion.Item>
+										{/each}
+									</Accordion.Root> -->
+								</Accordion.Content>
+							</Accordion.Item>
+						{/each}
+					</Accordion.Root>
+				</Card.Content>
+			</Card.Root>
 		{/key}
 
-		<!-- Select Features for cells -->
-		{#key reloadLayerInfoKey}
+		<!-- {#key reloadLayerInfoKey}
 			{#each Array.from(experiment.layers.values()) as obj}
 				{#if !obj.isGrouped}
 					<label>
@@ -463,7 +507,7 @@
 					</label>
 				{/if}
 			{/each}
-		{/key}
+		{/key}  -->
 	{/if}
 </div>
 

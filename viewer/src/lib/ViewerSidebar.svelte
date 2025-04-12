@@ -29,10 +29,21 @@
 		checked = value;
 	}
 </script>
-<Card.Root>
+
+<Accordion.Root>
+	<Accordion.Item value="item-1">
+		<Accordion.Trigger>{'hello'}</Accordion.Trigger>
+		<Accordion.Content>{'world'}</Accordion.Content>
+	</Accordion.Item>
+    <Accordion.Item value="item-2">
+		<Accordion.Trigger>{'hello2'}</Accordion.Trigger>
+		<Accordion.Content>{'world2'}</Accordion.Content>
+	</Accordion.Item>
+</Accordion.Root>
+
+<!-- <Card.Root>
     <Card.Header>
         <Card.Title>Images</Card.Title>
-        <!-- <Card.Description>Card Description</Card.Description> -->
     </Card.Header>
     <Card.Content>
         <Accordion.Root>
@@ -77,4 +88,4 @@
         </Accordion.Root>
 
     </Card.Content>
-</Card.Root>
+</Card.Root> -->

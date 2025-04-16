@@ -193,6 +193,12 @@ export class Image {
 
   }
 
+  setChannelColor(channelName, color) {
+    let view = this.imageView.channelNameToView.get(channelName);
+    view.color = color;
+    this.channelToColor.set(channelName, color);
+  }
+
   populateInitialFields() {
     this.channelToColor = generateColorMapping(defaultPalettes.imagePallete, this.channelNames); // this will eventually be populated by pulled info
 

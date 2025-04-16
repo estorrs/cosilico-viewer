@@ -10,12 +10,15 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
-	import { Input } from "$lib/components/ui/input";
-    import { Slider } from "$lib/components/ui/slider";
+	import { Input } from '$lib/components/ui/input';
+	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
+	import { Slider } from '$lib/components/ui/slider';
+	import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
 
 	import { initZarr } from './openlayers/ZarrHelpers';
 	import { Image } from './openlayers/Image';
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
+
 	import Check from 'lucide-svelte/icons/check';
 
 	let reloadImageInfoKey = $state(true);
@@ -248,12 +251,23 @@
 			imageDisplayInfo.set(imageId, channelToInfo);
 		}
 
+		let imageSwatches = $state(new SvelteMap());
+		for (const [imageId, obj] of experiment.images) {
+			let channelSwatches = $state([]);
+			for (const [channelName, view] of obj.image.imageView.channelNameToView) {
+				channelSwatches.push(view.color);
+			}
+			imageSwatches.set(imageId, channelSwatches);
+		}
+
+
 		let imageVisibilityInfo = $state(new SvelteMap());
 		for (const [imageId, obj] of experiment.images) {
 			imageVisibilityInfo.set(imageId, obj.image.isVisible);
 		}
 
 		mirrors.set('imageDisplayInfo', imageDisplayInfo);
+		mirrors.set('imageSwatches', imageSwatches);
 		mirrors.set('imageVisabilityInfo', imageVisibilityInfo);
 	}
 
@@ -346,6 +360,11 @@
 	}
 
 	async function toggleChannel(channelName, image) {
+		console.log(
+			channelName,
+			'toggle channel triggered, the current image view is',
+			image.imageView
+		);
 		if (image.imageView.visibleChannelNames.includes(channelName)) {
 			console.log('removing', channelName);
 			await image.removeChannel(channelName, map);
@@ -359,7 +378,18 @@
 			image.updateOverviewMapLayerOperations();
 		}
 
-		// reloadImageInfoKey = !reloadImageInfoKey; // forces reload of channel info elements
+	}
+
+	function changeChannelColor(channelName, image, value) {
+		console.log('setting channel color', channelName, value);
+		image.setChannelColor(channelName, value);
+		mirrors.get('imageDisplayInfo').get(image.imageId).get(channelName).color = value;
+
+		image.updateBeforeOperations();
+		if (image.isBaseImage) {
+			image.updateOverviewMapLayerOperations();
+		}
+
 	}
 
 	function getMinThresholdValue(image, channelName) {
@@ -406,9 +436,9 @@
 		const minValue = info.minValue;
 		const maxValue = info.maxValue;
 		return [minValue, maxValue];
-    }
+	}
 
-    function setThresholdValues(image, channelName, values) {
+	function setThresholdValues(image, channelName, values) {
 		let info = mirrors.get('imageDisplayInfo').get(image.imageId).get(channelName);
 		info.minValue = values[0];
 		info.maxValue = values[1];
@@ -421,106 +451,125 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
-
-    }
-
-
+	}
 </script>
 
 <div>
 	<div id="info" class="ol-tooltip hidden"></div>
 	<div id="map"></div>
-	{#if experiment && mirrors != null}
-		{#key reloadImageInfoKey}
-			<Card.Root>
-				<Card.Header>
-					<Card.Title>Images</Card.Title>
-				</Card.Header>
-				<Card.Content>
-					<Accordion.Root type="single">
-						{#each Array.from(experiment.images.values()) as obj}
-							<Accordion.Item value="{obj.image.imageId}-item">
-								<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
-									<Checkbox
-										checked={mirrors.get('imageVisabilityInfo').get(obj.image.imageId)}
-										id="{obj.image.imageId}-visibility-checkbox"
-										onCheckedChange={(v) => toggleImage(obj.image, v)}
-									/>
-									<Accordion.Trigger>
-										<span id="{obj.image.name}-trigger-text" class="text-left">{obj.image.name}</span>
-									</Accordion.Trigger>
-								</div>
-								<Accordion.Content>
-									<Accordion.Root>
-										{#each obj.image.channelNames as channelName}
-											<Accordion.Item value="{obj.image.imageId}-{channelName}-item">
-												<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
-													<Checkbox
-														bind:checked={
-															() => obj.image.imageView.visibleChannelNames.includes(channelName),
-															(v) => toggleChannel(channelName, obj.image)
-														}
-														id="{obj.image.imageId}-{channelName}-checkbox"
-													/>
-													<Accordion.Trigger>
-														<span id="{obj.image.imageId}-{channelName}-text" class="text-left"
-															>{channelName}</span
-														>
-													</Accordion.Trigger>
-												</div>
-												<Accordion.Content>
-													<Card.Root>
-														<Card.Header>
-															<Card.Title>Intensity Threshold</Card.Title>
-														</Card.Header>
-														<Card.Content>
-															<div class="flex w-full items-center gap-2">
-																<Input
-																	type="number"
-																	bind:value={
-																		() => getMinThresholdValue(obj.image, channelName),
-																		(v) => null
-																	}
-																	on:change={(e) => setMinThresholdValue(obj.image, channelName, e.target.value)}
-																	class="w-[70px] text-left"
+	<div class="absolute right-4 top-4 z-50 w-96">
+		{#if experiment && mirrors != null}
+			{#key reloadImageInfoKey}
+				<ScrollArea orientation="both">
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>Images</Card.Title>
+						</Card.Header>
+						<Card.Content>
+							<Accordion.Root type="single">
+								{#each Array.from(experiment.images.values()) as obj}
+									<Accordion.Item value="{obj.image.imageId}-item">
+										<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+											<Checkbox
+												checked={mirrors.get('imageVisabilityInfo').get(obj.image.imageId)}
+												id="{obj.image.imageId}-visibility-checkbox"
+												onCheckedChange={(v) => toggleImage(obj.image, v)}
+											/>
+											<Accordion.Trigger>
+												<span id="{obj.image.name}-trigger-text" class="text-left"
+													>{obj.image.name}</span
+												>
+											</Accordion.Trigger>
+										</div>
+										<Accordion.Content class="ml-3">
+											<Accordion.Root>
+												{#each obj.image.channelNames as channelName}
+													<Accordion.Item value="{obj.image.imageId}-{channelName}-item">
+														<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+															<div class="flex items-center gap-2">
+																<Checkbox
+																	checked={obj.image.imageView.visibleChannelNames.includes(
+																		channelName
+																	)}
+																	onCheckedChange={(v) => toggleChannel(channelName, obj.image)}
 																/>
-																<Slider
-																	bind:value={
-																		() => getThresholdValues(obj.image, channelName),
-																		(vs) => setThresholdValues(obj.image, channelName, vs)
-																	}
-																	min={obj.image.dtypeMin}
-																	max={obj.image.dtypeMax}
-																	step={1}
-																	class="flex-1"
-																/>
-																<Input
-																	type="number"
-																	bind:value={
-																		() => getMaxThresholdValue(obj.image, channelName),
-																		(v) => null
-																	}
-																	on:change={(e) => setMaxThresholdValue(obj.image, channelName, e.target.value)}
-																	class="w-[70px] text-left"
-																/>
+																<SwatchSelector
+																	hex={mirrors.get('imageDisplayInfo').get(obj.image.imageId).get(channelName).color}
+																	swatchHexs={mirrors.get('imageSwatches').get(obj.image.imageId)}
+																	onColorSelection={(value) => changeChannelColor(channelName, obj.image, value)} />
 															</div>
-														</Card.Content>
-													</Card.Root>
-												</Accordion.Content>
-											</Accordion.Item>
-										{/each}
-									</Accordion.Root>
-								</Accordion.Content>
-							</Accordion.Item>
-						{/each}
-					</Accordion.Root>
-				</Card.Content>
-			</Card.Root>
-		{/key}
-	{/if}
+															<Accordion.Trigger>
+																<span id="{obj.image.imageId}-{channelName}-text" class="text-left"
+																	>{channelName}</span
+																>
+															</Accordion.Trigger>
+														</div>
+														<Accordion.Content class="ml-3">
+															<Card.Root class="p-1">
+																<Card.Header class="p-1">
+																	<Card.Title class="text-sm">Intensity Threshold</Card.Title>
+																	<!-- <Card.Description>Intensity Threshold</Card.Description> -->
+																</Card.Header>
+																<Card.Content class="p-1 pt-0">
+																	<div class="flex w-full items-center gap-3">
+																		<Input
+																			type="number"
+																			bind:value={
+																				() => getMinThresholdValue(obj.image, channelName),
+																				(v) => null
+																			}
+																			on:change={(e) =>
+																				setMinThresholdValue(
+																					obj.image,
+																					channelName,
+																					e.target.value
+																				)}
+																			class="w-[70px] px-1 text-left"
+																		/>
+																		<Slider
+																			bind:value={
+																				() => getThresholdValues(obj.image, channelName),
+																				(vs) => setThresholdValues(obj.image, channelName, vs)
+																			}
+																			min={obj.image.dtypeMin}
+																			max={obj.image.dtypeMax}
+																			step={1}
+																			class="flex-1"
+																		/>
+																		<Input
+																			type="number"
+																			bind:value={
+																				() => getMaxThresholdValue(obj.image, channelName),
+																				(v) => null
+																			}
+																			on:change={(e) =>
+																				setMaxThresholdValue(
+																					obj.image,
+																					channelName,
+																					e.target.value
+																				)}
+																			class="w-[70px] py-1 text-left"
+																		/>
+																	</div>
+																</Card.Content>
+															</Card.Root>
+														</Accordion.Content>
+													</Accordion.Item>
+												{/each}
+											</Accordion.Root>
+										</Accordion.Content>
+									</Accordion.Item>
+								{/each}
+							</Accordion.Root>
+						</Card.Content>
+					</Card.Root>
+				</ScrollArea>
+			{/key}
+		{/if}
+	</div>
 </div>
-<!-- on:change={(e) => updateMaxValue(obj.image, channelName, e)} -->
 
+<!-- on:change={(e) => updateMaxValue(obj.image, channelName, e)} -->
 
 <!-- {#key reloadLayerInfoKey}
 			{#each Array.from(experiment.layers.values()) as obj}
@@ -581,7 +630,7 @@
 		display: inline-block;
 		height: auto;
 		width: auto;
-		z-index: 100;
+		z-index: 10;
 		background-color: #333;
 		color: #fff;
 		text-align: center;

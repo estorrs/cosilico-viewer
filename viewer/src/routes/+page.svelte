@@ -2,6 +2,7 @@
     import { Button } from "$lib/components/ui/button";
     import ZarrTileViewer from "$lib/ZarrTileViewer.svelte";
     import ViewerSidebar from "$lib/ViewerSidebar.svelte";
+    import PointViewOptions from "$lib/sidebar/PointViewOptions.svelte";
    </script>
 
 <h1>Welcome to SvelteKit</h1>
@@ -9,6 +10,7 @@
 
 <!-- <ViewerSidebar /> -->
 
-<!-- <Button>Click me</Button> -->
+<PointViewOptions />
 
-<ZarrTileViewer />
+
+<!-- <ZarrTileViewer /> -->

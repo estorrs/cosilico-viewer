@@ -221,6 +221,7 @@ export class FeatureGroupVector {
         //create view
         this.vectorView = {
             featureNameToView: new globalThis.Map(),
+            scale: 1.0,
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
             visibleFeatureNames: [],
@@ -380,11 +381,6 @@ export class FeatureVector {
                     const fillColor = valueToColor(
                         v.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
                     );
-                    // const fillColor = valueToColor(
-                    //     v.palette, value, 0, 5, null
-                    // );
-
-                    
 
                     if (props.isPoint) {
                         const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, fillColor);
@@ -422,6 +418,7 @@ export class FeatureVector {
             featureView: contFeatureView,
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
+            scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
             vMin: null,
@@ -437,6 +434,7 @@ export class FeatureVector {
             fieldToView: new globalThis.Map(),
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
+            scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
         };

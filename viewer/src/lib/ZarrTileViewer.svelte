@@ -14,6 +14,7 @@
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import { Slider } from '$lib/components/ui/slider';
 	import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
+	import PointViewOptions from './sidebar/PointViewOptions.svelte';
 
 	import { initZarr } from './openlayers/ZarrHelpers';
 	import { Image } from './openlayers/Image';
@@ -453,6 +454,14 @@
 		}
 	}
 </script>
+
+<!-- let view = $state({
+	viewAs: 'point',
+	fillOpacity: 1.0,
+	strokeOpacity: 1.0,
+	strokeWidth: 1.0,
+	scale: 1.0
+}); -->
 
 <div>
 	<div id="info" class="ol-tooltip hidden"></div>

@@ -3,6 +3,7 @@
     import ZarrTileViewer from "$lib/ZarrTileViewer.svelte";
     import ViewerSidebar from "$lib/ViewerSidebar.svelte";
     import PointViewOptions from "$lib/sidebar/PointViewOptions.svelte";
+    import CategoricalOptions from "$lib/sidebar/CategoricalOptions.svelte";
    </script>
 
 <h1>Welcome to SvelteKit</h1>
@@ -10,7 +11,9 @@
 
 <!-- <ViewerSidebar /> -->
 
-<PointViewOptions />
+<CategoricalOptions />
+
+<!-- <PointViewOptions /> -->
 
 
 <!-- <ZarrTileViewer /> -->

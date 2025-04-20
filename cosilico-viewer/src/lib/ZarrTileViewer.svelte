@@ -520,20 +520,6 @@
 																</Card.Header>
 																<Card.Content class="p-1 pt-0">
 																	<div class="flex w-full items-center gap-3">
-																		<!-- <Input
-																			type="number"
-																			bind:value={
-																				() => getMinThresholdValue(obj.image, channelName),
-																				(v) => null
-																			}
-																			onchange={(e) =>
-																				setMinThresholdValue(
-																					obj.image,
-																					channelName,
-																					e.target.value
-																				)}
-																			class="w-[70px] px-1 text-left"
-																		/> -->
 																		<Input
 																			type="number"
 																			value={mirrors.get('imageDisplayInfo').get(obj.image.imageId).get(channelName).minValue}

@@ -1,4 +1,6 @@
 <script lang='ts'>
+	// @ts-nocheck
+
 	import * as Accordion from '$lib/components/ui/accordion';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card';
@@ -14,7 +16,7 @@
 	import Regex from '@lucide/svelte/icons/regex';
 
 	let {
-        // view,
+        view,
 		onPointScaleChange = (e) => null,
 		onFillOpacityChange = (e) => null,
         onStrokeOpacityChange = (e) => null,
@@ -25,13 +27,13 @@
         maxStrokeWisth = 4,
 	} = $props();
 
-	let view = $state({
-		viewAs: 'point',
-		scale: 1.0,
-		fillOpacity: 1.0,
-		strokeOpacity: 1.0,
-		strokeWidth: 1.0
-	})
+	// let view = $state({
+	// 	viewAs: 'point',
+	// 	scale: 1.0,
+	// 	fillOpacity: 1.0,
+	// 	strokeOpacity: 1.0,
+	// 	strokeWidth: 1.0
+	// })
 
 	function scaleSliderGetValue() {
 		return [view.scale];

@@ -13,61 +13,14 @@
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import { cn } from '$lib/utils.js';
 
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
 	import SwatchSelector from '$lib/components/ui/swatch-selector/SwatchSelector.svelte';
-	import PaletteSelector from './PaletteSelector.svelte';
 
 	let {
 		// fields
 		displayNFields = 5,
-		areCategorical = true,
-		onColorChange = (fieldName, color) => null,
-		onShapeChange = (fieldName, shape) => null,
 		onPaletteChange = (fieldName, palette) => null,
 		onVisibilityChange = (fieldName, isVisible) => null
 	} = $props();
-
-	areCategorical = false;
-
-	// categorical
-	// let fields = $state([
-	// 	{
-	// 		name: 'Gene A',
-	// 		hex: '#ff0000',
-	// 		shape: 'circle',
-	// 		isVisible: false
-	// 	},
-	// 	{
-	// 		name: 'Bene B',
-	// 		hex: '#00ff00',
-	// 		shape: 'circle',
-	// 		isVisible: false
-	// 	},
-	// 	{
-	// 		name: 'Bene C',
-	// 		hex: '#00ff00',
-	// 		shape: 'circle',
-	// 		isVisible: false
-	// 	},
-	// 	{
-	// 		name: 'Bene D',
-	// 		hex: '#00ff00',
-	// 		shape: 'circle',
-	// 		isVisible: false
-	// 	},
-	// 	{
-	// 		name: 'Bene ZZZ',
-	// 		hex: '#000000',
-	// 		shape: 'circle',
-	// 		isVisible: false
-	// 	},
-	// 	{
-	// 		name: 'Bene Y',
-	// 		hex: '#0000ff',
-	// 		shape: 'circle',
-	// 		isVisible: false
-	// 	}
-	// ]);
 
 	let fields = $state([
 		{
@@ -80,41 +33,32 @@
 			palette: 'viridis',
 			isVisible: false
 		},
-		{
+        {
 			name: 'score C',
 			palette: 'viridis',
 			isVisible: false
 		},
-		{
+        {
 			name: 'score D',
 			palette: 'viridis',
 			isVisible: false
 		},
-		{
+        {
 			name: 'score E',
 			palette: 'viridis',
 			isVisible: false
 		},
-		{
+        {
 			name: 'score F',
 			palette: 'viridis',
 			isVisible: false
 		},
-		{
+        {
 			name: 'score G',
 			palette: 'viridis',
 			isVisible: false
-		}
+		},
 	]);
-
-	let swatchHexs = $state([]);
-	if (areCategorical) {
-		for (const field of fields) {
-			if (!swatchHexs.includes(field.hex)) {
-				swatchHexs.push(field.hex);
-			}
-		}
-	}
 
 	let selectedFields = $state([]);
 	if (fields.length < displayNFields) {
@@ -144,33 +88,19 @@
 		onVisibilityChange(field.name, field.isVisible);
 	}
 
-	function onFieldDeselection(field) {
-		if (field.isVisible) {
-			field.isVisible = false;
-			onVisibilityChange(field.name, field.isVisible);
-		}
-		selectedFields = selectedFields.filter((item) => item.name !== field.name);
-    console.log('selected fields are', $state.snapshot(selectedFields));
-
-	}
-
-	function onFieldColorSelection(field, hex) {
-		field.hex = hex;
-		onColorChange(field.name, hex);
-	}
-
-	function onFieldSymbolSelection(field, symbol) {
-		field.shape = symbol;
-		onShapeChange(field.name, symbol);
-	}
+  function onFieldDeselection(field) {
+    if (field.isVisible) {
+      field.isVisible = false;
+      onVisibilityChange(field.name, field.isVisible);
+    }
+    selectedFields = selectedFields.filter(item => item.name !== field.name);
+  }
 
 	function onFieldPaletteSelection(field, palette) {
 		field.palette = palette;
 		onPaletteChange(field.name, palette);
-
-		console.log('fields now are', $state.snapshot(fields));
-    console.log('selected fields now are', $state.snapshot(selectedFields));
 	}
+
 </script>
 
 {#if fields.length >= displayNFields}
@@ -198,6 +128,7 @@
 						{#each fields as field (field.name)}
 							{#if !field.isVisible}
 								<Command.Item value={field.name} onSelect={() => onFieldSelection(field)}>
+									<!-- <Check class={cn(name !== field.name && 'text-transparent')} /> -->
 									{field.name}
 								</Command.Item>
 							{/if}
@@ -218,35 +149,21 @@
 				<div class="flex items-center gap-2 pt-1 w-full">
 					<div class="flex items-center gap-2 pt-1">
 						<Checkbox
-							title="Field visibility"
+              title='Field visibility'
 							checked={field.isVisible}
 							onCheckedChange={(v) => onVisibilityChange(field.name, v)}
 						/>
-						{#if areCategorical}
-							<SwatchSelector
-								title="Select field color and symbol"
-								hex={field.hex}
-								{swatchHexs}
-								includeSymbols={true}
-								onColorSelection={(value) => onFieldColorSelection(field, value)}
-								onSymbolSelection={(value) => onFieldSymbolSelection(field, value)}
-							/>
-						{/if}
-						{#if !areCategorical}
-							<PaletteSelector
-								defaultPalette={field.palette}
-								palettes={continousPalettes}
-								onPaletteSelection={(v) => onFieldPaletteSelection(field, v)}
-							/>
-						{/if}
+						<SwatchSelector
+              title="Select field color and symbol"
+							hex={field.hex}
+							{swatchHexs}
+							includeSymbols={true}
+							onColorSelection={(value) => onFieldColorSelection(field, value)}
+							onSymbolSelection={(value) => onFieldSymbolSelection(field, value)}
+						/>
 						<p>{field.name}</p>
 					</div>
-					<Button
-						title="Remove field"
-						class="h-8 w-8 ml-auto"
-						variant="outline"
-						onclick={() => onFieldDeselection(field)}
-					>
+					<Button title='Remove field' class="h-8 w-8 ml-auto" variant="outline" onclick={() => onFieldDeselection(field)}>
 						<Trash2 />
 					</Button>
 				</div>

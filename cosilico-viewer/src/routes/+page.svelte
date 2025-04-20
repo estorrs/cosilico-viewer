@@ -4,6 +4,7 @@
     import ViewerSidebar from "$lib/ViewerSidebar.svelte";
     import PointViewOptions from "$lib/sidebar/PointViewOptions.svelte";
     import CategoricalOptions from "$lib/sidebar/CategoricalOptions.svelte";
+    import PaletteSelector from "$lib/sidebar/PaletteSelector.svelte";
    </script>
 
 <h1>Welcome to SvelteKit</h1>
@@ -11,9 +12,11 @@
 
 <!-- <ViewerSidebar /> -->
 
-<!-- <CategoricalOptions /> -->
+<CategoricalOptions />
 
-<PointViewOptions />
+<!-- <PaletteSelector /> -->
+
+<!-- <PointViewOptions /> -->
 
 
 <!-- <ZarrTileViewer /> -->

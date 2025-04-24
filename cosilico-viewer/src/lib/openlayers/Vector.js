@@ -21,6 +21,7 @@ export class FeatureGroupVector {
         baseImage,
     ) {
         this.node = node;
+        this.isVisible = false;
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
@@ -257,6 +258,7 @@ export class FeatureVector {
         baseImage,
     ) {
         this.node = node;
+        this.isVisible = false;
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
@@ -381,7 +383,7 @@ export class FeatureVector {
                     }
 
                     const fillColor = valueToColor(
-                        v.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
+                        vInfo.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
                     );
 
                     if (props.isPoint) {
@@ -423,10 +425,6 @@ export class FeatureVector {
             scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
-            vMin: null,
-            vMax: null,
-            vCenter: null,
-            palette: defaultPalettes.continousPalette,
         }
     }
 
@@ -497,7 +495,11 @@ export class FeatureVector {
                         {
                             vMin: vmins[i],
                             vMax: vmaxs[i],
+                            absoluteVMin: vmins[i],
+                            absoluteVMax: vmaxs[i],
                             vCenter: vCenter,
+                            vStepSize: .1,
+                            palette: defaultPalettes.continousPalette,
                         }
                     );
                 }
@@ -607,6 +609,11 @@ export class FeatureVector {
         this.vectorView.visibleFeatureIndices.splice(fieldIndex, 1);
         this.vectorView.visibleFields.splice(fieldIndex, 1);
 
+        this.layer.getSource().changed();
+    }
+
+    setFeatureFillColor(featureName, hex) {
+        this.vectorView.featureNameToView.get(featureName).fillColor = hex;
         this.layer.getSource().changed();
     }
 }

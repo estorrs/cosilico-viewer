@@ -17,7 +17,7 @@
 	import { Slider } from '$lib/components/ui/slider';
 	import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
 	import PointViewOptions from './sidebar/PointViewOptions.svelte';
-
+	import LayerOptions from './sidebar/LayerOptions.svelte';
 	import { initZarr } from './openlayers/ZarrHelpers';
 	import { Image } from './openlayers/Image';
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
@@ -105,15 +105,6 @@
 	};
 
 	class Experiment {
-		// imagesLoaded: boolean;
-		// layersLoaded: boolean;
-		// baseImage: null;
-		// experimentObj: any;
-		// imageOrder: any[];
-		// layerOrder: any[];
-		// layerToIsGrouped: globalThis.Map<any, any>;
-		// images: globalThis.Map<any, any>;
-		// layers: globalThis.Map<any, any>;
 		constructor(experimentObj) {
 			this.imagesLoaded = false;
 			this.layersLoaded = false;
@@ -151,6 +142,7 @@
 			this.baseImage = this.images.get(this.imageOrder[0]).image;
 			// @ts-ignore
 			this.baseImage.isBaseImage = true;
+			this.baseImage.isVisible = true;
 
 			this.imagesLoaded = true;
 		}
@@ -254,6 +246,7 @@
 			imageDisplayInfo.set(imageId, channelToInfo);
 		}
 
+
 		let imageSwatches = $state(new SvelteMap());
 		for (const [imageId, obj] of experiment.images) {
 			let channelSwatches = $state([]);
@@ -269,38 +262,19 @@
 			imageVisibilityInfo.set(imageId, obj.image.isVisible);
 		}
 
+
+		let layerVisabilityInfo = $state(new SvelteMap());
+		for (const [vectorId, obj] of experiment.layers) {
+			layerVisabilityInfo.set(vectorId, obj.vector.isVisible);
+		}
+
+
 		mirrors.set('imageDisplayInfo', imageDisplayInfo);
 		mirrors.set('imageSwatches', imageSwatches);
 		mirrors.set('imageVisabilityInfo', imageVisibilityInfo);
+		mirrors.set('layerVisabilityInfo', layerVisabilityInfo);
 	}
 
-	// $effect(() => {
-	// 	console.log('effect triggered, mirrors is', mirrors);
-	// 	if (mirrors != null) {
-	// 		const displayInfo = mirrors.get('imageDisplayInfo');
-	// 		for (const [imageId, channelToInfo] of displayInfo) {
-	// 			for (const [channelName, info] of channelToInfo) {
-	// 				// 👇 touch each field to make it reactive
-	// 				let view = experiment.images
-	// 					.get(imageId)
-	// 					.image.imageView.channelNameToView.get(channelName);
-	// 				view.minValue = info.minValue;
-	// 				view.maxValue = info.maxValue;
-	// 				view.gamma = info.gamma;
-	// 				view.color = info.color;
-
-	// 				info.maxValue = info.maxValue;
-	// 			}
-	// 		}
-
-	// 		const visibilityInfo = mirrors.get('imageVisabilityInfo');
-	// 		for (const [imageId, isVisible] of visibilityInfo) {
-	// 			let image = experiment.images.get(imageId);
-	// 			image.isVisible = isVisible;
-	// 		}
-	// 	}
-	// 	console.log('experiment post update', experiment);
-	// });
 
 	onMount(async () => {
 		experiment = await Experiment.create(experimentObj);
@@ -323,9 +297,9 @@
 
 		// const key = 'Kmeans N=10';
 		// const key = 'PCAs';
-		const key = 'Transcript Counts';
-		const l = experiment.layers.get('sldfkjasa');
-		await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
+		// const key = 'Transcript Counts';
+		// const l = experiment.layers.get('sldfkjasa');
+		// await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
 
 		initializeMirrors();
 
@@ -335,31 +309,43 @@
 
 	async function toggleImage(image, value) {
 		if (value) {
+			// show image logic here
+			///
+		} else {
+			// hide image logic here
+			///
+		}
+		image.isVisible = value;
+
+	}
+
+	async function toggleLayer(vector, value) {
+		if (value) {
 			// show layers logic here
 			///
 		} else {
 			// hide layers logic here
 			///
 		}
-		image.isVisible = value;
+		vector.isVisible = value;
 
-		// reloadImageInfoKey = !reloadImageInfoKey; // forces reload of image elements
 	}
 
-	function toggleFeature(featureName, vector) {
+	function toggleFeature(featureName, vector, isVisible) {
 		let visible;
 		if (vector instanceof FeatureVector) {
 			visible = vector.vectorView.visibleFields;
 		} else {
 			visible = vector.vectorView.visibleFeatureNames;
 		}
+
 		if (visible.includes(featureName)) {
 			vector.removeFeature(featureName, map);
 		} else {
 			vector.addFeature(featureName, map);
 		}
 
-		reloadLayerInfoKey = !reloadLayerInfoKey;
+		// reloadLayerInfoKey = !reloadLayerInfoKey;
 	}
 
 	async function toggleChannel(channelName, image) {
@@ -452,15 +438,14 @@
 			image.updateOverviewMapLayerOperations();
 		}
 	}
+
+	function onLayerFieldColorChange(layer, fieldName, hex) {
+		layer.vector.setFeatureFillColor(hex);
+	}
+
+
 </script>
 
-<!-- let view = $state({
-	viewAs: 'point',
-	fillOpacity: 1.0,
-	strokeOpacity: 1.0,
-	strokeWidth: 1.0,
-	scale: 1.0
-}); -->
 
 <div>
 	<div id="info" class="ol-tooltip hidden"></div>
@@ -561,6 +546,51 @@
 													</Accordion.Item>
 												{/each}
 											</Accordion.Root>
+										</Accordion.Content>
+									</Accordion.Item>
+								{/each}
+							</Accordion.Root>
+						</Card.Content>
+					</Card.Root>
+					<Card.Root>
+						<Card.Header>
+							<Card.Title>Layers</Card.Title>
+						</Card.Header>
+						<Card.Content>
+							<Accordion.Root type="single">
+								{#each Array.from(experiment.layers.values()) as obj}
+									<Accordion.Item value="{obj.vector.vectorId}-item">
+										<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+											<Checkbox
+												checked={mirrors.get('layerVisabilityInfo').get(obj.vector.vectorId)}
+												id="{obj.vector.vectorId}-visibility-checkbox"
+												onCheckedChange={(v) => toggleLayer(obj.vector, v)}
+											/>
+											<Accordion.Trigger>
+												<span id="{obj.vector.name}-trigger-text" class="text-left"
+													>{obj.vector.name}</span
+												>
+											</Accordion.Trigger>
+										</div>
+										<Accordion.Content class="ml-3">
+											<Card.Root>
+												<Card.Header>
+													<Card.Title>Active metadata</Card.Title>
+												</Card.Header>
+												<Card.Content>
+														<LayerOptions
+															layer={obj}
+															onMetadataChange={(layer, metadataName) => onLayerMetadataChange(layer, metadataName)}
+															onFieldColorChange={(layer, fieldName, color) => null}
+															onFieldShapeChange={(layer, fieldName, shape) => null}
+															onFieldPaletteChange={(layer, fieldName, palette) => null}
+															onFieldVisibilityChange={(layer, fieldName, isVisible) => toggleFeature(fieldName, layer.vector, isVisible)}
+															onFieldVMinChange={(layer, fieldName, vMin) => null}
+															onFieldVMaxChange={(layer, fieldName, vMax) => null}
+															onFieldVCenterChange={(layer, fieldName, vMax) => null}
+															/>
+												</Card.Content>
+											</Card.Root>
 										</Accordion.Content>
 									</Accordion.Item>
 								{/each}

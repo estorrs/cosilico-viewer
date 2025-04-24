@@ -11,9 +11,6 @@
 
 	let { defaultPalette, palettes, onPaletteSelection = (palette) => null } = $props();
 
-	// let defaultPalette = 'viridis';
-	// let palettes = continousPalettes;
-
 	const entries = Object.entries(palettes).map(([name, hexs]) => ({
 		name,
 		hexs
@@ -58,7 +55,8 @@
 				{...props}
 				role="combobox"
 				aria-expanded={open}
-			>
+			    >
+                {console.log('rendering palette button with', value)}
 				{@render paletteView(value, palettes[value])}
 				<!-- {selectedValue || 'Select a palette...'} -->
 
@@ -72,7 +70,7 @@
 			<Command.List>
 				<Command.Empty>No palette found.</Command.Empty>
 				<Command.Group>
-					{#each entries as obj}
+					{#each entries as obj (obj.name)}
 						<Command.Item value={obj.name} onSelect={() => onSelection(obj)}>
 							<Check class={cn(value !== obj.name && 'text-transparent')} />
 							{@render paletteView(obj.name, obj.hexs)}

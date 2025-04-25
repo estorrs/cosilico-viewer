@@ -12,14 +12,14 @@
 
 	let {
 		layer,
-		onMetadataChange = (layer, metadataName) => null,
-		onFieldColorChange = (layer, fieldName, color) => null,
-		onFieldShapeChange = (layer, fieldName, shape) => null,
-		onFieldPaletteChange = (layer, fieldName, palette) => null,
-		onFieldVisibilityChange = (layer, fieldName, isVisible) => null,
-		onFieldVMinChange = (layer, fieldName, vMin) => null,
-		onFieldVMaxChange = (layer, fieldName, vMax) => null,
-		onFieldVCenterChange = (layer, fieldName, vMax) => null
+		onMetadataChange = (metadataName) => null,
+		onFieldColorChange = (fieldName, color) => null,
+		onFieldShapeChange = (fieldName, shape) => null,
+		onFieldPaletteChange = (fieldName, palette) => null,
+		onFieldVisibilityChange = (fieldName, isVisible) => null,
+		onFieldVMinChange = (fieldName, vMin) => null,
+		onFieldVMaxChange = (fieldName, vMax) => null,
+		onFieldVCenterChange = (fieldName, vMax) => null
 	} = $props();
 
 	let names = $state(Array.from(layer.metadataToNode.keys()));
@@ -96,11 +96,11 @@
 
 		closeAndFocusTrigger();
 
-		onMetadataChange(layer, metadataName);
+		onMetadataChange(metadataName);
 	}
 
 	function fieldVisibilityChange(field, isVisible) {
-		onFieldVisibilityChange(layer, field.name, isVisible);
+		onFieldVisibilityChange(field.name, isVisible);
 
 		field.isVisible = isVisible;
 	}
@@ -145,13 +145,11 @@
 		fields={getFields()}
 		areCategorical={layerIsCategorical()}
 		onVisibilityChange={(field, isVisible) => fieldVisibilityChange(field, isVisible)}
+        onColorChange={(field, color) => onFieldColorChange(field.name, color)}
+        onShapeChange={(field, shape) => onFieldShapeChange(field.name, shape)}
+        onPaletteChange={(field, palette) => onFieldPaletteChange(field.name, palette)}
+        onVMinChange={(field, vMin) => onFieldVMinChange(field.name, vMin)}
+        onVMaxChange={(field, vMax) => onFieldVMaxChange(field.name, vMax)}
+        onVCenterChange={(field, vCenter) => onFieldVCenterChange(field.name, vCenter)}
 	/>
 {/if}
-
-<!-- onColorChange = (fieldName, color) => null,
-   onShapeChange = (fieldName, shape) => null,
-   onPaletteChange = (fieldName, palette) => null,
-   
-   onVMinChange = (fieldName, vMin) => null,
-   onVMaxChange = (fieldName, vMax) => null,
-   onVCenterChange = (fieldName, vMax) => null -->

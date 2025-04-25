@@ -14,6 +14,8 @@
 	import Star from '@lucide/svelte/icons/star';
 	import Cross from '@lucide/svelte/icons/cross';
 	import Hexagon from '@lucide/svelte/icons/hexagon';
+	import Diamond from '@lucide/svelte/icons/diamond';
+	import Sparkle from '@lucide/svelte/icons/sparkle';
 
 	let {
 		hex,
@@ -51,14 +53,17 @@
 	{#if shape == 'square'}
 		<Square strokeWidth={4} color={hex} {size} />
 	{/if}
+	{#if shape == 'diamond'}
+		<Diamond strokeWidth={4} color={hex} {size} />
+	{/if}
 	{#if shape == 'hexagon'}
 		<Hexagon strokeWidth={4} color={hex} {size} />
 	{/if}
 	{#if shape == 'star'}
 		<Star strokeWidth={4} color={hex} {size} />
 	{/if}
-	{#if shape == 'cross'}
-		<Cross strokeWidth={4} color={hex} {size} />
+	{#if shape == 'sparkle'}
+		<Sparkle strokeWidth={4} color={hex} {size} />
 	{/if}
 {/snippet}
 
@@ -136,14 +141,17 @@
 							<ToggleGroup.Item value="square" aria-label="Square">
 								{@render icon('square')}
 							</ToggleGroup.Item>
+							<ToggleGroup.Item value="diamond" aria-label="Diamond">
+								{@render icon('diamond')}
+							</ToggleGroup.Item>
 							<ToggleGroup.Item value="hexagon" aria-label="Hexagon">
 								{@render icon('hexagon')}
 							</ToggleGroup.Item>
 							<ToggleGroup.Item value="star" aria-label="Star">
 								{@render icon('star')}
 							</ToggleGroup.Item>
-							<ToggleGroup.Item value="cross" aria-label="Cross">
-								{@render icon('cross')}
+							<ToggleGroup.Item value="sparkle" aria-label="Sparkle">
+								{@render icon('sparkle')}
 							</ToggleGroup.Item>
 						</div>
 					</ToggleGroup.Root>

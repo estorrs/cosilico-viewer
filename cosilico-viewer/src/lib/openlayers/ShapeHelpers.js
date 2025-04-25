@@ -1,6 +1,6 @@
 // @ts-nocheck
 
-import { Circle, RegularShape, Fill, Stroke } from "ol/style";
+import { Circle, RegularShape, Fill, Stroke, Icon } from "ol/style";
 
 /**
  * Generate an OpenLayers shape based on the input parameters.
@@ -24,7 +24,7 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 stroke,
             });
 
-        case "uptriangle":
+        case "triangle":
             return new RegularShape({
                 points: 3,
                 radius: 10 * scaleFactor,
@@ -33,7 +33,7 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 angle: 0, // Triangle facing up
             });
 
-        case "righttriangle":
+        case "righttriangle": 
             return new RegularShape({
                 points: 3,
                 radius: 10 * scaleFactor,
@@ -60,7 +60,7 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 angle: (3 * Math.PI) / 2, // Rotate 270° to face left
             });
 
-        case "square":
+        case "diamond":
             return new RegularShape({
                 points: 4,
                 radius: 10 * scaleFactor,
@@ -69,7 +69,7 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 angle: 0, // Regular square
             });
 
-        case "diamond":
+        case "square":
             return new RegularShape({
                 points: 4,
                 radius: 10 * scaleFactor,
@@ -78,7 +78,7 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 angle: Math.PI / 4, // Rotate 45° to form a diamond
             });
 
-        case "cross":
+        case "sparkle":
             return new RegularShape({
                 points: 4,
                 radius: 10 * scaleFactor,
@@ -86,16 +86,6 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 fill,
                 stroke,
                 angle: 0,
-            });
-
-        case "xcross":
-            return new RegularShape({
-                points: 4,
-                radius: 10 * scaleFactor,
-                radius2: 5 * scaleFactor, // Inner radius to make it an "X"
-                fill,
-                stroke,
-                angle: Math.PI / 4, // Rotate 45° to make it an X-cross
             });
 
         case "star":
@@ -106,6 +96,14 @@ export function generateShape(shapeName, strokeWidth = 1., strokeColor = "#ddddd
                 fill,
                 stroke,
                 angle: 0,
+            });
+        case "hexagon":
+            return new RegularShape({
+                points: 6,
+                radius: 10 * scaleFactor,
+                fill,
+                stroke,
+                angle: 0, // Regular upright hexagon
             });
 
         default:

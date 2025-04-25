@@ -12,6 +12,7 @@ import { GroupedZarrVectorLoader, ZarrVectorLoader } from './ZarrVectorLoader';
 import { generateColorMapping, defaultPalettes, valueToColor } from './ColorHelpers';
 import { generateShape } from "./ShapeHelpers";
 import { initZarr } from "./ZarrHelpers";
+import { scaleFromCenter } from "ol/extent";
 
 export class FeatureGroupVector {
     constructor(
@@ -25,6 +26,7 @@ export class FeatureGroupVector {
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
+        this.presentTypes = ['point'];
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
         this.sizeY = baseImage.sizeY;
@@ -102,62 +104,62 @@ export class FeatureGroupVector {
         }
     }
 
-    setFeatureToolTip(map, info) {
-        const displayFeatureInfo = (pixel, target) => {
-            const res = map.getView().getResolution();
-            // console.log('current map resolution', res);
-            // console.log('current map z', this.vectorView.featureNameToViewtileGrid.getZForResolution(map.getView().getResolution()));
-            const feature = target.closest('.ol-control')
-                ? undefined
-                : map.forEachFeatureAtPixel(pixel, function (feature) {
-                    return feature;
-                });
-            if (feature) {
-                info.style.left = pixel[0] + 'px';
-                info.style.top = pixel[1] + 'px';
-                if (feature !== this.currentFeature) {
-                    info.style.visibility = 'visible';
+    // setFeatureToolTip(map, info) {
+    //     const displayFeatureInfo = (pixel, target) => {
+    //         const res = map.getView().getResolution();
+    //         // console.log('current map resolution', res);
+    //         // console.log('current map z', this.vectorView.featureNameToViewtileGrid.getZForResolution(map.getView().getResolution()));
+    //         const feature = target.closest('.ol-control')
+    //             ? undefined
+    //             : map.forEachFeatureAtPixel(pixel, function (feature) {
+    //                 return feature;
+    //             });
+    //         if (feature) {
+    //             info.style.left = pixel[0] + 'px';
+    //             info.style.top = pixel[1] + 'px';
+    //             if (feature !== this.currentFeature) {
+    //                 info.style.visibility = 'visible';
 
-                    if (res < this.resolutions[this.resolutions.length - 1] / this.tileSize) {
-                        const identifier = feature.get('id')
-                        let text = `id: ${identifier}\n`;
-                        for (const [key, _] of this.featureMetaToNode) {
-                            if (key !== 'count') {
-                                const value = feature.get(key);
-                                text = text + `${key}: ${value}\n`;
-                            }
-                        }
+    //                 if (res < this.resolutions[this.resolutions.length - 1] / this.tileSize) {
+    //                     const identifier = feature.get('id')
+    //                     let text = `id: ${identifier}\n`;
+    //                     for (const [key, _] of this.featureMetaToNode) {
+    //                         if (key !== 'count') {
+    //                             const value = feature.get(key);
+    //                             text = text + `${key}: ${value}\n`;
+    //                         }
+    //                     }
 
-                        info.innerText = text;
-                    } else {
-                        const count = feature.get('count')
-                        info.innerText = `# entities: ${count}`;
-                    }
-                }
-            } else {
-                info.style.visibility = 'hidden';
-            }
-            this.currentFeature = feature;
-        };
+    //                     info.innerText = text;
+    //                 } else {
+    //                     const count = feature.get('count')
+    //                     info.innerText = `# entities: ${count}`;
+    //                 }
+    //             }
+    //         } else {
+    //             info.style.visibility = 'hidden';
+    //         }
+    //         this.currentFeature = feature;
+    //     };
 
-        map.on('pointermove', function (evt) {
-            if (evt.dragging) {
-                info.style.visibility = 'hidden';
-                this.currentFeature = undefined;
-                return;
-            }
-            displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-        });
+    //     map.on('pointermove', function (evt) {
+    //         if (evt.dragging) {
+    //             info.style.visibility = 'hidden';
+    //             this.currentFeature = undefined;
+    //             return;
+    //         }
+    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+    //     });
 
-        map.on('click', function (evt) {
-            displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-        });
+    //     map.on('click', function (evt) {
+    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+    //     });
 
-        map.getTargetElement().addEventListener('pointerleave', function () {
-            this.currentFeature = undefined;
-            info.style.visibility = 'hidden';
-        });
-    }
+    //     map.getTargetElement().addEventListener('pointerleave', function () {
+    //         this.currentFeature = undefined;
+    //         info.style.visibility = 'hidden';
+    //     });
+    // }
 
     addFeature(featureName, map) {
         // @ts-ignore
@@ -191,7 +193,37 @@ export class FeatureGroupVector {
         this.featureNameToLayer.delete(featureName);
     }
 
+    setFeatureFillColor(featureName, hex) {
+        this.featureToColor.set(featureName, hex);
+        let fview = this.vectorView.featureNameToView.get(featureName);
+        fview.fillColor = hex;
+        fview.shape = generateShape(fview.shapeType, fview.strokeWidth, fview.strokeColor, fview.fillColor, this.vectorView.scale);
 
+        const layer = this.featureNameToLayer.get(featureName);
+        layer.setStyle(layer.getStyle());
+    }
+
+    setFeatureShapeType(featureName, shapeName) {
+        let fview = this.vectorView.featureNameToView.get(featureName);
+        fview.shapeType = shapeName;
+        fview.shape = generateShape(fview.shapeType, fview.strokeWidth, fview.strokeColor, fview.fillColor, this.vectorView.scale);
+
+        const layer = this.featureNameToLayer.get(featureName);
+        layer.setStyle(layer.getStyle());
+    }
+
+    setScale(scale) {
+        this.vectorView.scale = scale;
+        for (const [featureName, fview] of this.vectorView.featureNameToView) {
+            let fview = this.vectorView.featureNameToView.get(featureName);
+            fview.shape = generateShape(fview.shapeType, fview.strokeWidth, fview.strokeColor, fview.fillColor, this.vectorView.scale);
+        }
+
+        for (const featureName of this.vectorView.visibleFeatureNames) {
+            const layer = this.featureNameToLayer.get(featureName);
+            layer.setStyle(layer.getStyle());
+        }
+    }
 
     async populateInitialFields() {
         const metaPath = '/metadata/features'
@@ -241,7 +273,7 @@ export class FeatureGroupVector {
                 strokeColor: '#dddddd',
                 fillColor: this.featureToColor.get(featureName)
             };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, catFeatureView.strokeWidth, catFeatureView.strokeColor, catFeatureView.fillColor);
+            catFeatureView.shape = generateShape(catFeatureView.shapeType, catFeatureView.strokeWidth, catFeatureView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
 
             this.vectorView.featureNameToView.set(featureName, catFeatureView);
         }
@@ -264,6 +296,8 @@ export class FeatureVector {
         this.name = node.attrs.name;
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
+        this.objectTypes = this.node.attrs.object_types;
+        this.presentTypes = [...new Set(this.objectTypes)];
         this.sizeX = baseImage.sizeX;
         this.sizeY = baseImage.sizeY;
         this.tileSize = baseImage.tileSize;
@@ -350,7 +384,7 @@ export class FeatureVector {
             } else {
                 if (v.visibleFieldIndices.length == 0) {
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, '#aaaaaa');
+                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, '#aaaaaa', v.scale);
                         return new Style({
                             image: shape
                         });
@@ -387,7 +421,7 @@ export class FeatureVector {
                     );
 
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, fillColor);
+                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, fillColor, v.scale);
                         return new Style({
                             image: shape
                         });
@@ -416,7 +450,7 @@ export class FeatureVector {
             strokeWidth: 1.,
             strokeColor: '#dddddd',
         };
-        contFeatureView.shape = generateShape(contFeatureView.shapeType, contFeatureView.strokeWidth, contFeatureView.strokeColor, '#aaaaaa');
+        contFeatureView.shape = generateShape(contFeatureView.shapeType, contFeatureView.strokeWidth, contFeatureView.strokeColor, '#aaaaaa', 1.0);
         
         this.vectorView = {
             featureView: contFeatureView,
@@ -447,7 +481,7 @@ export class FeatureVector {
                 strokeColor: '#dddddd',
                 fillColor: this.fieldToColor.get(field)
             };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, catFeatureView.strokeWidth, catFeatureView.strokeColor, catFeatureView.fillColor);
+            catFeatureView.shape = generateShape(catFeatureView.shapeType, catFeatureView.strokeWidth, catFeatureView.strokeColor, catFeatureView.fillColor, 1.0);
 
             this.vectorView.fieldToView.set(field, catFeatureView);
         }
@@ -533,61 +567,61 @@ export class FeatureVector {
 
     }
 
-    setFeatureToolTip(map, info) {
-        const displayFeatureInfo = (pixel, target) => {
-            const res = map.getView().getResolution();
-            const feature = target.closest('.ol-control')
-                ? undefined
-                : map.forEachFeatureAtPixel(pixel, function (feature) {
-                    return feature;
-                });
-            if (feature) {
-                info.style.left = pixel[0] + 'px';
-                info.style.top = pixel[1] + 'px';
-                if (feature !== this.currentFeature) {
-                    info.style.visibility = 'visible';
+    // setFeatureToolTip(map, info) {
+    //     const displayFeatureInfo = (pixel, target) => {
+    //         const res = map.getView().getResolution();
+    //         const feature = target.closest('.ol-control')
+    //             ? undefined
+    //             : map.forEachFeatureAtPixel(pixel, function (feature) {
+    //                 return feature;
+    //             });
+    //         if (feature) {
+    //             info.style.left = pixel[0] + 'px';
+    //             info.style.top = pixel[1] + 'px';
+    //             if (feature !== this.currentFeature) {
+    //                 info.style.visibility = 'visible';
 
-                    const identifier = feature.get('id')
-                    let text = `id: ${identifier}\n`;
+    //                 const identifier = feature.get('id')
+    //                 let text = `id: ${identifier}\n`;
 
-                    if (this.metadataType == 'categorical') {
-                        const idx = feature.get('category');
-                        const field = this.metadataFields[idx];
-                        text = text + `${this.metadataName}: ${field}\n`;
-                    } else {
-                        const visibleIdx = this.vectorView.visibleFieldIndices[0];
-                        const field = this.metadataFields[visibleIdx];
-                        if (visibleIdx in feature.values_) {
-                            const value = feature.get(visibleIdx);
-                            text = text + `${field}: ${value}\n`;
-                        }
-                    }
-                    info.innerText = text;
-                }
-            } else {
-                info.style.visibility = 'hidden';
-            }
-            this.currentFeature = feature;
-        };
+    //                 if (this.metadataType == 'categorical') {
+    //                     const idx = feature.get('category');
+    //                     const field = this.metadataFields[idx];
+    //                     text = text + `${this.metadataName}: ${field}\n`;
+    //                 } else {
+    //                     const visibleIdx = this.vectorView.visibleFieldIndices[0];
+    //                     const field = this.metadataFields[visibleIdx];
+    //                     if (visibleIdx in feature.values_) {
+    //                         const value = feature.get(visibleIdx);
+    //                         text = text + `${field}: ${value}\n`;
+    //                     }
+    //                 }
+    //                 info.innerText = text;
+    //             }
+    //         } else {
+    //             info.style.visibility = 'hidden';
+    //         }
+    //         this.currentFeature = feature;
+    //     };
 
-        map.on('pointermove', function (evt) {
-            if (evt.dragging) {
-                info.style.visibility = 'hidden';
-                this.currentFeature = undefined;
-                return;
-            }
-            displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-        });
+    //     map.on('pointermove', function (evt) {
+    //         if (evt.dragging) {
+    //             info.style.visibility = 'hidden';
+    //             this.currentFeature = undefined;
+    //             return;
+    //         }
+    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+    //     });
 
-        map.on('click', function (evt) {
-            displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-        });
+    //     map.on('click', function (evt) {
+    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
+    //     });
 
-        map.getTargetElement().addEventListener('pointerleave', function () {
-            this.currentFeature = undefined;
-            info.style.visibility = 'hidden';
-        });
-    }
+    //     map.getTargetElement().addEventListener('pointerleave', function () {
+    //         this.currentFeature = undefined;
+    //         info.style.visibility = 'hidden';
+    //     });
+    // }
 
     addFeature(featureName) {
         // @ts-ignore
@@ -613,7 +647,24 @@ export class FeatureVector {
     }
 
     setFeatureFillColor(featureName, hex) {
-        this.vectorView.featureNameToView.get(featureName).fillColor = hex;
-        this.layer.getSource().changed();
+        this.vectorView.fieldToView.get(featureName).fillColor = hex;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
+    setScale(scale) {
+        this.vectorView.scale = scale;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
+    setFeatureShapeType(featureName, shapeName) {
+        if (this.metadataType == 'categorical') {
+            this.vectorView.featureNameToView.get(featureName).shapeType = shapeName;
+        } else {
+            this.vectorView.featureView.shapeType = shapeName;
+        }
+        
+        this.layer.setStyle(layer.getStyle());
     }
 }

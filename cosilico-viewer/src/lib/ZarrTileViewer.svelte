@@ -269,6 +269,23 @@
 		}
 
 
+		let layerPointViewOptions = $state(new SvelteMap());
+		for (const [vectorId, obj] of experiment.layers) {
+			const view = {
+				viewAs: // use present types
+			};
+			layerPointViewOptions.set(vectorId, obj.vector.isVisible);
+		}
+
+		// let view = $state({
+	// 	viewAs: 'point',
+	// 	scale: 1.0,
+	// 	fillOpacity: 1.0,
+	// 	strokeOpacity: 1.0,
+	// 	strokeWidth: 1.0
+	// })
+
+
 		mirrors.set('imageDisplayInfo', imageDisplayInfo);
 		mirrors.set('imageSwatches', imageSwatches);
 		mirrors.set('imageVisabilityInfo', imageVisibilityInfo);
@@ -289,11 +306,11 @@
 		await experiment.baseImage.addChannel(experiment.baseImage.channelNames[0], map);
 		await experiment.initializeLayerMetadata(map);
 
-		//set tooltip info, must fix
-		for (const [k, layer] of experiment.layers) {
-			let info = document.getElementById('info'); // this needs to be fixed
-			layer.vector.setFeatureToolTip(map, info);
-		}
+		// //set tooltip info, must fix
+		// for (const [k, layer] of experiment.layers) {
+		// 	let info = document.getElementById('info'); // this needs to be fixed
+		// 	layer.vector.setFeatureToolTip(map, info);
+		// }
 
 		// const key = 'Kmeans N=10';
 		// const key = 'PCAs';
@@ -439,9 +456,9 @@
 		}
 	}
 
-	function onLayerFieldColorChange(layer, fieldName, hex) {
-		layer.vector.setFeatureFillColor(hex);
-	}
+	// function onLayerFieldColorChange(layer, fieldName, hex) {
+	// 	layer.vector.setFeatureFillColor(hex);
+	// }
 
 
 </script>
@@ -570,24 +587,28 @@
 												<span id="{obj.vector.name}-trigger-text" class="text-left"
 													>{obj.vector.name}</span
 												>
+												<PointViewOptions
+													onPointScaleChange={(scale) => obj.vector.setScale(scale)}
+
+													/>
 											</Accordion.Trigger>
 										</div>
 										<Accordion.Content class="ml-3">
 											<Card.Root>
-												<Card.Header>
-													<Card.Title>Active metadata</Card.Title>
+												<Card.Header class="p-1">
+													<Card.Title class="text-md">Active Metadata</Card.Title>
 												</Card.Header>
-												<Card.Content>
+												<Card.Content class="p-1 pt-0">
 														<LayerOptions
 															layer={obj}
-															onMetadataChange={(layer, metadataName) => onLayerMetadataChange(layer, metadataName)}
-															onFieldColorChange={(layer, fieldName, color) => null}
-															onFieldShapeChange={(layer, fieldName, shape) => null}
-															onFieldPaletteChange={(layer, fieldName, palette) => null}
-															onFieldVisibilityChange={(layer, fieldName, isVisible) => toggleFeature(fieldName, layer.vector, isVisible)}
-															onFieldVMinChange={(layer, fieldName, vMin) => null}
-															onFieldVMaxChange={(layer, fieldName, vMax) => null}
-															onFieldVCenterChange={(layer, fieldName, vMax) => null}
+															onMetadataChange={(metadataName) => onLayerMetadataChange(obj, metadataName)}
+															onFieldColorChange={(fieldName, hex) => obj.vector.setFeatureFillColor(fieldName, hex)}
+															onFieldShapeChange={(fieldName, shape) => obj.vector.setFeatureShapeType(fieldName, shape)}
+															onFieldPaletteChange={(fieldName, palette) => null}
+															onFieldVisibilityChange={(fieldName, isVisible) => toggleFeature(fieldName, obj.vector, isVisible)}
+															onFieldVMinChange={(fieldName, vMin) => null}
+															onFieldVMaxChange={(fieldName, vMax) => null}
+															onFieldVCenterChange={(fieldName, vMax) => null}
 															/>
 												</Card.Content>
 											</Card.Root>

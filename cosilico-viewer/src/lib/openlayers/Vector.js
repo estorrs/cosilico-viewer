@@ -14,6 +14,16 @@ import { generateShape } from "./ShapeHelpers";
 import { initZarr } from "./ZarrHelpers";
 import { scaleFromCenter } from "ol/extent";
 
+function getClosestResolution(map, availableResolutions, tileSize) {
+	let current = map.getView().getResolution();
+	if (!current) return null;
+    current = current * tileSize;
+
+	return availableResolutions.reduce((prev, curr) =>
+		Math.abs(curr - current) < Math.abs(prev - current) ? curr : prev
+	);
+}
+
 export class FeatureGroupVector {
     constructor(
         node,
@@ -26,9 +36,9 @@ export class FeatureGroupVector {
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
-        this.presentTypes = ['point'];
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
+        this.objectTypes = this.resolutions.map((res) => 'point'); // for now just prepopulate
         this.sizeY = baseImage.sizeY;
         this.sizeX = baseImage.sizeX;
         this.tileSize = baseImage.tileSize;
@@ -102,6 +112,13 @@ export class FeatureGroupVector {
             map.addLayer(layer);
             this.featureNameToLayer.set(featureName, layer);
         }
+    }
+
+    getCurrentObjectType(map) {
+        const res = getClosestResolution(map, this.resolutions, this.tileSize);
+        const idx = this.resolutions.indexOf(res);
+        const objType = this.objectTypes[idx];
+        return objType;
     }
 
     // setFeatureToolTip(map, info) {
@@ -197,7 +214,7 @@ export class FeatureGroupVector {
         this.featureToColor.set(featureName, hex);
         let fview = this.vectorView.featureNameToView.get(featureName);
         fview.fillColor = hex;
-        fview.shape = generateShape(fview.shapeType, fview.strokeWidth, fview.strokeColor, fview.fillColor, this.vectorView.scale);
+        fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, fview.fillColor, this.vectorView.scale);
 
         const layer = this.featureNameToLayer.get(featureName);
         layer.setStyle(layer.getStyle());
@@ -206,7 +223,7 @@ export class FeatureGroupVector {
     setFeatureShapeType(featureName, shapeName) {
         let fview = this.vectorView.featureNameToView.get(featureName);
         fview.shapeType = shapeName;
-        fview.shape = generateShape(fview.shapeType, fview.strokeWidth, fview.strokeColor, fview.fillColor, this.vectorView.scale);
+        fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, fview.fillColor, this.vectorView.scale);
 
         const layer = this.featureNameToLayer.get(featureName);
         layer.setStyle(layer.getStyle());
@@ -216,7 +233,7 @@ export class FeatureGroupVector {
         this.vectorView.scale = scale;
         for (const [featureName, fview] of this.vectorView.featureNameToView) {
             let fview = this.vectorView.featureNameToView.get(featureName);
-            fview.shape = generateShape(fview.shapeType, fview.strokeWidth, fview.strokeColor, fview.fillColor, this.vectorView.scale);
+            fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, fview.fillColor, this.vectorView.scale);
         }
 
         for (const featureName of this.vectorView.visibleFeatureNames) {
@@ -259,6 +276,8 @@ export class FeatureGroupVector {
             scale: 1.0,
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
+            strokeWidth: 1.0,
+            strokeColor: '#dddddd',
             visibleFeatureNames: [],
             visibleFeatureGroups: [],
             visibleFeatureIndices: [],
@@ -269,11 +288,9 @@ export class FeatureGroupVector {
             const featureName = this.featureNames[i];
             const catFeatureView = {
                 shapeType: 'circle',
-                strokeWidth: 1.,
-                strokeColor: '#dddddd',
                 fillColor: this.featureToColor.get(featureName)
             };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, catFeatureView.strokeWidth, catFeatureView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
+            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
 
             this.vectorView.featureNameToView.set(featureName, catFeatureView);
         }
@@ -297,7 +314,6 @@ export class FeatureVector {
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
         this.objectTypes = this.node.attrs.object_types;
-        this.presentTypes = [...new Set(this.objectTypes)];
         this.sizeX = baseImage.sizeX;
         this.sizeY = baseImage.sizeY;
         this.tileSize = baseImage.tileSize;
@@ -384,7 +400,7 @@ export class FeatureVector {
             } else {
                 if (v.visibleFieldIndices.length == 0) {
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, '#aaaaaa', v.scale);
+                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, v.strokeColor, '#aaaaaa', v.scale);
                         return new Style({
                             image: shape
                         });
@@ -421,7 +437,7 @@ export class FeatureVector {
                     );
 
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.featureView.strokeWidth, v.featureView.strokeColor, fillColor, v.scale);
+                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, v.strokeColor, fillColor, v.scale);
                         return new Style({
                             image: shape
                         });
@@ -445,21 +461,22 @@ export class FeatureVector {
     }
 
     initializeContinuousView() {
-        const contFeatureView = {
-            shapeType: 'circle',
-            strokeWidth: 1.,
-            strokeColor: '#dddddd',
-        };
-        contFeatureView.shape = generateShape(contFeatureView.shapeType, contFeatureView.strokeWidth, contFeatureView.strokeColor, '#aaaaaa', 1.0);
         
         this.vectorView = {
-            featureView: contFeatureView,
+            featureView: null,
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
+            strokeWidth: 1.,
+            strokeColor: '#dddddd',
             scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
         }
+        const contFeatureView = {
+            shapeType: 'circle',
+        };
+        contFeatureView.shape = generateShape(contFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, '#aaaaaa', this.vectorView.scale);
+        this.vectorView.featureView = contFeatureView;
     }
 
     initializeCategoricalView() {
@@ -468,6 +485,8 @@ export class FeatureVector {
             fieldToView: new globalThis.Map(),
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
+            strokeWidth: 1.,
+            strokeColor: '#dddddd',
             scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
@@ -477,11 +496,9 @@ export class FeatureVector {
             const field = this.metadataFields[i];
             const catFeatureView = {
                 shapeType: 'circle',
-                strokeWidth: 1.,
-                strokeColor: '#dddddd',
                 fillColor: this.fieldToColor.get(field)
             };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, catFeatureView.strokeWidth, catFeatureView.strokeColor, catFeatureView.fillColor, 1.0);
+            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
 
             this.vectorView.fieldToView.set(field, catFeatureView);
         }
@@ -565,6 +582,13 @@ export class FeatureVector {
         this.layer = obj.layer;
         map.addLayer(obj.layer);
 
+    }
+
+    getCurrentObjectType(map) {
+        const res = getClosestResolution(map, this.resolutions, this.tileSize);
+        const idx = this.resolutions.indexOf(res);
+        const objType = this.objectTypes[idx];
+        return objType;
     }
 
     // setFeatureToolTip(map, info) {

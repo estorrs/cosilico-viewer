@@ -269,27 +269,23 @@
 		}
 
 
-		let layerPointViewOptions = $state(new SvelteMap());
+		let layerPointViewInfo = $state(new SvelteMap());
 		for (const [vectorId, obj] of experiment.layers) {
-			const view = {
-				viewAs: // use present types
+			let view = {
+				viewAs: obj.vector.getCurrentObjectType(map),
+				scale: obj.vector.vectorView.scale,
+				fillOpacity: obj.vector.vectorView.fillOpacity,
+				strokeOpacity: obj.vector.vectorView.strokeOpacity,
+				strokeWidth: obj.vector.vectorView.strokeWidth,
 			};
-			layerPointViewOptions.set(vectorId, obj.vector.isVisible);
+			layerPointViewInfo.set(vectorId, view);
 		}
-
-		// let view = $state({
-	// 	viewAs: 'point',
-	// 	scale: 1.0,
-	// 	fillOpacity: 1.0,
-	// 	strokeOpacity: 1.0,
-	// 	strokeWidth: 1.0
-	// })
-
 
 		mirrors.set('imageDisplayInfo', imageDisplayInfo);
 		mirrors.set('imageSwatches', imageSwatches);
 		mirrors.set('imageVisabilityInfo', imageVisibilityInfo);
 		mirrors.set('layerVisabilityInfo', layerVisabilityInfo);
+		mirrors.set('layerPointViewInfo', layerPointViewInfo);
 	}
 
 
@@ -456,10 +452,6 @@
 		}
 	}
 
-	// function onLayerFieldColorChange(layer, fieldName, hex) {
-	// 	layer.vector.setFeatureFillColor(hex);
-	// }
-
 
 </script>
 
@@ -588,8 +580,11 @@
 													>{obj.vector.name}</span
 												>
 												<PointViewOptions
-													onPointScaleChange={(scale) => obj.vector.setScale(scale)}
-
+													view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
+													onPointScaleChange={(scale) => {
+														obj.vector.setScale(scale);
+														mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale = scale;
+													}}
 													/>
 											</Accordion.Trigger>
 										</div>

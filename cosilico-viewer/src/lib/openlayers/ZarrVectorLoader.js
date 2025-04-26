@@ -73,6 +73,8 @@ export class GroupedZarrVectorLoader {
             resolutions: resolutions.map(r => r / this.tileSize), // Normalize resolutions to pixel space
             extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
         });
+
+        this.tileGrid.getResolutions
     
         this.vectorTileSource = this.getVectorSource();
     }

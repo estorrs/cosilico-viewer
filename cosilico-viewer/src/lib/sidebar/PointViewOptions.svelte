@@ -21,10 +21,11 @@
 		onFillOpacityChange = (e) => null,
         onStrokeOpacityChange = (e) => null,
 		onStrokeWidthChange = (e) => null,
+		onStrokeColorChange = (e) => null,
 		minScale = 0,
 		maxScale = 4,
         minStrokeWidth = 0,
-        maxStrokeWisth = 4,
+        maxStrokeWidth = 4,
 	} = $props();
 
 	// let view = $state({
@@ -32,8 +33,11 @@
 	// 	scale: 1.0,
 	// 	fillOpacity: 1.0,
 	// 	strokeOpacity: 1.0,
-	// 	strokeWidth: 1.0
+	// 	strokeWidth: 1.0,
+	//  strokeColor: '#aaaaaa'
 	// })
+
+	let swatchHexs = $state([view.strokeColor]);
 
 	function scaleSliderGetValue() {
 		return [view.scale];
@@ -129,7 +133,8 @@
 		<Tooltip.Provider>
 			<Tooltip.Root>
 			  <Tooltip.Trigger class={buttonVariants({ variant: "outline" })}>
-				<Regex />
+				<!-- <Regex /> -->
+				 Point view options
 			  </Tooltip.Trigger>
 			  <Tooltip.Content>
 				<p>Adjust point view options</p>
@@ -205,6 +210,23 @@
                                 <p class='pt-2'>Stroke</p>
 								<Card.Root class="p-1">
 									<Card.Header class="p-1">
+										<Card.Title class="text-sm">Stroke color</Card.Title>
+									</Card.Header>
+									<Card.Content class="p-1 pt-0">
+										<div class="flex items-center gap-2 pt-1">
+												<SwatchSelector
+													title="Select stroke color"
+													hex={view.strokeColor}
+													{swatchHexs}
+													includeSymbols={false}
+													onColorSelection={(value) => onStrokeColorChange(value)}
+												/>
+												<p>Set stroke color</p>
+										</div>
+									</Card.Content>
+								</Card.Root>
+								<Card.Root class="p-1">
+									<Card.Header class="p-1">
 										<Card.Title class="text-sm">Stroke opacity</Card.Title>
 									</Card.Header>
 									<Card.Content class="p-1 pt-0">
@@ -238,7 +260,7 @@
 													() => strokeWidthSliderGetValue(), (v) => strokeWidthSliderSetValue(v)
 												}
 												min={minStrokeWidth}
-												max={maxStrokeWisth}
+												max={maxStrokeWidth}
 												step={0.01}
 											/>
 											<Input

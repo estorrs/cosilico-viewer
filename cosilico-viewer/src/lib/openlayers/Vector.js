@@ -9,7 +9,7 @@ import { Style, Fill, Stroke } from "ol/style";
 
 
 import { GroupedZarrVectorLoader, ZarrVectorLoader } from './ZarrVectorLoader';
-import { generateColorMapping, defaultPalettes, valueToColor } from './ColorHelpers';
+import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba } from './ColorHelpers';
 import { generateShape } from "./ShapeHelpers";
 import { initZarr } from "./ZarrHelpers";
 import { scaleFromCenter } from "ol/extent";
@@ -214,7 +214,7 @@ export class FeatureGroupVector {
         this.featureToColor.set(featureName, hex);
         let fview = this.vectorView.featureNameToView.get(featureName);
         fview.fillColor = hex;
-        fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, fview.fillColor, this.vectorView.scale);
+        fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(fview.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
 
         const layer = this.featureNameToLayer.get(featureName);
         layer.setStyle(layer.getStyle());
@@ -223,23 +223,43 @@ export class FeatureGroupVector {
     setFeatureShapeType(featureName, shapeName) {
         let fview = this.vectorView.featureNameToView.get(featureName);
         fview.shapeType = shapeName;
-        fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, fview.fillColor, this.vectorView.scale);
+        fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(fview.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
 
         const layer = this.featureNameToLayer.get(featureName);
         layer.setStyle(layer.getStyle());
     }
 
-    setScale(scale) {
-        this.vectorView.scale = scale;
+    setVectorViewValue(key, value) {
+        this.vectorView[key] = value;
         for (const [featureName, fview] of this.vectorView.featureNameToView) {
             let fview = this.vectorView.featureNameToView.get(featureName);
-            fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, fview.fillColor, this.vectorView.scale);
+            fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(fview.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
         }
 
         for (const featureName of this.vectorView.visibleFeatureNames) {
             const layer = this.featureNameToLayer.get(featureName);
             layer.setStyle(layer.getStyle());
         }
+    }
+
+    setScale(scale) {
+        this.setVectorViewValue('scale', scale);
+    }
+
+    setFillOpacity(fillOpacity) {
+        this.setVectorViewValue('fillOpacity', fillOpacity);
+    }
+
+    setStrokeWidth(strokeWidth) {
+        this.setVectorViewValue('strokeWidth', strokeWidth);
+    }
+
+    setStrokeColor(hex) {
+        this.setVectorViewValue('strokeColor', hex);
+    }
+
+    setStrokeOpacity(strokeOpacity) {
+        this.setVectorViewValue('strokeOpacity', strokeOpacity);
     }
 
     async populateInitialFields() {
@@ -391,8 +411,8 @@ export class FeatureVector {
                         });
                     } else {
                         const style = new Style({
-                            fill: new Fill({color: view.fillColor}),
-                            stroke: new Stroke({color: view.strokeColor, width: view.strokeWidth})
+                            fill: new Fill({color: hexToRgba(view.fillColor, v.fillOpacity)}),
+                            stroke: new Stroke({color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth})
                         });
                         return style
                     }
@@ -400,14 +420,14 @@ export class FeatureVector {
             } else {
                 if (v.visibleFieldIndices.length == 0) {
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, v.strokeColor, '#aaaaaa', v.scale);
+                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, hexToRgba(v.strokeColor, v.strokeOpacity), hexToRgba('#aaaaaa', v.fillOpacity), v.scale);
                         return new Style({
                             image: shape
                         });
                     } else {
                         return new Style({
-                            fill: new Fill({color: '#aaaaaa'}),
-                            stroke: new Stroke({color: v.featureView.strokeColor, width: v.featureView.strokeWidth})
+                            fill: new Fill({color: hexToRgba('#aaaaaa', v.fillOpacity)}),
+                            stroke: new Stroke({color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth})
                         });
                     }
                 } else {
@@ -437,14 +457,14 @@ export class FeatureVector {
                     );
 
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, v.strokeColor, fillColor, v.scale);
+                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, hexToRgba(v.strokeColor, v.strokeOpacity), hexToRgba(fillColor, v.fillOpacity), v.scale);
                         return new Style({
                             image: shape
                         });
                     } else {
                         return new Style({
-                            fill: new Fill({color: fillColor}),
-                            stroke: new Stroke({color: v.featureView.strokeColor, width: v.featureView.strokeWidth})
+                            fill: new Fill({color: hexToRgba(fillColor, v.fillOpacity)}),
+                            stroke: new Stroke({color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth})
                         });
                     }
                 }
@@ -461,7 +481,6 @@ export class FeatureVector {
     }
 
     initializeContinuousView() {
-        
         this.vectorView = {
             featureView: null,
             fillOpacity: 1.0,
@@ -475,7 +494,7 @@ export class FeatureVector {
         const contFeatureView = {
             shapeType: 'circle',
         };
-        contFeatureView.shape = generateShape(contFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, '#aaaaaa', this.vectorView.scale);
+        contFeatureView.shape = generateShape(contFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba('#aaaaaa', this.vectorView.fillOpacity), this.vectorView.scale);
         this.vectorView.featureView = contFeatureView;
     }
 
@@ -498,7 +517,7 @@ export class FeatureVector {
                 shapeType: 'circle',
                 fillColor: this.fieldToColor.get(field)
             };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
+            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(catFeatureView.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
 
             this.vectorView.fieldToView.set(field, catFeatureView);
         }
@@ -676,12 +695,6 @@ export class FeatureVector {
         this.layer.setStyle(layer.getStyle());
     }
 
-    setScale(scale) {
-        this.vectorView.scale = scale;
-
-        this.layer.setStyle(layer.getStyle());
-    }
-
     setFeatureShapeType(featureName, shapeName) {
         if (this.metadataType == 'categorical') {
             this.vectorView.featureNameToView.get(featureName).shapeType = shapeName;
@@ -691,4 +704,35 @@ export class FeatureVector {
         
         this.layer.setStyle(layer.getStyle());
     }
+
+    setScale(scale) {
+        this.vectorView.scale = scale;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
+    setFillOpacity(fillOpacity) {
+        this.vectorView.fillOpacity = fillOpacity;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
+    setStrokeWidth(strokeWidth) {
+        this.vectorView.strokeWidth = strokeWidth;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
+    setStrokeColor(hex) {
+        this.vectorView.strokeColor = hex;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
+    setStrokeOpacity(strokeOpacity) {
+        this.vectorView.strokeOpacity = strokeOpacity;
+
+        this.layer.setStyle(layer.getStyle());
+    }
+
 }

@@ -11,12 +11,11 @@
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
-	import { computeCommandScore } from "bits-ui";
+	import { computeCommandScore } from 'bits-ui';
 	import { cn } from '$lib/utils.js';
 
 	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
 	import SwatchSelector from '$lib/components/ui/swatch-selector/SwatchSelector.svelte';
-	import PaletteSelector from './PaletteSelector.svelte';
 	import ContinuousOptions from './ContinuousOptions.svelte';
 
 	let {
@@ -168,7 +167,7 @@
 
 	let selectedFields = $state([]);
 	let search = $state('');
-    let filteredFields = $derived(filterFields(search));
+	let filteredFields = $derived(filterFields(search));
 
 	let open = $state(false);
 	let name = $state('');
@@ -177,26 +176,25 @@
 	const selectedValue = $derived(fields.find((f) => f.name === name)?.name);
 
 	function filterFields(search) {
-        let scores = [];
-        for (const field of fields) {
-            const score = computeCommandScore(field.name, search);
-            scores.push(score);
-        }
-        let objs = fields.map((f, i) => ({ entity: f, score: scores[i] }));
-        objs = objs.sort((a, b) => b.score - a.score);
-        objs = objs.filter((f) => f.score > 0);
-        objs = objs.map((f) => f.entity);
-        const n = objs.length - displayNFieldsSearch;
-        objs = objs.slice(0, displayNFieldsSearch);
-        if (n > 0) {
-            objs.push({
-            name: `${n} additional fields`,
-            isDisabeled: true
-            });
-        }
-        return objs;
-       
-    }
+		let scores = [];
+		for (const field of fields) {
+			const score = computeCommandScore(field.name, search);
+			scores.push(score);
+		}
+		let objs = fields.map((f, i) => ({ entity: f, score: scores[i] }));
+		objs = objs.sort((a, b) => b.score - a.score);
+		objs = objs.filter((f) => f.score > 0);
+		objs = objs.map((f) => f.entity);
+		const n = objs.length - displayNFieldsSearch;
+		objs = objs.slice(0, displayNFieldsSearch);
+		if (n > 0) {
+			objs.push({
+				name: `${n} additional fields`,
+				isDisabeled: true
+			});
+		}
+		return objs;
+	}
 
 	function closeAndFocusTrigger() {
 		open = false;
@@ -207,15 +205,9 @@
 
 	function onFieldSelection(field) {
 		closeAndFocusTrigger();
-
-		if (areCategorical) {
-			field.isVisible = true;
-		}
-
 		selectedFields.push(field);
 		field.isSelected = true;
-		onVisibilityChange(field, field.isVisible);
-
+		onFieldVisibilityChange(field, true);
 		rerenderActive = !rerenderActive;
 	}
 
@@ -279,7 +271,6 @@
 		onVCenterChange(field, value);
 	}
 
-	
 	onMount(() => {
 		for (let field of fields) {
 			field.isDisabeled = false;
@@ -315,7 +306,11 @@
 				<Command.Group>
 					{#each filteredFields as field (field.name)}
 						{#if !field.isSelected}
-							<Command.Item value={field.name} disabled={field.isDisabeled} onSelect={() => onFieldSelection(field)}>
+							<Command.Item
+								value={field.name}
+								disabled={field.isDisabeled}
+								onSelect={() => onFieldSelection(field)}
+							>
 								{field.name}
 							</Command.Item>
 						{/if}
@@ -354,11 +349,10 @@
 							{/if}
 							{#if !areCategorical}
 								<p>{field.name}</p>
-								<PaletteSelector
-									defaultPalette={field.palette}
-									palettes={continousPalettes}
-									onPaletteSelection={(v) => onFieldPaletteSelection(field, v)}
-								/>
+							{/if}
+						</div>
+						<div class="ml-auto">
+							{#if !areCategorical}
 								<ContinuousOptions
 									vMin={field.vMin}
 									vMax={field.vMax}
@@ -366,20 +360,21 @@
 									absoluteVMax={field.absoluteVMax}
 									vCenter={field.vCenter}
 									vStepSize={field.vStepSize}
+									palette={field.palette}
 									onVMinChange={(v) => onFieldVMinChange(field, v)}
 									onVMaxChange={(v) => onFieldVMaxChange(field, v)}
 									onVCenterChange={(v) => onFieldVCenterChange(field, v)}
+									onPaletteSelection={(v) => onFieldPaletteSelection(field, v)}
 								/>
 							{/if}
+							<Button
+								title="Remove field"
+								variant="outline"
+								onclick={() => onFieldDeselection(field)}
+							>
+								<Trash2 />
+							</Button>
 						</div>
-						<Button
-							title="Remove field"
-							class="ml-auto"
-							variant="outline"
-							onclick={() => onFieldDeselection(field)}
-						>
-							<Trash2 />
-						</Button>
 					</div>
 					<!-- {/if} -->
 				{/each}

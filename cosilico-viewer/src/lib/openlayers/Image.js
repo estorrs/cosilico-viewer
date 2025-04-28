@@ -201,6 +201,12 @@ export class Image {
     this.channelToColor.set(channelName, color);
   }
 
+  setVisibility(value) {
+    this.rasterLayer.setVisible(value);
+    this.overviewLayer.setVisible(value);
+		this.isVisible = value;
+  }
+
   populateInitialFields() {
     this.channelToColor = generateColorMapping(defaultPalettes.imagePallete, this.channelNames); // this will eventually be populated by pulled info
 

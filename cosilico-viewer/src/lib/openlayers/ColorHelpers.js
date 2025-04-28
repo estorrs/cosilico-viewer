@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 export const defaultPalettes = {
     imagePallete: 'multiplex',
@@ -122,8 +121,8 @@ export function generateColorMapping(paletteName, items) {
 
 export function valueToColor(paletteName, value, minValue, maxValue, centerValue = null) {
     // Determine if the palette is continuous or diverging
-    const isDiverging = paletteName in DivergingPalettes;
-    const palette = isDiverging ? DivergingPalettes[paletteName] : continousPalettes[paletteName];
+    const isDiverging = paletteName in divergingPalettes;
+    const palette = isDiverging ? divergingPalettes[paletteName] : continousPalettes[paletteName];
 
     if (!palette) {
         throw new Error(`Palette "${paletteName}" not found in continuous or diverging palettes.`);
@@ -160,7 +159,7 @@ export function valueToColor(paletteName, value, minValue, maxValue, centerValue
     return palette[index];
 }
 
-function hexToRgba(hex, alpha = 1) {
+export function hexToRgba(hex, alpha = 1) {
 	const bigint = parseInt(hex.replace('#', ''), 16);
 	const r = (bigint >> 16) & 255;
 	const g = (bigint >> 8) & 255;

@@ -184,6 +184,7 @@ export class FeatureGroupVector {
         const featureGroup = this.featureGroups[featureIndex];
 
         const layer = this.createLayer(featureGroup);
+        layer.setVisible(this.isVisible);
 
         map.addLayer(layer);
 
@@ -208,6 +209,14 @@ export class FeatureGroupVector {
 
         map.removeLayer(layer);
         this.featureNameToLayer.delete(featureName);
+    }
+
+    setVisibility(value) {
+        for (const featureName of this.vectorView.visibleFeatureNames) {
+            this.featureNameToLayer.get(featureName).setVisible(value);
+        }
+
+		this.isVisible = value;
     }
 
     setFeatureFillColor(featureName, hex) {
@@ -476,6 +485,7 @@ export class FeatureVector {
             source: vectorTileSource,
             style: vectorTileStyle,
         });
+        layer.setVisible(this.isVisible);
 
         return { layer, vectorLoader };
     }
@@ -601,6 +611,7 @@ export class FeatureVector {
         this.layer = obj.layer;
         map.addLayer(obj.layer);
 
+
     }
 
     getCurrentObjectType(map) {
@@ -683,10 +694,16 @@ export class FeatureVector {
     removeFeature(featureName) {
         const fieldIndex = this.vectorView.visibleFieldIndices.indexOf(featureName);
 
-        this.vectorView.visibleFeatureIndices.splice(fieldIndex, 1);
+        this.vectorView.visibleFieldIndices.splice(fieldIndex, 1);
         this.vectorView.visibleFields.splice(fieldIndex, 1);
 
         this.layer.getSource().changed();
+    }
+
+    setVisibility(value) {
+        this.layer.setVisible(value);
+
+		this.isVisible = value;
     }
 
     setFeatureFillColor(featureName, hex) {
@@ -708,31 +725,31 @@ export class FeatureVector {
     setScale(scale) {
         this.vectorView.scale = scale;
 
-        this.layer.setStyle(layer.getStyle());
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     setFillOpacity(fillOpacity) {
         this.vectorView.fillOpacity = fillOpacity;
 
-        this.layer.setStyle(layer.getStyle());
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     setStrokeWidth(strokeWidth) {
         this.vectorView.strokeWidth = strokeWidth;
 
-        this.layer.setStyle(layer.getStyle());
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     setStrokeColor(hex) {
         this.vectorView.strokeColor = hex;
 
-        this.layer.setStyle(layer.getStyle());
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     setStrokeOpacity(strokeOpacity) {
         this.vectorView.strokeOpacity = strokeOpacity;
 
-        this.layer.setStyle(layer.getStyle());
+        this.layer.setStyle(this.layer.getStyle());
     }
 
 }

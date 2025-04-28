@@ -13,7 +13,9 @@
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import SwatchSelector from '$lib/components/ui/swatch-selector/SwatchSelector.svelte';
-	import Regex from '@lucide/svelte/icons/regex';
+	import Waypoints from '@lucide/svelte/icons/waypoints';
+	import * as Sheet from '$lib/components/ui/transparent-sheet/index.js';
+
 
 	let {
 		view,
@@ -42,8 +44,6 @@
 
 	function fillOpacitySliderSetValue(v) {
 		v = Number(v[0]);
-		view.fillOpacity = v;
-
 		onFillOpacityChange(v);
 	}
 
@@ -53,8 +53,6 @@
 
 	function fillOpacityInputSetValue(v) {
 		v = Number(v);
-		view.fillOpacity = v;
-
 		onFillOpacityChange(v);
 	}
 
@@ -64,8 +62,6 @@
 
 	function strokeOpacitySliderSetValue(v) {
 		v = Number(v[0]);
-		view.strokeOpacity = v;
-
 		onStrokeOpacityChange(v);
 	}
 
@@ -75,8 +71,6 @@
 
 	function strokeOpacityInputSetValue(v) {
 		v = Number(v);
-		view.strokeOpacity = v;
-
 		onStrokeOpacityChange(v);
 	}
 
@@ -86,8 +80,6 @@
 
 	function strokeWidthSliderSetValue(v) {
 		v = Number(v[0]);
-		view.strokeWidth = v;
-
 		onStrokeWidthChange(v);
 	}
 
@@ -97,36 +89,34 @@
 
 	function strokeWidthInputSetValue(v) {
 		v = Number(v);
-		view.strokeWidth = v;
-
 		onStrokeWidthChange(v);
 	}
 </script>
 
-<Popover.Root>
-	<Popover.Trigger>
+<Sheet.Root>
+	<Sheet.Trigger>
 		<Tooltip.Provider>
 			<Tooltip.Root>
 				<Tooltip.Trigger class={buttonVariants({ variant: 'outline' })}>
-					Polygon view options
+					<Waypoints />
 				</Tooltip.Trigger>
 				<Tooltip.Content>
 					<p>Adjust polygon view options</p>
 				</Tooltip.Content>
 			</Tooltip.Root>
 		</Tooltip.Provider>
-	</Popover.Trigger>
-	<Popover.Content>
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>Polygon view options</Card.Title>
-				<Card.Description>Set view options for polygon-level features</Card.Description>
-			</Card.Header>
-			<Card.Content>
-				<div>
-					<div class="flex flex-col items-center gap-0">
+	</Sheet.Trigger>
+	<Sheet.Portal>
+		<Sheet.Overlay />
+		<Sheet.Content>
+			<Sheet.Header>
+				<Sheet.Title>Polygon view options</Sheet.Title>
+				<Sheet.Description>Set view options for polygon features</Sheet.Description>
+			</Sheet.Header>
+				<div class='w-full'>
+					<div class="flex flex-col items-center gap-0 w-full">
 						<p>Fill</p>
-						<Card.Root class="p-1">
+						<Card.Root class="p-1 w-full">
 							<Card.Header class="p-1">
 								<Card.Title class="text-sm">Fill opacity</Card.Title>
 							</Card.Header>
@@ -151,7 +141,7 @@
 							</Card.Content>
 						</Card.Root>
 						<p class="pt-2">Stroke</p>
-						<Card.Root class="p-1">
+						<Card.Root class="p-1 w-full">
 							<Card.Header class="p-1">
 								<Card.Title class="text-sm">Stroke color</Card.Title>
 							</Card.Header>
@@ -168,7 +158,7 @@
 								</div>
 							</Card.Content>
 						</Card.Root>
-						<Card.Root class="p-1">
+						<Card.Root class="p-1 w-full">
 							<Card.Header class="p-1">
 								<Card.Title class="text-sm">Stroke opacity</Card.Title>
 							</Card.Header>
@@ -192,7 +182,7 @@
 								</div>
 							</Card.Content>
 						</Card.Root>
-						<Card.Root class="p-1">
+						<Card.Root class="p-1 w-full">
 							<Card.Header class="p-1">
 								<Card.Title class="text-sm">Stroke width</Card.Title>
 							</Card.Header>
@@ -217,9 +207,7 @@
 							</Card.Content>
 						</Card.Root>
 					</div>
-					<Separator />
-				</div>
-			</Card.Content>
-		</Card.Root>
-	</Popover.Content>
-</Popover.Root>
+				</Sheet.Content>
+			</Sheet.Portal>
+		</Sheet.Root>
+		

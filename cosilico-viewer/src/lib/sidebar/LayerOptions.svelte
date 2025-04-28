@@ -56,18 +56,19 @@
 				fields.push(field);
 			}
 		} else {
-			for (const fname of layer.vector.metadataFields) {
-				const view = layer.vector.vectorView.fieldToView.get(fname);
-
+			// for (const fname of layer.vector.metadataFields ?? []) {
+			for (const fidx of layer.vector.metadataFieldIdxs ?? []) {
+				const fname = layer.vector.metadataFields[fidx];
+				const vinfo = layer.vector.metadataFieldToVInfo.get(fidx);
 				let field = {
 					name: fname,
-					palette: view.palette,
-					vMin: view.vMin,
-					vMax: view.vMax,
-					absoluteVMin: view.absoluteVMin,
-					absoluteVMax: view.absoluteVMax,
-					vCenter: view.vCenter,
-					vStepSize: view.vStepSize,
+					palette: vinfo.palette,
+					vMin: vinfo.vMin,
+					vMax: vinfo.vMax,
+					absoluteVMin: vinfo.absoluteVMin,
+					absoluteVMax: vinfo.absoluteVMax,
+					vCenter: vinfo.vCenter,
+					vStepSize: vinfo.vStepSize,
 					isVisible: false
 				};
 				fields.push(field);
@@ -76,6 +77,8 @@
 
 		return fields;
 	}
+
+	let allFields = $state(getFields());
 
 	function layerIsCategorical() {
 		if (layer.isGrouped) {
@@ -91,12 +94,14 @@
 		});
 	}
 
-	function selectMetadataName(metadataName) {
+	async function selectMetadataName(metadataName) {
 		selectedValue = metadataName;
 
 		closeAndFocusTrigger();
 
-		onMetadataChange(metadataName);
+		await onMetadataChange(metadataName);
+
+		allFields = getFields();
 	}
 
 	function fieldVisibilityChange(field, isVisible) {
@@ -129,7 +134,7 @@
 					<Command.Empty>No metadata found.</Command.Empty>
 					<Command.Group>
 						{#each names as name (name)}
-							<Command.Item value={name} onSelect={() => selectMetadataName(name)}>
+							<Command.Item value={name} onSelect={async () => await selectMetadataName(name)}>
 								<Check class={cn(selectedValue !== name && 'text-transparent')} />
 								{name}
 							</Command.Item>
@@ -142,7 +147,7 @@
 {/if}
 {#if selectedValue !== null}
 	<FieldOptions
-		fields={getFields()}
+		fields={allFields}
 		areCategorical={layerIsCategorical()}
 		onVisibilityChange={(field, isVisible) => fieldVisibilityChange(field, isVisible)}
         onColorChange={(field, color) => onFieldColorChange(field.name, color)}

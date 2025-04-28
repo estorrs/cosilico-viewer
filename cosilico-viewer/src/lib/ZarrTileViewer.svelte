@@ -269,25 +269,25 @@
 
 		let layerPointViewInfo = $state(new SvelteMap());
 		for (const [vectorId, obj] of experiment.layers) {
-			let view = {
+			let view = $state({
 				viewAs: obj.vector.getCurrentObjectType(map),
 				scale: obj.vector.vectorView.scale,
 				fillOpacity: obj.vector.vectorView.fillOpacity,
 				strokeOpacity: obj.vector.vectorView.strokeOpacity,
 				strokeWidth: obj.vector.vectorView.strokeWidth,
 				strokeColor: obj.vector.vectorView.strokeColor
-			};
+			});
 			layerPointViewInfo.set(vectorId, view);
 		}
 
 		let layerPolygonViewInfo = $state(new SvelteMap());
 		for (const [vectorId, obj] of experiment.layers) {
-			let view = {
+			let view = $state({
 				fillOpacity: obj.vector.vectorView.fillOpacity,
 				strokeOpacity: obj.vector.vectorView.strokeOpacity,
 				strokeWidth: obj.vector.vectorView.strokeWidth,
 				strokeColor: obj.vector.vectorView.strokeColor
-			};
+			});
 			layerPolygonViewInfo.set(vectorId, view);
 		}
 
@@ -329,17 +329,6 @@
 		reloadImageInfoKey = !reloadImageInfoKey;
 		reloadLayerInfoKey = !reloadLayerInfoKey;
 	});
-
-	async function toggleImage(image, value) {
-		if (value) {
-			// show image logic here
-			///
-		} else {
-			// hide image logic here
-			///
-		}
-		image.isVisible = value;
-	}
 
 	async function toggleLayer(vector, value) {
 		if (value) {
@@ -477,7 +466,10 @@
 											<Checkbox
 												checked={mirrors.get('imageVisabilityInfo').get(obj.image.imageId)}
 												id="{obj.image.imageId}-visibility-checkbox"
-												onCheckedChange={(v) => toggleImage(obj.image, v)}
+												onCheckedChange={(v) => {
+													obj.image.setVisibility(v);
+													mirrors.get('imageVisabilityInfo').set(obj.image.imageId, v);
+												}}
 											/>
 											<Accordion.Trigger>
 												<span id="{obj.image.name}-trigger-text" class="text-left"
@@ -584,7 +576,10 @@
 											<Checkbox
 												checked={mirrors.get('layerVisabilityInfo').get(obj.vector.vectorId)}
 												id="{obj.vector.vectorId}-visibility-checkbox"
-												onCheckedChange={(v) => toggleLayer(obj.vector, v)}
+												onCheckedChange={(v) => {
+													obj.vector.setVisibility(v);
+													mirrors.get('layerVisabilityInfo').set(obj.vector.vectorId, v);
+												}}
 											/>
 											<Accordion.Trigger>
 												<span id="{obj.vector.name}-trigger-text" class="text-left"
@@ -592,79 +587,84 @@
 												>
 											</Accordion.Trigger>
 										</div>
-										<Accordion.Content class="ml-3">
+										<Accordion.Content class="ml-3"> 
+											<div class="flex w-full items-center gap-3">
+												<p>View options</p>
+												{#if obj.vector.objectTypes.includes('point')}
+													<PointViewOptions
+														view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
+														onPointScaleChange={(v) => {
+															obj.vector.setScale(v);
+															mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale =
+																v;
+														}}
+														onFillOpacityChange={(v) => {
+															obj.vector.setFillOpacity(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).fillOpacity = v;
+														}}
+														onStrokeOpacityChange={(v) => {
+															obj.vector.setStrokeOpacity(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).strokeOpacity = v;
+														}}
+														onStrokeWidthChange={(v) => {
+															obj.vector.setStrokeWidth(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).strokeWidth = v;
+														}}
+														onStrokeColorChange={(v) => {
+															obj.vector.setStrokeColor(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).strokeColor = v;
+														}}
+													/>
+												{/if}
+												{#if obj.vector.objectTypes.includes('polygon')}
+													<PolygonViewOptions
+														view={mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId)}
+														onFillOpacityChange={(v) => {
+															obj.vector.setFillOpacity(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).fillOpacity = v;
+														}}
+														onStrokeOpacityChange={(v) => {
+															obj.vector.setStrokeOpacity(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeOpacity = v;
+														}}
+														onStrokeWidthChange={(v) => {
+															obj.vector.setStrokeWidth(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeWidth = v;
+														}}
+														onStrokeColorChange={(v) => {
+															obj.vector.setStrokeColor(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeColor = v;
+														}}
+													/>
+												{/if}
+											</div>
 											<Card.Root>
 												<Card.Header class="p-1">
 													<Card.Title class="text-md">Active Metadata</Card.Title>
 												</Card.Header>
 												<Card.Content class="p-1 pt-0">
-													{#if obj.vector.objectTypes.includes('point')}
-														<PointViewOptions
-															view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
-															onPointScaleChange={(v) => {
-																obj.vector.setScale(v);
-																mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale =
-																	v;
-															}}
-															onFillOpacityChange={(v) => {
-																obj.vector.setFillOpacity(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).fillOpacity = v;
-															}}
-															onStrokeOpacityChange={(v) => {
-																obj.vector.setStrokeOpacity(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).strokeOpacity = v;
-															}}
-															onStrokeWidthChange={(v) => {
-																obj.vector.setStrokeWidth(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).strokeWidth = v;
-															}}
-															onStrokeColorChange={(v) => {
-																obj.vector.setStrokeColor(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).strokeColor = v;
-															}}
-														/>
-													{/if}
-													{#if obj.vector.objectTypes.includes('polygon')}
-														<PolygonViewOptions
-															view={mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId)}
-															onFillOpacityChange={(v) => {
-																obj.vector.setFillOpacity(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).fillOpacity = v;
-															}}
-															onStrokeOpacityChange={(v) => {
-																obj.vector.setStrokeOpacity(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeOpacity = v;
-															}}
-															onStrokeWidthChange={(v) => {
-																obj.vector.setStrokeWidth(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeWidth = v;
-															}}
-															onStrokeColorChange={(v) => {
-																obj.vector.setStrokeColor(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeColor = v;
-															}}
-														/>
-													{/if}
+													
 													<LayerOptions
 														layer={obj}
-														onMetadataChange={(metadataName) =>
-															onLayerMetadataChange(obj, metadataName)}
+														onMetadataChange={async (metadataName) => {
+															await obj.vector.setMetadata(metadataName, obj.metadataToNode.get(metadataName), map);
+														}}
 														onFieldColorChange={(fieldName, hex) =>
 															obj.vector.setFeatureFillColor(fieldName, hex)}
 														onFieldShapeChange={(fieldName, shape) =>
@@ -676,6 +676,7 @@
 														onFieldVMaxChange={(fieldName, vMax) => null}
 														onFieldVCenterChange={(fieldName, vMax) => null}
 													/>
+													
 												</Card.Content>
 											</Card.Root>
 										</Accordion.Content>

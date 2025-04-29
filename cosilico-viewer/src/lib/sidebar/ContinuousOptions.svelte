@@ -11,9 +11,6 @@
 
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
-	import PaletteSelector from './PaletteSelector.svelte';
-
 	let {
 		vMin,
 		vMax,
@@ -21,11 +18,9 @@
 		absoluteVMax,
 		vCenter = null,
 		vStepSize = 0.01,
-		palette = 'viridis',
 		onVMinChange = (e) => null,
 		onVMaxChange = (e) => null,
 		onVCenterChange = (e) => null,
-		onPaletteSelection = (e) => null
 	} = $props();
 
 	// let vMin = $state(0);
@@ -117,14 +112,8 @@
 			</Sheet.Header>
 
 			<div>
-				<div class="flex flex-col items-center gap-0 w-full">
-					<p>Color Palette</p>
-					<PaletteSelector
-						defaultPalette={palette}
-						palettes={continousPalettes}
-						onPaletteSelection={(v) => onPaletteSelection(v)}
-					/>
-					<p class="pt-2">Scale values</p>
+				<div class="flex flex-col items-center gap-0">
+					<p>Scale values</p>
 					<Card.Root class="p-1 w-full">
 						<Card.Header class="p-1">
 							<Card.Title class="text-sm">Scale Min/Max</Card.Title>
@@ -134,6 +123,7 @@
 								<Input
 									type="number"
 									value={vMin}
+									step={vStepSize}
 									onchange={(e) => vMinInputSetValue(e.target.value)}
 									class="w-[70px] py-1 text-left"
 								/>
@@ -141,11 +131,13 @@
 									bind:value={() => vSliderGetValues(), (vs) => vSliderSetValues(vs)}
 									min={absoluteVMin}
 									max={absoluteVMax}
+									step={vStepSize}
 									class="flex-1"
 								/>
 								<Input
 									type="number"
 									value={vMax}
+									step={vStepSize}
 									onchange={(e) => vMaxInputSetValue(e.target.value)}
 									class="w-[70px] py-1 text-left"
 								/>

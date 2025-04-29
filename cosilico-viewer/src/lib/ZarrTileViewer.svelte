@@ -210,7 +210,6 @@
 		async initializeLayerMetadata(map) {
 			for (const [k, v] of this.layers) {
 				if (!v.isGrouped) {
-					// console.log('vector', v);
 					await v.vector.setMetadata(null, null, map);
 				}
 			}
@@ -665,16 +664,17 @@
 														onMetadataChange={async (metadataName) => {
 															await obj.vector.setMetadata(metadataName, obj.metadataToNode.get(metadataName), map);
 														}}
+														onPaletteChange={(palette) => obj.vector.setPalette(palette)}
 														onFieldColorChange={(fieldName, hex) =>
 															obj.vector.setFeatureFillColor(fieldName, hex)}
 														onFieldShapeChange={(fieldName, shape) =>
 															obj.vector.setFeatureShapeType(fieldName, shape)}
-														onFieldPaletteChange={(fieldName, palette) => null}
+														onFieldPaletteChange={(fieldName, palette) => obj.vector.setPalette(palette)}
 														onFieldVisibilityChange={(fieldName, isVisible) =>
 															toggleFeature(fieldName, obj.vector, isVisible)}
-														onFieldVMinChange={(fieldName, vMin) => null}
-														onFieldVMaxChange={(fieldName, vMax) => null}
-														onFieldVCenterChange={(fieldName, vMax) => null}
+														onFieldVMinChange={(fieldName, vMin) => obj.vector.setVMin(fieldName, vMin)}
+														onFieldVMaxChange={(fieldName, vMax) => obj.vector.setVMax(fieldName, vMax)}
+														onFieldVCenterChange={(fieldName, vCenter) => obj.vector.setVCenter(fieldName, vCenter)}
 													/>
 													
 												</Card.Content>

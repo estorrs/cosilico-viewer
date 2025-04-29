@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
@@ -405,7 +404,7 @@ export class FeatureVector {
             const props = feature.values_;
             const v = this.vectorView;
 
-            if (props == null || props[this.metadataName] == null) {
+            if (props == null) {
                 return null;
             }
 
@@ -454,15 +453,15 @@ export class FeatureVector {
                         }
 
                     } else {
-                        if (visibleIdx in obj) {
+                        if (obj && visibleIdx in obj) {
                             value = obj[visibleIdx];
                         } else {
-                            throw new Error('metadata is not sparse and visible idx not found');
+                            console.log('metadata is not sparse and visible idx not found', props);
                         }
                     }
 
                     const fillColor = valueToColor(
-                        vInfo.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
+                        v.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
                     );
 
                     if (props.isPoint) {
@@ -498,6 +497,7 @@ export class FeatureVector {
             strokeWidth: 1.,
             strokeColor: '#dddddd',
             scale: 1.0,
+            palette: defaultPalettes.continousPalette,
             visibleFields: [],
             visibleFieldIndices: [],
         }
@@ -578,8 +578,7 @@ export class FeatureVector {
                             absoluteVMin: vmins[i],
                             absoluteVMax: vmaxs[i],
                             vCenter: vCenter,
-                            vStepSize: .1,
-                            palette: defaultPalettes.continousPalette,
+                            vStepSize: .01,
                         }
                     );
                 }
@@ -709,17 +708,20 @@ export class FeatureVector {
     setFeatureFillColor(featureName, hex) {
         this.vectorView.fieldToView.get(featureName).fillColor = hex;
 
-        this.layer.setStyle(layer.getStyle());
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     setFeatureShapeType(featureName, shapeName) {
-        if (this.metadataType == 'categorical') {
-            this.vectorView.featureNameToView.get(featureName).shapeType = shapeName;
-        } else {
-            this.vectorView.featureView.shapeType = shapeName;
+        if (this.objectTypes.includes('point')) {
+            if (this.metadataType == 'categorical') {
+                this.vectorView.featureNameToView.get(featureName).shapeType = shapeName;
+            } else {
+                this.vectorView.featureView.shapeType = shapeName;
+            }
+            
+            this.layer.setStyle(this.layer.getStyle());
         }
         
-        this.layer.setStyle(layer.getStyle());
     }
 
     setScale(scale) {
@@ -748,6 +750,35 @@ export class FeatureVector {
 
     setStrokeOpacity(strokeOpacity) {
         this.vectorView.strokeOpacity = strokeOpacity;
+
+        this.layer.setStyle(this.layer.getStyle());
+    }
+
+    setPalette(palette) {
+        this.vectorView.palette = palette;
+
+        this.layer.setStyle(this.layer.getStyle());
+    }
+
+    setVMin(fieldName, value) {
+        console.log('metadataFieldToVInfo', this.metadataFieldToVInfo);
+        const idx = this.metadataFields.indexOf(fieldName);
+        this.metadataFieldToVInfo.get(idx).vMin = value;
+
+        this.layer.setStyle(this.layer.getStyle());
+    }
+
+    setVMax(fieldName, value) {
+        console.log('vv', this.vectorView);
+        const idx = this.metadataFields.indexOf(fieldName);
+        this.metadataFieldToVInfo.get(idx).vMax = value;
+
+        this.layer.setStyle(this.layer.getStyle());
+    }
+
+    setVCenter(fieldName, value) {
+        const idx = this.metadataFields.indexOf(fieldName);
+        this.metadataFieldToVInfo.get(idx).vCenter = value;
 
         this.layer.setStyle(this.layer.getStyle());
     }

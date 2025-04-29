@@ -213,8 +213,7 @@
 
 	function onFieldDeselection(field) {
 		if (field.isVisible) {
-			field.isVisible = false;
-			onVisibilityChange(field, field.isVisible);
+			onFieldVisibilityChange(field, false);
 		}
 		selectedFields = selectedFields.filter((item) => item.name !== field.name);
 		field.isSelected = false;
@@ -224,7 +223,6 @@
 
 	function onFieldColorSelection(field, hex) {
 		field.hex = hex;
-		console.log('field is now', field.hex);
 		onColorChange(field, hex);
 	}
 
@@ -233,17 +231,17 @@
 		onShapeChange(field, symbol);
 	}
 
-	function onFieldPaletteSelection(field, palette) {
-		field.palette = palette;
-		onPaletteChange(field, palette);
-	}
+	// function onFieldPaletteSelection(field, palette) {
+	// 	field.palette = palette;
+	// 	onPaletteChange(field, palette);
+	// }
 
 	function onFieldVisibilityChange(field, value) {
 		if (!areCategorical && value) {
 			// can only have one visible at a time if continuous
 			for (const f of fields) {
 				if (f.isVisible) {
-					onVisibilityChange(f.name, false);
+					onVisibilityChange(f, false);
 					f.isVisible = false;
 				}
 			}
@@ -274,12 +272,17 @@
 	onMount(() => {
 		for (let field of fields) {
 			field.isDisabeled = false;
-			if (field.isVisible || fields.length < displayNFields) {
+			if (field.isVisible){
 				field.isSelected = true;
+				selectedFields.push(field);
+			} else if(areCategorical && fields.length < displayNFields) {
+				field.isSelected = true;
+				selectedFields.push(field);
 			} else {
 				field.isSelected = false;
 			}
 		}
+		rerenderActive = !rerenderActive;
 	});
 </script>
 
@@ -341,7 +344,7 @@
 									title="Select field color and symbol"
 									hex={field.hex}
 									{swatchHexs}
-									includeSymbols={true}
+									includeSymbols={areCategorical} // need to make two versions of this depending on whether you want symbols
 									onColorSelection={(value) => onFieldColorSelection(field, value)}
 									onSymbolSelection={(value) => onFieldSymbolSelection(field, value)}
 								/>
@@ -360,11 +363,9 @@
 									absoluteVMax={field.absoluteVMax}
 									vCenter={field.vCenter}
 									vStepSize={field.vStepSize}
-									palette={field.palette}
 									onVMinChange={(v) => onFieldVMinChange(field, v)}
 									onVMaxChange={(v) => onFieldVMaxChange(field, v)}
 									onVCenterChange={(v) => onFieldVCenterChange(field, v)}
-									onPaletteSelection={(v) => onFieldPaletteSelection(field, v)}
 								/>
 							{/if}
 							<Button

@@ -134,7 +134,8 @@ export class GroupedZarrVectorLoader {
                         const locationsY = locationsYChunk.data;
 
                         const minIdx = idIdxs[0];
-                        const maxIdx = idIdxs[idIdxs.length - 1];
+                        // const maxIdx = idIdxs[idIdxs.length - 1];
+                        const maxIdx = minIdx + idIdxs.length;
 
                         let featureToData = new Map();
                         for (const [featureName, n] of this.featureToNode) {
@@ -259,7 +260,8 @@ export class ZarrVectorLoader {
 
                         
                         const minIdx = featureIdxs[0];
-                        const maxIdx = featureIdxs[featureIdxs.length - 1];
+                        // const maxIdx = featureIdxs[featureIdxs.length - 1];
+                        const maxIdx = minIdx + featureIdxs.length;
 
                         let metadataToData = new Map();
                         for (const [metadataName, n] of this.metadataToNode) {
@@ -321,6 +323,7 @@ export class ZarrVectorLoader {
                                     entities.push(obj);
                                 }
                             }
+                            console.log('entity length', entities.length);
                             metadataToData.set(metadataName, entities);
                         }
 
@@ -361,10 +364,6 @@ export class ZarrVectorLoader {
                                 properties: props
                             }
 
-                            // if (feature.properties.id == 'bbahjjpl-1') {
-                            //     console.log('bbahjjpl-1', feature);
-                            // }
-
                             featureCollection.features.push(feature);
                         }
                     } 
@@ -373,6 +372,10 @@ export class ZarrVectorLoader {
                         featureProjection: this.projection,
                         dataProjection: this.projection,
                     });
+
+                    console.log('feature length', features.length);
+                    console.log('features', features);
+
 
                     tile.setFeatures(features);
                 } else {

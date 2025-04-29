@@ -9,10 +9,13 @@
 	import { cn } from '$lib/utils.js';
 
 	import FieldOptions from './FieldOptions.svelte';
+	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+	import PaletteSelector from './PaletteSelector.svelte';
 
 	let {
 		layer,
 		onMetadataChange = (metadataName) => null,
+		onPaletteChange = (palette) => null,
 		onFieldColorChange = (fieldName, color) => null,
 		onFieldShapeChange = (fieldName, shape) => null,
 		onFieldPaletteChange = (fieldName, palette) => null,
@@ -22,6 +25,7 @@
 		onFieldVCenterChange = (fieldName, vMax) => null
 	} = $props();
 
+	
 	let names = $state(Array.from(layer.metadataToNode.keys()));
 
 	let open = $state(false);
@@ -29,6 +33,8 @@
 	let triggerRef = $state<HTMLButtonElement>(null!);
 
 	let selectedValue = $state(layer.isGrouped ? 'Gene' : null);
+
+	let renderFields = $state(false);
 
 	function getFields() {
 		let fields = [];
@@ -44,7 +50,7 @@
 				};
 				fields.push(field);
 			}
-		} else if (layer.metadataType == 'categorical') {
+		} else if (layer.vector.metadataType == 'categorical') {
 			for (const fname of layer.vector.metadataFields) {
 				const view = layer.vector.vectorView.fieldToView.get(fname);
 				let field = {
@@ -101,7 +107,13 @@
 
 		await onMetadataChange(metadataName);
 
+		console.log('layer opt layer is', layer);
+
 		allFields = getFields();
+
+
+		renderFields = !renderFields;
+
 	}
 
 	function fieldVisibilityChange(field, isVisible) {
@@ -145,16 +157,30 @@
 		</Popover.Content>
 	</Popover.Root>
 {/if}
+{#key renderFields}
 {#if selectedValue !== null}
 	<FieldOptions
 		fields={allFields}
+
 		areCategorical={layerIsCategorical()}
 		onVisibilityChange={(field, isVisible) => fieldVisibilityChange(field, isVisible)}
-        onColorChange={(field, color) => onFieldColorChange(field.name, color)}
-        onShapeChange={(field, shape) => onFieldShapeChange(field.name, shape)}
-        onPaletteChange={(field, palette) => onFieldPaletteChange(field.name, palette)}
-        onVMinChange={(field, vMin) => onFieldVMinChange(field.name, vMin)}
-        onVMaxChange={(field, vMax) => onFieldVMaxChange(field.name, vMax)}
-        onVCenterChange={(field, vCenter) => onFieldVCenterChange(field.name, vCenter)}
+		onColorChange={(field, color) => onFieldColorChange(field.name, color)}
+		onShapeChange={(field, shape) => onFieldShapeChange(field.name, shape)}
+		onPaletteChange={(field, palette) => onFieldPaletteChange(field.name, palette)}
+		onVMinChange={(field, vMin) => onFieldVMinChange(field.name, vMin)}
+		onVMaxChange={(field, vMax) => onFieldVMaxChange(field.name, vMax)}
+		onVCenterChange={(field, vCenter) => onFieldVCenterChange(field.name, vCenter)}
 	/>
 {/if}
+
+	{#if !layerIsCategorical() && layer.vector.metadataName != null}
+		<div>
+			<p>Color Palette</p>
+			<PaletteSelector
+				defaultPalette={layer.vector.vectorView.palette}
+				palettes={continousPalettes}
+				onPaletteSelection={(v) => onPaletteChange(v)}
+			/>
+		</div>
+	{/if}
+{/key}

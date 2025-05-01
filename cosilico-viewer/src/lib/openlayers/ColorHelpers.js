@@ -167,3 +167,48 @@ export function hexToRgba(hex, alpha = 1) {
 	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+
+export function adjustHexLightness(hex, amount) {
+	if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) {
+		throw new Error("Invalid hex color");
+	}
+
+	// Expand short hex like "#abc" to "#aabbcc"
+	if (hex.length === 4) {
+		hex = '#' + hex.slice(1).split('').map(ch => ch + ch).join('');
+	}
+
+	// Parse R, G, B
+	const r = parseInt(hex.slice(1, 3), 16);
+	const g = parseInt(hex.slice(3, 5), 16);
+	const b = parseInt(hex.slice(5, 7), 16);
+
+	// Clamp amount to [0, 1]
+	amount = Math.max(0, Math.min(1, amount));
+
+	// Interpolate between white → original → black
+	function mix(channel) {
+		if (amount < 0.5) {
+			// mix with white
+			return Math.round(channel + (255 - channel) * (1 - 2 * amount));
+		} else {
+			// mix with black
+			return Math.round(channel * (2 * (1 - amount)));
+		}
+	}
+
+	const rAdj = mix(r);
+	const gAdj = mix(g);
+	const bAdj = mix(b);
+
+	// Convert back to hex
+	return (
+		'#' +
+		rAdj.toString(16).padStart(2, '0') +
+		gAdj.toString(16).padStart(2, '0') +
+		bAdj.toString(16).padStart(2, '0')
+	);
+}
+
+
+

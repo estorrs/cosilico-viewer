@@ -23,6 +23,7 @@
 		displayNFields = 20,
 		displayNFieldsSearch = 50,
 		areCategorical = true,
+		getCurrentObjectType = () => 'polygon',
 		onColorChange = (field, color) => null,
 		onShapeChange = (field, shape) => null,
 		onPaletteChange = (field, palette) => null,
@@ -245,13 +246,9 @@
 					f.isVisible = false;
 				}
 			}
-
-			field.isVisible = value;
-			onVisibilityChange(field, value);
-		} else {
-			field.isVisible = value;
-			onVisibilityChange(field, field.isVisible);
-		}
+		} 
+		field.isVisible = value;
+		onVisibilityChange(field, field.isVisible);
 	}
 
 	function onFieldVMaxChange(field, value) {
@@ -339,14 +336,24 @@
 								checked={field.isVisible}
 								onCheckedChange={(v) => onFieldVisibilityChange(field, v)}
 							/>
-							{#if areCategorical}
+							{#if areCategorical && getCurrentObjectType() == 'point'}
 								<SwatchSelector
 									title="Select field color and symbol"
 									hex={field.hex}
 									{swatchHexs}
-									includeSymbols={areCategorical} // need to make two versions of this depending on whether you want symbols
+									includeSymbols={true}
 									onColorSelection={(value) => onFieldColorSelection(field, value)}
 									onSymbolSelection={(value) => onFieldSymbolSelection(field, value)}
+								/>
+								<p>{field.name}</p>
+							{/if}
+							{#if areCategorical && getCurrentObjectType() == 'polygon'}
+								<SwatchSelector
+									title="Select field color"
+									hex={field.hex}
+									{swatchHexs}
+									includeSymbols={false}
+									onColorSelection={(value) => onFieldColorSelection(field, value)}
 								/>
 								<p>{field.name}</p>
 							{/if}

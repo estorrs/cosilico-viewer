@@ -14,6 +14,7 @@
 
 	let {
 		layer,
+		getCurrentObjectType = () => 'point',
 		onMetadataChange = (metadataName) => null,
 		onPaletteChange = (palette) => null,
 		onFieldColorChange = (fieldName, color) => null,
@@ -25,7 +26,6 @@
 		onFieldVCenterChange = (fieldName, vMax) => null
 	} = $props();
 
-	
 	let names = $state(Array.from(layer.metadataToNode.keys()));
 
 	let open = $state(false);
@@ -161,7 +161,7 @@
 {#if selectedValue !== null}
 	<FieldOptions
 		fields={allFields}
-
+		getCurrentObjectType={getCurrentObjectType}
 		areCategorical={layerIsCategorical()}
 		onVisibilityChange={(field, isVisible) => fieldVisibilityChange(field, isVisible)}
 		onColorChange={(field, color) => onFieldColorChange(field.name, color)}

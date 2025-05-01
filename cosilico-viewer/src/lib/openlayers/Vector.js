@@ -8,7 +8,7 @@ import { Style, Fill, Stroke } from "ol/style";
 
 
 import { GroupedZarrVectorLoader, ZarrVectorLoader } from './ZarrVectorLoader';
-import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba } from './ColorHelpers';
+import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba, adjustHexLightness } from './ColorHelpers';
 import { generateShape } from "./ShapeHelpers";
 import { initZarr } from "./ZarrHelpers";
 import { scaleFromCenter } from "ol/extent";
@@ -420,7 +420,7 @@ export class FeatureVector {
                     } else {
                         const style = new Style({
                             fill: new Fill({color: hexToRgba(view.fillColor, v.fillOpacity)}),
-                            stroke: new Stroke({color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth})
+                            stroke: new Stroke({color: hexToRgba(view.strokeColor, v.strokeOpacity), width: v.strokeWidth})
                         });
                         return style
                     }
@@ -496,6 +496,7 @@ export class FeatureVector {
             strokeOpacity: 1.0,
             strokeWidth: 1.,
             strokeColor: '#dddddd',
+            strokeDarkness: .5,
             scale: 1.0,
             palette: defaultPalettes.continousPalette,
             visibleFields: [],
@@ -515,7 +516,7 @@ export class FeatureVector {
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
             strokeWidth: 1.,
-            strokeColor: '#dddddd',
+            strokeDarkness: .5,
             scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
@@ -525,9 +526,10 @@ export class FeatureVector {
             const field = this.metadataFields[i];
             const catFeatureView = {
                 shapeType: 'circle',
+                strokeColor: '#dddddd',
                 fillColor: this.fieldToColor.get(field)
             };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(catFeatureView.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
+            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(catFeatureView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(catFeatureView.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
 
             this.vectorView.fieldToView.set(field, catFeatureView);
         }
@@ -676,9 +678,22 @@ export class FeatureVector {
     //     });
     // }
 
+    applyDarkenedBorder(value) {
+        console.log('vector darken value is', value);
+        if (this.metadataType == 'categorical') {
+            for (const [fname, v] of this.vectorView.fieldToView) {
+                const dark = adjustHexLightness(v.fillColor, value);
+                v.strokeColor = dark;
+            }
+            this.vectorView.strokeDarkness = value
+        }
+        this.layer.setStyle(this.layer.getStyle());
+    }
+
     addFeature(featureName) {
         // @ts-ignore
         const fieldIndex = this.metadataFields.indexOf(featureName);
+        console.log('adding feature', featureName);
 
         if (this.metadataType == 'categorical') {
             this.vectorView.visibleFieldIndices.push(fieldIndex);
@@ -687,16 +702,22 @@ export class FeatureVector {
             this.vectorView.visibleFieldIndices = [fieldIndex];
             this.vectorView.visibleFields = [featureName];
         }
-        this.layer.getSource().changed();
+        // this.layer.getSource().changed();
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     removeFeature(featureName) {
-        const fieldIndex = this.vectorView.visibleFieldIndices.indexOf(featureName);
+        console.log('removing feature', featureName);
+        const fieldIndex = this.vectorView?.visibleFields.indexOf(featureName);
+        console.log('idx', fieldIndex);
 
         this.vectorView.visibleFieldIndices.splice(fieldIndex, 1);
         this.vectorView.visibleFields.splice(fieldIndex, 1);
 
-        this.layer.getSource().changed();
+        console.log(this.vectorView?.visibleFields);
+
+        // this.layer.getSource().changed();
+        this.layer.setStyle(this.layer.getStyle());
     }
 
     setVisibility(value) {
@@ -737,14 +758,28 @@ export class FeatureVector {
     }
 
     setStrokeWidth(strokeWidth) {
-        this.vectorView.strokeWidth = strokeWidth;
+        const v = Math.max(.01, strokeWidth);
+        console.log('stroke width is', v);
+        this.vectorView.strokeWidth = v; //cant be zero
 
         this.layer.setStyle(this.layer.getStyle());
     }
 
-    setStrokeColor(hex) {
-        this.vectorView.strokeColor = hex;
+    setFieldStrokeColor(featureName, hex) {
+        this.vectorView.fieldToView.get(featureName).strokeColor = hex;
+        this.layer.setStyle(this.layer.getStyle());
+    }
 
+    setStrokeColor(hex) {
+        if (this.metadataType == 'categorical') {
+            console.log('vector view', this.vectorView);
+            for (const [fname, v] of this.vectorView.fieldToView) {
+                v.strokeColor = hex;
+            }
+        } else {
+            this.vectorView.strokeColor = hex;
+        }
+        
         this.layer.setStyle(this.layer.getStyle());
     }
 

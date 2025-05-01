@@ -285,7 +285,8 @@
 				fillOpacity: obj.vector.vectorView.fillOpacity,
 				strokeOpacity: obj.vector.vectorView.strokeOpacity,
 				strokeWidth: obj.vector.vectorView.strokeWidth,
-				strokeColor: obj.vector.vectorView.strokeColor
+				strokeColor: obj.vector.vectorView.strokeColor,
+				strokeDarkness: obj.vector.vectorView.strokeDarkness,
 			});
 			layerPolygonViewInfo.set(vectorId, view);
 		}
@@ -650,6 +651,12 @@
 																.get('layerPolygonViewInfo')
 																.get(obj.vector.vectorId).strokeColor = v;
 														}}
+														onApplyDarkenedBorder={(v) => {
+															obj.vector.applyDarkenedBorder(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeDarkness = v;
+														}}
 													/>
 												{/if}
 											</div>
@@ -661,6 +668,7 @@
 													
 													<LayerOptions
 														layer={obj}
+														getCurrentObjectType={() => obj.vector.getCurrentObjectType(map)}
 														onMetadataChange={async (metadataName) => {
 															await obj.vector.setMetadata(metadataName, obj.metadataToNode.get(metadataName), map);
 														}}

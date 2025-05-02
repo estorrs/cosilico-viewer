@@ -14,13 +14,13 @@ import { initZarr } from "./ZarrHelpers";
 import { scaleFromCenter } from "ol/extent";
 
 function getClosestResolution(map, availableResolutions, tileSize) {
-	let current = map.getView().getResolution();
-	if (!current) return null;
+    let current = map.getView().getResolution();
+    if (!current) return null;
     current = current * tileSize;
 
-	return availableResolutions.reduce((prev, curr) =>
-		Math.abs(curr - current) < Math.abs(prev - current) ? curr : prev
-	);
+    return availableResolutions.reduce((prev, curr) =>
+        Math.abs(curr - current) < Math.abs(prev - current) ? curr : prev
+    );
 }
 
 export class FeatureGroupVector {
@@ -215,7 +215,7 @@ export class FeatureGroupVector {
             this.featureNameToLayer.get(featureName).setVisible(value);
         }
 
-		this.isVisible = value;
+        this.isVisible = value;
     }
 
     setFeatureFillColor(featureName, hex) {
@@ -382,7 +382,7 @@ export class FeatureVector {
             metadataToFieldIdxs.set(this.metadataName, this.metadataFieldIdxs);
             metadataToIsSparse.set(this.metadataName, this.metadataIsSparse);
             metadataToType.set(this.metadataName, this.metadataType);
-        } 
+        }
 
         // vectorNode, fullImageHeight, fullImageWidth, pixelProjection, tileSize, resolutions, metadataToNode, metadataToType, metadataToFieldIdxs, metadataToIsSparse
         const vectorLoader = new ZarrVectorLoader(
@@ -419,8 +419,8 @@ export class FeatureVector {
                         });
                     } else {
                         const style = new Style({
-                            fill: new Fill({color: hexToRgba(view.fillColor, v.fillOpacity)}),
-                            stroke: new Stroke({color: hexToRgba(view.strokeColor, v.strokeOpacity), width: v.strokeWidth})
+                            fill: new Fill({ color: hexToRgba(view.fillColor, v.fillOpacity) }),
+                            stroke: new Stroke({ color: hexToRgba(view.strokeColor, v.strokeOpacity), width: v.strokeWidth })
                         });
                         return style
                     }
@@ -434,8 +434,8 @@ export class FeatureVector {
                         });
                     } else {
                         return new Style({
-                            fill: new Fill({color: hexToRgba('#aaaaaa', v.fillOpacity)}),
-                            stroke: new Stroke({color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth})
+                            fill: new Fill({ color: hexToRgba('#aaaaaa', v.fillOpacity) }),
+                            stroke: new Stroke({ color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth })
                         });
                     }
                 } else {
@@ -463,16 +463,20 @@ export class FeatureVector {
                     const fillColor = valueToColor(
                         v.palette, value, vInfo.vMin, vInfo.vMax, vInfo.vCenter
                     );
+                    let strokeColor = v.strokeColor;
+                    if (v.borderType == 'field') {
+                        strokeColor = adjustHexLightness(fillColor, v.strokeDarkness);
+                    }
 
                     if (props.isPoint) {
-                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, hexToRgba(v.strokeColor, v.strokeOpacity), hexToRgba(fillColor, v.fillOpacity), v.scale);
+                        const shape = generateShape(v.featureView.shapeType, v.strokeWidth, hexToRgba(strokeColor, v.strokeOpacity), hexToRgba(fillColor, v.fillOpacity), v.scale);
                         return new Style({
                             image: shape
                         });
                     } else {
                         return new Style({
-                            fill: new Fill({color: hexToRgba(fillColor, v.fillOpacity)}),
-                            stroke: new Stroke({color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth})
+                            fill: new Fill({ color: hexToRgba(fillColor, v.fillOpacity) }),
+                            stroke: new Stroke({ color: hexToRgba(strokeColor, v.strokeOpacity), width: v.strokeWidth })
                         });
                     }
                 }
@@ -497,6 +501,7 @@ export class FeatureVector {
             strokeWidth: 1.,
             strokeColor: '#dddddd',
             strokeDarkness: .5,
+            borderType: 'default',
             scale: 1.0,
             palette: defaultPalettes.continousPalette,
             visibleFields: [],
@@ -516,7 +521,9 @@ export class FeatureVector {
             fillOpacity: 1.0,
             strokeOpacity: 1.0,
             strokeWidth: 1.,
+            strokeColor: '#dddddd', // this is only used as the default stroke color
             strokeDarkness: .5,
+            borderType: 'default',
             scale: 1.0,
             visibleFields: [],
             visibleFieldIndices: [],
@@ -526,7 +533,7 @@ export class FeatureVector {
             const field = this.metadataFields[i];
             const catFeatureView = {
                 shapeType: 'circle',
-                strokeColor: '#dddddd',
+                strokeColor: this.vectorView.strokeColor,
                 fillColor: this.fieldToColor.get(field)
             };
             catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(catFeatureView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(catFeatureView.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
@@ -542,7 +549,7 @@ export class FeatureVector {
             const fieldsArr = await open(metadataNode.resolve(path), { kind: "array" });
             const chunk = await get(fieldsArr, [null]);
             this.metadataFields = chunk.data;
-    
+
             this.metadataName = metadataName;
             this.metadataNode = metadataNode;
             this.metadataIsSparse = metadataNode.attrs.is_sparse;
@@ -550,9 +557,9 @@ export class FeatureVector {
             for (let i = 0; i < this.metadataFields.length; i++) {
                 this.metadataFieldIdxs.push(i);
             }
-    
+
             this.metadataType = metadataNode.attrs.type;
-    
+
             if (this.metadataType == 'categorical') {
                 this.initializeCategoricalView();
             } else {
@@ -587,10 +594,10 @@ export class FeatureVector {
 
                 this.initializeContinuousView();
             }
-            
+
             obj = this.createLayer();
             this.vectorView.zarrVectorLoader = obj.vectorLoader;
-    
+
             // if categorical all fields are visible by default
             if (this.metadataType == 'categorical') {
                 this.vectorView.visibleFieldIndices = [...this.metadataFieldIdxs];
@@ -598,6 +605,12 @@ export class FeatureVector {
             } else { // for continuous no field is visible by default
                 this.vectorView.visibleFieldIndices = [];
                 this.vectorView.visibleFields = []
+            }
+
+
+            // if categorical we need to check to see if we are coloring border by field
+            if (this.vectorView.borderType == 'field') {
+                this.setBorderColoring(this.vectorView.strokeDarkness);
             }
         } else {
             this.initializeContinuousView();
@@ -678,18 +691,6 @@ export class FeatureVector {
     //     });
     // }
 
-    applyDarkenedBorder(value) {
-        console.log('vector darken value is', value);
-        if (this.metadataType == 'categorical') {
-            for (const [fname, v] of this.vectorView.fieldToView) {
-                const dark = adjustHexLightness(v.fillColor, value);
-                v.strokeColor = dark;
-            }
-            this.vectorView.strokeDarkness = value
-        }
-        this.layer.setStyle(this.layer.getStyle());
-    }
-
     addFeature(featureName) {
         // @ts-ignore
         const fieldIndex = this.metadataFields.indexOf(featureName);
@@ -723,11 +724,15 @@ export class FeatureVector {
     setVisibility(value) {
         this.layer.setVisible(value);
 
-		this.isVisible = value;
+        this.isVisible = value;
     }
 
     setFeatureFillColor(featureName, hex) {
         this.vectorView.fieldToView.get(featureName).fillColor = hex;
+
+        if (this.metadataType == 'categorical' && this.vectorView.borderType == 'field') {
+            this.setBorderColoring(this.vectorView?.strokeDarkness);
+        }
 
         this.layer.setStyle(this.layer.getStyle());
     }
@@ -739,10 +744,10 @@ export class FeatureVector {
             } else {
                 this.vectorView.featureView.shapeType = shapeName;
             }
-            
+
             this.layer.setStyle(this.layer.getStyle());
         }
-        
+
     }
 
     setScale(scale) {
@@ -771,15 +776,14 @@ export class FeatureVector {
     }
 
     setStrokeColor(hex) {
+        this.vectorView.strokeColor = hex;
         if (this.metadataType == 'categorical') {
             console.log('vector view', this.vectorView);
             for (const [fname, v] of this.vectorView.fieldToView) {
                 v.strokeColor = hex;
             }
-        } else {
-            this.vectorView.strokeColor = hex;
         }
-        
+
         this.layer.setStyle(this.layer.getStyle());
     }
 
@@ -814,6 +818,27 @@ export class FeatureVector {
     setVCenter(fieldName, value) {
         const idx = this.metadataFields.indexOf(fieldName);
         this.metadataFieldToVInfo.get(idx).vCenter = value;
+
+        this.layer.setStyle(this.layer.getStyle());
+    }
+
+    setBorderType(value) {
+        this.vectorView.borderType = value;
+
+        if (value == 'default') {
+            this.setStrokeColor(this.vectorView.strokeColor);
+        } else if (value == 'field') {
+            this.setBorderColoring(this.vectorView.strokeDarkness);
+        }
+    }
+
+    setBorderColoring(value) {
+        this.vectorView.strokeDarkness = value
+        if (this.metadataType == 'categorical') {
+            for (const [fname, v] of this.vectorView.fieldToView) {
+                v.strokeColor = adjustHexLightness(v.fillColor, value);
+            }
+        }
 
         this.layer.setStyle(this.layer.getStyle());
     }

@@ -1,5 +1,4 @@
 <script lang="ts">
-	// @ts-nocheck
 
 	import * as Accordion from '$lib/components/ui/accordion';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
@@ -25,14 +24,15 @@
 		onStrokeOpacityChange = (e) => null,
 		onStrokeWidthChange = (e) => null,
 		onStrokeColorChange = (e) => null,
-		onApplyDarkenedBorder = () => null,
+		onBorderColoring = (value) => null,
+		onBorderTypeChange = (e) => null,
 		minScale = 0,
 		maxScale = 4,
 		minStrokeWidth = 0,
 		maxStrokeWidth = 4
 	} = $props();
 
-	let applyDarken = $state(false);
+	// let applyDarken = $state(false);
 
 	// let view = $state({
 	// 	fillOpacity: 1.0,
@@ -40,7 +40,7 @@
 	// 	strokeWidth: 1.0,
 	//  strokeColor: '#aaaaaa'
 	// })
-	console.log('view is', $state.snapshot(view));
+	// console.log('view is', $state.snapshot(view));
 
 	let swatchHexs = $state([view.strokeColor]);
 
@@ -104,20 +104,23 @@
 
 	function strokeDarknessSliderSetValue(v) {
 		v = Number(v[0]);
-		onApplyDarkenedBorder(v);
+		onBorderColoring(v);
 	}
 
 	function strokeDarknessInputSetValue(v) {
 		v = Number(v);
-		onApplyDarkenedBorder(v);
+		onBorderColoring(v);
 	}
 
-	function applyDarkenCheck(v) {
-		applyDarken = v;
-		if (v) {
-			onApplyDarkenedBorder(view.strokeDarkness);
-		}
-	}
+	// function applyDarkenCheck(v) {
+	// 	// view.applyBorderColoring = v;
+	// 	onBorderColoring(view.applyBorderColoring, view.strokeDarkness);
+	// }
+
+	// function onBorderTypeChange(value) {
+	// 	// view.borderType = value;
+	// 	onBorderTypeChange(value);
+	// }
 </script>
 
 <Sheet.Root>
@@ -168,23 +171,43 @@
 						</Card.Content>
 					</Card.Root>
 					<p class="pt-2">Stroke</p>
-					<Switch
-						id="apply-darken"
-						checked={applyDarken}
-						onCheckedChange={(v) => applyDarkenCheck(v)}
-					/>
-					{#key applyDarken}
-						{#if applyDarken}
-							{console.log('html darkness value is', view.strokeDarkness)}
-							<Card.Root class="p-1 w-full">
-								<Card.Header class="p-1">
-									<Card.Title class="text-sm">Color shade</Card.Title>
-								</Card.Header>
-								<Card.Content class="p-1 pt-0">
+					<Card.Root class="p-1 w-full">
+						<Card.Header class="p-1">
+							<Card.Title class="text-sm">Border color style</Card.Title>
+						</Card.Header>
+						<Card.Content class="p-1 pt-0">
+							<!-- <div class="flex w-full items-center gap-3">
+								<Switch
+									id="apply-darken"
+									checked={view.applyBorderColoring}
+									onCheckedChange={(v) => applyDarkenCheck(v)}
+								/>
+								<p>Adjust border brightness</p>
+							</div> -->
+							<Tabs.Root value={view.borderType} class="w-full" onValueChange={(value) => onBorderTypeChange(value)}>
+								<Tabs.List class="grid grid-cols-2 w-full">
+								  <Tabs.Trigger value="default">Default</Tabs.Trigger>
+								  <Tabs.Trigger value="field">Color by field</Tabs.Trigger>
+								</Tabs.List>
+								<Tabs.Content value="default">
+									<div class="flex items-center gap-2 pt-1">
+										<SwatchSelector
+											title="Select stroke color"
+											hex={view.strokeColor}
+											{swatchHexs}
+											includeSymbols={false}
+											onColorSelection={(value) => onStrokeColorChange(value)}
+										/>
+										<p>Set stroke color</p>
+									</div>
+								</Tabs.Content>
+								<Tabs.Content value="field">
+									<p>Border brightness</p>
 									<div class="flex w-full items-center gap-3">
 										<Slider
 											bind:value={
-												() => strokeDarknessSliderGetValue(), (v) => strokeDarknessSliderSetValue(v)
+												() => strokeDarknessSliderGetValue(),
+												(v) => strokeDarknessSliderSetValue(v)
 											}
 											min={0}
 											max={1.0}
@@ -198,11 +221,49 @@
 											class="w-[70px] py-1 text-left"
 										/>
 									</div>
-								</Card.Content>
-							</Card.Root>
-						{/if}
-					{/key}
-					<Card.Root class="p-1 w-full">
+								</Tabs.Content>
+							</Tabs.Root>
+							
+						</Card.Content>
+					</Card.Root>
+					<!-- <div class="flex w-full items-center gap-3"></div>
+					<p>Border stroke as color</p>
+					<Switch
+						id="apply-darken"
+						checked={applyDarken}
+						onCheckedChange={(v) => applyDarkenCheck(v)}
+					/>
+				</div>
+				{#key applyDarken}
+					{#if applyDarken}
+						{console.log('html darkness value is', view.strokeDarkness)}
+						<Card.Root class="p-1 w-full">
+							<Card.Header class="p-1">
+								<Card.Title class="text-sm">Color shade</Card.Title>
+							</Card.Header>
+							<Card.Content class="p-1 pt-0">
+								<div class="flex w-full items-center gap-3">
+									<Slider
+										bind:value={
+											() => strokeDarknessSliderGetValue(), (v) => strokeDarknessSliderSetValue(v)
+										}
+										min={0}
+										max={1.0}
+										step={0.01}
+									/>
+									<Input
+										type="number"
+										step=".01"
+										value={view.strokeDarkness}
+										onchange={(e) => strokeDarknessInputSetValue(e.target.value)}
+										class="w-[70px] py-1 text-left"
+									/>
+								</div>
+							</Card.Content>
+						</Card.Root>
+					{/if}
+				{/key} -->
+					<!-- <Card.Root class="p-1 w-full">
 						<Card.Header class="p-1">
 							<Card.Title class="text-sm">Stroke color</Card.Title>
 						</Card.Header>
@@ -218,7 +279,7 @@
 								<p>Set stroke color</p>
 							</div>
 						</Card.Content>
-					</Card.Root>
+					</Card.Root> -->
 					<Card.Root class="p-1 w-full">
 						<Card.Header class="p-1">
 							<Card.Title class="text-sm">Stroke opacity</Card.Title>

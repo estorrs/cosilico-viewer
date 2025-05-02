@@ -25,6 +25,7 @@
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
 
 	import Check from '@lucide/svelte/icons/check';
+	import { apply } from 'ol/transform';
 
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
@@ -287,6 +288,7 @@
 				strokeWidth: obj.vector.vectorView.strokeWidth,
 				strokeColor: obj.vector.vectorView.strokeColor,
 				strokeDarkness: obj.vector.vectorView.strokeDarkness,
+				borderType: obj.vector.vectorView.borderType,
 			});
 			layerPolygonViewInfo.set(vectorId, view);
 		}
@@ -651,11 +653,17 @@
 																.get('layerPolygonViewInfo')
 																.get(obj.vector.vectorId).strokeColor = v;
 														}}
-														onApplyDarkenedBorder={(v) => {
-															obj.vector.applyDarkenedBorder(v);
+														onBorderColoring={(v) => {
+															obj.vector.setBorderColoring(v);
 															mirrors
 																.get('layerPolygonViewInfo')
 																.get(obj.vector.vectorId).strokeDarkness = v;
+														}}
+														onBorderTypeChange={(v) => {
+															obj.vector.setBorderType(v);
+															let info = mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId);
+															info.borderType = v;
+
 														}}
 													/>
 												{/if}

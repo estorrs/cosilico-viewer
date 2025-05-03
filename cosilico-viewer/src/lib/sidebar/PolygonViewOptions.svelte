@@ -112,15 +112,6 @@
 		onBorderColoring(v);
 	}
 
-	// function applyDarkenCheck(v) {
-	// 	// view.applyBorderColoring = v;
-	// 	onBorderColoring(view.applyBorderColoring, view.strokeDarkness);
-	// }
-
-	// function onBorderTypeChange(value) {
-	// 	// view.borderType = value;
-	// 	onBorderTypeChange(value);
-	// }
 </script>
 
 <Sheet.Root>
@@ -176,14 +167,6 @@
 							<Card.Title class="text-sm">Border color style</Card.Title>
 						</Card.Header>
 						<Card.Content class="p-1 pt-0">
-							<!-- <div class="flex w-full items-center gap-3">
-								<Switch
-									id="apply-darken"
-									checked={view.applyBorderColoring}
-									onCheckedChange={(v) => applyDarkenCheck(v)}
-								/>
-								<p>Adjust border brightness</p>
-							</div> -->
 							<Tabs.Root value={view.borderType} class="w-full" onValueChange={(value) => onBorderTypeChange(value)}>
 								<Tabs.List class="grid grid-cols-2 w-full">
 								  <Tabs.Trigger value="default">Default</Tabs.Trigger>

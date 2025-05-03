@@ -345,6 +345,7 @@ export class FeatureVector {
         this.sizeX = baseImage.sizeX;
         this.sizeY = baseImage.sizeY;
         this.tileSize = baseImage.tileSize;
+        this.metadataToView = new Map();
         this.metadataName = null;
         this.metadataNode = null;
         this.metadataIsSparse = null;
@@ -494,19 +495,30 @@ export class FeatureVector {
     }
 
     initializeContinuousView() {
-        this.vectorView = {
-            featureView: null,
-            fillOpacity: 1.0,
-            strokeOpacity: 1.0,
-            strokeWidth: 1.,
-            strokeColor: '#dddddd',
-            strokeDarkness: .5,
-            borderType: 'default',
-            scale: 1.0,
-            palette: defaultPalettes.continousPalette,
-            visibleFields: [],
-            visibleFieldIndices: [],
+        if (!this.vectorView) {
+            this.vectorView = {
+                featureView: null,
+                fillOpacity: 1.0,
+                strokeOpacity: 1.0,
+                strokeWidth: 1.,
+                strokeColor: '#dddddd',
+                strokeDarkness: .5,
+                borderType: 'default',
+                scale: 1.0,
+                palette: defaultPalettes.continousPalette,
+                visibleFields: [],
+                visibleFieldIndices: [],
+            }
+        } else {
+            this.vectorView = {
+                ...this.vectorView,
+                featureView: null,
+                palette: defaultPalettes.continousPalette,
+                visibleFields: [],
+                visibleFieldIndices: [],
+            }
         }
+       
         const contFeatureView = {
             shapeType: 'circle',
         };
@@ -516,18 +528,28 @@ export class FeatureVector {
 
     initializeCategoricalView() {
         this.fieldToColor = generateColorMapping(defaultPalettes.featurePallete, this.metadataFields);
-        this.vectorView = {
-            fieldToView: new globalThis.Map(),
-            fillOpacity: 1.0,
-            strokeOpacity: 1.0,
-            strokeWidth: 1.,
-            strokeColor: '#dddddd', // this is only used as the default stroke color
-            strokeDarkness: .5,
-            borderType: 'default',
-            scale: 1.0,
-            visibleFields: [],
-            visibleFieldIndices: [],
-        };
+
+        if (!this.vectorView) {
+            this.vectorView = {
+                fieldToView: new globalThis.Map(),
+                fillOpacity: 1.0,
+                strokeOpacity: 1.0,
+                strokeWidth: 1.,
+                strokeColor: '#dddddd', // this is only used as the default stroke color
+                strokeDarkness: .5,
+                borderType: 'default',
+                scale: 1.0,
+                visibleFields: [],
+                visibleFieldIndices: [],
+            }; 
+        } else {
+            this.vectorView = {
+                ...this.vectorView,
+                fieldToView: new globalThis.Map(),
+                visibleFields: [],
+                visibleFieldIndices: [],
+            }
+        }
 
         for (let i = 0; i < this.metadataFields.length; i++) {
             const field = this.metadataFields[i];
@@ -543,6 +565,10 @@ export class FeatureVector {
     }
 
     async setMetadata(metadataName, metadataNode, map) {
+        if (this.metadataName) {
+            this.metadataToView.set(this.metadataName, this.vectorView); // saving previous
+        }
+
         let obj;
         if (metadataName) {
             const path = '/metadata/fields'
@@ -561,7 +587,12 @@ export class FeatureVector {
             this.metadataType = metadataNode.attrs.type;
 
             if (this.metadataType == 'categorical') {
-                this.initializeCategoricalView();
+                if (this.metadataToView.has(this.metadataName)) {
+                    this.vectorView = this.metadataToView.get(this.metadataName);
+                } else {
+                    this.initializeCategoricalView();
+                }
+                
             } else {
                 let chunk;
                 chunk = await get(await open(metadataNode.resolve('/metadata/vmins'), { kind: "array" }), [null]);
@@ -592,7 +623,11 @@ export class FeatureVector {
                     );
                 }
 
-                this.initializeContinuousView();
+                if (this.metadataToView.has(this.metadataName)) {
+                    this.vectorView = this.metadataToView.get(this.metadataName);
+                } else {
+                    this.initializeContinuousView();
+                }
             }
 
             obj = this.createLayer();
@@ -606,7 +641,6 @@ export class FeatureVector {
                 this.vectorView.visibleFieldIndices = [];
                 this.vectorView.visibleFields = []
             }
-
 
             // if categorical we need to check to see if we are coloring border by field
             if (this.vectorView.borderType == 'field') {
@@ -625,6 +659,7 @@ export class FeatureVector {
         this.layer = obj.layer;
         map.addLayer(obj.layer);
 
+        console.log('metadata set, vector view is', this.vectorView);
 
     }
 

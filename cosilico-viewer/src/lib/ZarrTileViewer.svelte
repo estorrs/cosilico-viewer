@@ -29,9 +29,11 @@
 
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
+	let metadataChangeKey = $state(true);
 	let map;
 	let experiment = $state(null);
 	let mirrors = $state(null);
+
 
 	const experimentObj = {
 		id: 'alsdkfj',
@@ -590,6 +592,7 @@
 											</Accordion.Trigger>
 										</div>
 										<Accordion.Content class="ml-3"> 
+											{#key metadataChangeKey}
 											<div class="flex w-full items-center gap-3">
 												<p>View options</p>
 												{#if obj.vector.objectTypes.includes('point')}
@@ -668,6 +671,7 @@
 													/>
 												{/if}
 											</div>
+											{/key}
 											<Card.Root>
 												<Card.Header class="p-1">
 													<Card.Title class="text-md">Active Metadata</Card.Title>
@@ -679,6 +683,23 @@
 														getCurrentObjectType={() => obj.vector.getCurrentObjectType(map)}
 														onMetadataChange={async (metadataName) => {
 															await obj.vector.setMetadata(metadataName, obj.metadataToNode.get(metadataName), map);
+
+															// we need to resynch view options
+															let info = mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId);
+															info.fillOpacity = obj.vector.vectorView.fillOpacity;
+															info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
+															info.strokeWidth = obj.vector.vectorView.strokeWidth;
+															info.strokeColor = obj.vector.vectorView.strokeColor;
+															info.strokeDarkness = obj.vector.vectorView.strokeDarkness;
+															info.borderType = obj.vector.vectorView.borderType;
+
+															info = mirrors.get('layerPointViewInfo').get(obj.vector.vectorId);
+															info.viewAs = obj.vector.getCurrentObjectType(map);
+															info.scale = obj.vector.vectorView.scale;
+															info.fillOpacity = obj.vector.vectorView.fillOpacity;
+															info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
+															info.strokeWidth = obj.vector.vectorView.strokeWidth;
+															info.strokeColor = obj.vector.vectorView.strokeColor;
 														}}
 														onPaletteChange={(palette) => obj.vector.setPalette(palette)}
 														onFieldColorChange={(fieldName, hex) =>

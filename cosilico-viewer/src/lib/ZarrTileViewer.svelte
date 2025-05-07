@@ -1,6 +1,4 @@
 <script>
-	// @ts-nocheck
-
 	import { onMount } from 'svelte';
 	import Map from 'ol/Map';
 	import View from 'ol/View';
@@ -18,6 +16,7 @@
 	import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
 	import PointViewOptions from './sidebar/PointViewOptions.svelte';
 	import PolygonViewOptions from './sidebar/PolygonViewOptions.svelte';
+	import FilterOptions from './sidebar/FilterOptions.svelte';
 
 	import LayerOptions from './sidebar/LayerOptions.svelte';
 	import { initZarr } from './openlayers/ZarrHelpers';
@@ -295,12 +294,56 @@
 			layerPolygonViewInfo.set(vectorId, view);
 		}
 
+		
+		let layerMetadataFilters = $state(new SvelteMap());
+		for (const [vectorId, obj] of experiment.layers) {
+			let filters = new SvelteMap();
+			for (const [metadataName, filter] of obj.vector.filterMap) {
+				
+				for (const [key, operator] of filter.operations) {
+					const key = metadataName + '-' + operator.field + '-' + operator.symbol;
+					filters.set(key, {
+						metadataName: metadataName,
+						metadataField: operator.field,
+						symbol: operator.symbol,
+						value: operator.value
+					});
+				}
+			}
+			layerMetadataFilters.set(vectorId, filters);
+		}
+
+		let layerLayerFilters = $state(new SvelteMap());
+		for (const [vectorId, obj] of experiment.layers) {
+			let filters = new SvelteMap();
+			for (const [layerName, filter] of obj.vector.maskingMap) {
+				const key = layerName + '-' + filter.symbol;
+				filters.set(key, {
+					layerName: layerName,
+					symbol: filter.symbol,
+				});
+			}
+			layerLayerFilters.set(vectorId, filters);
+		}
+
+		let layerFilterViewInfo = $state([]);
+		for (const [vectorId, obj] of experiment.layers) {
+			layerFilterViewInfo.push({
+				geometryType: obj.vector.getCurrentObjectType(map),
+				name: obj.vector.name
+			});
+		}
+
+
 		mirrors.set('imageDisplayInfo', imageDisplayInfo);
 		mirrors.set('imageSwatches', imageSwatches);
 		mirrors.set('imageVisabilityInfo', imageVisibilityInfo);
 		mirrors.set('layerVisabilityInfo', layerVisabilityInfo);
 		mirrors.set('layerPointViewInfo', layerPointViewInfo);
 		mirrors.set('layerPolygonViewInfo', layerPolygonViewInfo);
+		mirrors.set('layerMetadataFilters', layerMetadataFilters);
+		mirrors.set('layerLayerFilters', layerLayerFilters);
+		mirrors.set('layerFilterViewInfo', layerFilterViewInfo);
 	}
 
 	onMount(async () => {
@@ -670,6 +713,45 @@
 														}}
 													/>
 												{/if}
+												<FilterOptions 
+													layer={obj}
+													layerViews={mirrors.get('layerFilterViewInfo')}
+													metadataFilters={mirrors.get('layerMetadataFilters').get(obj.vector.vectorId)}
+													layerFilters={mirrors.get('layerLayerFilters').get(obj.vector.vectorId)}
+													onAddFilterMetadata = {async (metadataName) => {
+														await obj.vector.addMetadataFilter(metadataName, obj.metadataToNode.get(metadataName), map);
+													}}
+													onAddMetadataFilter = {(metadataFilter) => {
+														const key = metadataFilter.metadataName + '-' + metadataFilter.fieldName + '-' + metadataFilter.symbol;
+														obj.vector.addMetadataFilterOperation(metadataFilter.metadataName, metadataFilter.fieldName, key, metadataFilter.symbol, metadataFilter.value);
+														let mapping = mirrors.get('layerMetadataFilters').get(obj.vector.vectorId);
+														mapping.set(key, metadataFilter);
+													}}
+													onRemoveMetadataFilter = {async (metadataFilter) => {
+														const key = metadataFilter.metadataName + '-' + metadataFilter.fieldName + '-' + metadataFilter.symbol;
+														obj.vector.removeMetadataFilterOperation(metadataFilter.metadataName, key);
+
+														if (obj.vector.filterMap.get(metadataFilter.metadataName).operations.length == 0) {
+															await obj.vector.removeMetadataFilter(metadataFilter.metadataName, map);
+														}
+
+														let mapping = mirrors.get('layerMetadataFilters').get(obj.vector.vectorId);
+														mapping.delete(key);
+													}}
+													onAddLayerFilter = {(layerFilter) => {
+														const key = layerFilter.layerName + '-' + layerFilter.symbol;
+														obj.vector.addLayerFilter(layerFilter.layerName, obj.layers.get(layerFilter.layerName), layerFilter.symbol, key, map);
+														let mapping = mirrors.get('layerLayerFilters').get(obj.vector.vectorId);
+														mapping.set(key, layerFilter);
+													}}
+													onRemoveLayerFilter = {(layerFilter) => {
+														const key = layerFilter.layerName + '-' + layerFilter.symbol;
+														obj.vector.removeLayerFilter(key);
+
+														let mapping = mirrors.get('layerLayerFilters').get(obj.vector.vectorId);
+														mapping.delete(key);
+													}}
+													/>
 											</div>
 											{/key}
 											<Card.Root>

@@ -75,7 +75,7 @@
 					absoluteVMax: vinfo.absoluteVMax,
 					vCenter: vinfo.vCenter,
 					vStepSize: vinfo.vStepSize,
-					isVisible: false
+					isVisible: layer.vector.vectorView.visibleFields.includes(fname)
 				};
 				fields.push(field);
 			}

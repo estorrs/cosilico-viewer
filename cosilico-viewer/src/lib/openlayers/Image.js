@@ -28,6 +28,7 @@ export class Image {
     node,
     imageId,
     isBaseImage,
+    insertionIdx,
   ) {
     this.node = node;
     this.isBaseImage = isBaseImage;
@@ -52,6 +53,7 @@ export class Image {
     this.overviewControl = null;
     // this.overviewSources = [];
     this.isLoaded = false;
+    this.insertionIdx = insertionIdx;
 
     this.loadGenerationCounter = 0;
 
@@ -146,8 +148,8 @@ export class Image {
       });
 
       const layers = map.getLayers();
-      layers.removeAt(0);
-      layers.insertAt(0, this.rasterLayer);
+      layers.removeAt(this.insertionIdx);
+      layers.insertAt(this.insertionIdx, this.rasterLayer);
     } else {
       this.updateBeforeOperations(rasterSource)
       const rasterLayer = new ImageLayer({

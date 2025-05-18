@@ -33,7 +33,6 @@
 	let experiment = $state(null);
 	let mirrors = $state(null);
 
-
 	const experimentObj = {
 		id: 'alsdkfj',
 		name: 'Test Experiment',
@@ -52,28 +51,6 @@
 			}
 		],
 		layers: [
-			{
-				id: 'sdf',
-				name: 'Transcripts',
-				is_grouped: true,
-				metadata: {}, // this would be just whatever metadata
-				path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
-				view_settings: {},
-				layer_metadatas: [
-					{
-						id: 'sdlfkj',
-						name: 'Counts',
-						type: 'continuous',
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip'
-					},
-					{
-						id: 'sdlsasfkj',
-						name: 'QV',
-						type: 'continuous',
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
-					}
-				]
-			},
 			{
 				id: 'sldfkjasa',
 				name: 'Cells',
@@ -104,7 +81,30 @@
 						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_transcriptcounts.zarr.zip'
 					}
 				]
-			}
+			},
+			{
+				id: 'sdf',
+				name: 'Transcripts',
+				is_grouped: true,
+				metadata: {}, // this would be just whatever metadata
+				path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
+				view_settings: {},
+				layer_metadatas: [
+					{
+						id: 'sdlfkj',
+						name: 'Counts',
+						type: 'continuous',
+						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip'
+					},
+					{
+						id: 'sdlsasfkj',
+						name: 'QV',
+						type: 'continuous',
+						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
+					}
+				]
+			},
+			
 		]
 	};
 
@@ -119,6 +119,8 @@
 			this.layerToIsGrouped = new globalThis.Map();
 			this.images = new globalThis.Map();
 			this.layers = new globalThis.Map();
+			this.currentInsertionIdx = 0;
+			// this.layerToInsertionIdx = new globalThis.Map();
 		}
 
 		async init() {
@@ -132,19 +134,46 @@
 			return await instance.init();
 		}
 
+		incrementInsertionIndices(id, increment = 1) {
+			let ids = [...this.imageOrder, ...this.layerOrder];
+			// if (increment < 0) {
+			// 	ids = ids.reverse();
+			// }
+
+			let doIncrement = false;
+			for (const objId of ids) {
+				let obj;
+				if (this.imageOrder.includes(objId)) {
+					obj = this.images.get(objId).image;
+				} else {
+					obj = this.layers.get(objId).vector;
+				}
+
+				if (objId == id) {
+					doIncrement = true;
+				}
+
+				if (doIncrement) {
+					obj.insertionIdx = obj.insertionIdx + increment;
+				}
+			}
+
+			this.currentInsertionIdx = this.currentInsertionIdx + increment;
+		}
+
 		async loadImages() {
 			for (const img of this.experimentObj.images) {
 				const node = await initZarr(img.path);
 				const obj = {
-					image: new Image(node, img.id, false),
+					image: new Image(node, img.id, false, this.currentInsertionIdx),
 					viewSettings: img.view_settings
 				};
+				this.currentInsertionIdx = this.currentInsertionIdx + 1;
 				this.images.set(img.id, obj);
 				this.imageOrder.push(img.id);
 			}
 
 			this.baseImage = this.images.get(this.imageOrder[0]).image;
-			// @ts-ignore
 			this.baseImage.isBaseImage = true;
 			this.baseImage.isVisible = true;
 
@@ -160,7 +189,14 @@
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
 			}
 
-			const fgv = await FeatureGroupVector.create(node, gl.id, featureMetaToNode, this.baseImage);
+			const fgv = await FeatureGroupVector.create(
+				node,
+				gl.id,
+				featureMetaToNode,
+				this.baseImage,
+				this.currentInsertionIdx
+			);
+			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			const obj = {
 				vector: fgv,
@@ -177,7 +213,8 @@
 		async loadLayer(l) {
 			const node = await initZarr(l.path);
 
-			const fv = await FeatureVector.create(node, l.id, this.baseImage);
+			const fv = await FeatureVector.create(node, l.id, this.baseImage, this.currentInsertionIdx);
+			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			let featureMetaToNode = new globalThis.Map();
 			for (const mgl of l.layer_metadatas) {
@@ -213,6 +250,7 @@
 			for (const [k, v] of this.layers) {
 				if (!v.isGrouped) {
 					await v.vector.setMetadata(null, null, map);
+					this.incrementInsertionIndices(v.vector.vectorId);
 				}
 			}
 		}
@@ -289,17 +327,15 @@
 				strokeWidth: obj.vector.vectorView.strokeWidth,
 				strokeColor: obj.vector.vectorView.strokeColor,
 				strokeDarkness: obj.vector.vectorView.strokeDarkness,
-				borderType: obj.vector.vectorView.borderType,
+				borderType: obj.vector.vectorView.borderType
 			});
 			layerPolygonViewInfo.set(vectorId, view);
 		}
 
-		
 		let layerMetadataFilters = $state(new SvelteMap());
 		for (const [vectorId, obj] of experiment.layers) {
 			let filters = new SvelteMap();
 			for (const [metadataName, filter] of obj.vector.filterMap) {
-				
 				for (const [key, operator] of filter.operations) {
 					const key = metadataName + '-' + operator.field + '-' + operator.symbol;
 					filters.set(key, {
@@ -320,20 +356,12 @@
 				const key = layerName + '-' + filter.symbol;
 				filters.set(key, {
 					layerName: layerName,
-					symbol: filter.symbol,
+					layerId: filter.layerId,
+					symbol: filter.symbol
 				});
 			}
 			layerLayerFilters.set(vectorId, filters);
 		}
-
-		let layerFilterViewInfo = $state([]);
-		for (const [vectorId, obj] of experiment.layers) {
-			layerFilterViewInfo.push({
-				geometryType: obj.vector.getCurrentObjectType(map),
-				name: obj.vector.name
-			});
-		}
-
 
 		mirrors.set('imageDisplayInfo', imageDisplayInfo);
 		mirrors.set('imageSwatches', imageSwatches);
@@ -343,7 +371,6 @@
 		mirrors.set('layerPolygonViewInfo', layerPolygonViewInfo);
 		mirrors.set('layerMetadataFilters', layerMetadataFilters);
 		mirrors.set('layerLayerFilters', layerLayerFilters);
-		mirrors.set('layerFilterViewInfo', layerFilterViewInfo);
 	}
 
 	onMount(async () => {
@@ -398,8 +425,10 @@
 
 		if (visible.includes(featureName)) {
 			vector.removeFeature(featureName, map);
+			experiment.incrementInsertionIndices(vector.vectorId);
 		} else {
 			vector.addFeature(featureName, map);
+			experiment.incrementInsertionIndices(vector.vectorId, -1);
 		}
 
 		// reloadLayerInfoKey = !reloadLayerInfoKey;
@@ -634,140 +663,192 @@
 												>
 											</Accordion.Trigger>
 										</div>
-										<Accordion.Content class="ml-3"> 
+										<Accordion.Content class="ml-3">
 											{#key metadataChangeKey}
-											<div class="flex w-full items-center gap-3">
-												<p>View options</p>
-												{#if obj.vector.objectTypes.includes('point')}
-													<PointViewOptions
-														view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
-														onPointScaleChange={(v) => {
-															obj.vector.setScale(v);
-															mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale =
-																v;
+												<div class="flex w-full items-center gap-3">
+													<p>View options</p>
+													{#if obj.vector.objectTypes.includes('point')}
+														<PointViewOptions
+															view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
+															onPointScaleChange={(v) => {
+																obj.vector.setScale(v);
+																mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale =
+																	v;
+															}}
+															onFillOpacityChange={(v) => {
+																obj.vector.setFillOpacity(v);
+																mirrors
+																	.get('layerPointViewInfo')
+																	.get(obj.vector.vectorId).fillOpacity = v;
+															}}
+															onStrokeOpacityChange={(v) => {
+																obj.vector.setStrokeOpacity(v);
+																mirrors
+																	.get('layerPointViewInfo')
+																	.get(obj.vector.vectorId).strokeOpacity = v;
+															}}
+															onStrokeWidthChange={(v) => {
+																obj.vector.setStrokeWidth(v);
+																mirrors
+																	.get('layerPointViewInfo')
+																	.get(obj.vector.vectorId).strokeWidth = v;
+															}}
+															onStrokeColorChange={(v) => {
+																obj.vector.setStrokeColor(v);
+																mirrors
+																	.get('layerPointViewInfo')
+																	.get(obj.vector.vectorId).strokeColor = v;
+															}}
+														/>
+													{/if}
+													{#if obj.vector.objectTypes.includes('polygon')}
+														<PolygonViewOptions
+															view={mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId)}
+															onFillOpacityChange={(v) => {
+																obj.vector.setFillOpacity(v);
+																mirrors
+																	.get('layerPolygonViewInfo')
+																	.get(obj.vector.vectorId).fillOpacity = v;
+															}}
+															onStrokeOpacityChange={(v) => {
+																obj.vector.setStrokeOpacity(v);
+																mirrors
+																	.get('layerPolygonViewInfo')
+																	.get(obj.vector.vectorId).strokeOpacity = v;
+															}}
+															onStrokeWidthChange={(v) => {
+																obj.vector.setStrokeWidth(v);
+																mirrors
+																	.get('layerPolygonViewInfo')
+																	.get(obj.vector.vectorId).strokeWidth = v;
+															}}
+															onStrokeColorChange={(v) => {
+																obj.vector.setStrokeColor(v);
+																mirrors
+																	.get('layerPolygonViewInfo')
+																	.get(obj.vector.vectorId).strokeColor = v;
+															}}
+															onBorderColoring={(v) => {
+																obj.vector.setBorderColoring(v);
+																mirrors
+																	.get('layerPolygonViewInfo')
+																	.get(obj.vector.vectorId).strokeDarkness = v;
+															}}
+															onBorderTypeChange={(v) => {
+																obj.vector.setBorderType(v);
+																let info = mirrors
+																	.get('layerPolygonViewInfo')
+																	.get(obj.vector.vectorId);
+																info.borderType = v;
+															}}
+														/>
+													{/if}
+													<FilterOptions
+														layer={obj}
+														layers={experiment.layers}
+														vectorToGeomType={(v) => v.getCurrentObjectType(map)}
+														metadataFilters={mirrors
+															.get('layerMetadataFilters')
+															.get(obj.vector.vectorId)}
+														layerFilters={mirrors.get('layerLayerFilters').get(obj.vector.vectorId)}
+														onAddFilterMetadata={async (metadataName) => {
+															await obj.vector.addMetadataFilter(
+																metadataName,
+																obj.metadataToNode.get(metadataName),
+																map
+															);
 														}}
-														onFillOpacityChange={(v) => {
-															obj.vector.setFillOpacity(v);
-															mirrors
-																.get('layerPointViewInfo')
-																.get(obj.vector.vectorId).fillOpacity = v;
+														onAddMetadataFilter={(metadataFilter) => {
+															const key =
+																metadataFilter.metadataName +
+																'-' +
+																metadataFilter.fieldName +
+																'-' +
+																metadataFilter.symbol;
+															obj.vector.addMetadataFilterOperation(
+																metadataFilter.metadataName,
+																metadataFilter.fieldName,
+																key,
+																metadataFilter.symbol,
+																metadataFilter.value
+															);
+															let mapping = mirrors
+																.get('layerMetadataFilters')
+																.get(obj.vector.vectorId);
+															mapping.set(key, metadataFilter);
 														}}
-														onStrokeOpacityChange={(v) => {
-															obj.vector.setStrokeOpacity(v);
-															mirrors
-																.get('layerPointViewInfo')
-																.get(obj.vector.vectorId).strokeOpacity = v;
+														onRemoveMetadataFilter={async (metadataFilter) => {
+															const key =
+																metadataFilter.metadataName +
+																'-' +
+																metadataFilter.fieldName +
+																'-' +
+																metadataFilter.symbol;
+															obj.vector.removeMetadataFilterOperation(
+																metadataFilter.metadataName,
+																key
+															);
+
+															if (
+																obj.vector.filterMap.get(metadataFilter.metadataName).operations
+																	.length == 0
+															) {
+																await obj.vector.removeMetadataFilter(
+																	metadataFilter.metadataName,
+																	map
+																);
+															}
+
+															let mapping = mirrors
+																.get('layerMetadataFilters')
+																.get(obj.vector.vectorId);
+															mapping.delete(key);
 														}}
-														onStrokeWidthChange={(v) => {
-															obj.vector.setStrokeWidth(v);
-															mirrors
-																.get('layerPointViewInfo')
-																.get(obj.vector.vectorId).strokeWidth = v;
+														onAddLayerFilter={(layerFilter) => {
+															const key = layerFilter.layerName + '-' + layerFilter.symbol;
+															obj.vector.addLayerFilter(
+																layerFilter.layerName,
+																experiment.layers.get(layerFilter.layerId).vector,
+																layerFilter.symbol,
+																key,
+																map
+															);
+															let mapping = mirrors
+																.get('layerLayerFilters')
+																.get(obj.vector.vectorId);
+															mapping.set(key, layerFilter);
 														}}
-														onStrokeColorChange={(v) => {
-															obj.vector.setStrokeColor(v);
-															mirrors
-																.get('layerPointViewInfo')
-																.get(obj.vector.vectorId).strokeColor = v;
+														onRemoveLayerFilter={(layerFilter) => {
+															const key = layerFilter.layerName + '-' + layerFilter.symbol;
+															obj.vector.removeLayerFilter(key);
+
+															let mapping = mirrors
+																.get('layerLayerFilters')
+																.get(obj.vector.vectorId);
+															mapping.delete(key);
 														}}
 													/>
-												{/if}
-												{#if obj.vector.objectTypes.includes('polygon')}
-													<PolygonViewOptions
-														view={mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId)}
-														onFillOpacityChange={(v) => {
-															obj.vector.setFillOpacity(v);
-															mirrors
-																.get('layerPolygonViewInfo')
-																.get(obj.vector.vectorId).fillOpacity = v;
-														}}
-														onStrokeOpacityChange={(v) => {
-															obj.vector.setStrokeOpacity(v);
-															mirrors
-																.get('layerPolygonViewInfo')
-																.get(obj.vector.vectorId).strokeOpacity = v;
-														}}
-														onStrokeWidthChange={(v) => {
-															obj.vector.setStrokeWidth(v);
-															mirrors
-																.get('layerPolygonViewInfo')
-																.get(obj.vector.vectorId).strokeWidth = v;
-														}}
-														onStrokeColorChange={(v) => {
-															obj.vector.setStrokeColor(v);
-															mirrors
-																.get('layerPolygonViewInfo')
-																.get(obj.vector.vectorId).strokeColor = v;
-														}}
-														onBorderColoring={(v) => {
-															obj.vector.setBorderColoring(v);
-															mirrors
-																.get('layerPolygonViewInfo')
-																.get(obj.vector.vectorId).strokeDarkness = v;
-														}}
-														onBorderTypeChange={(v) => {
-															obj.vector.setBorderType(v);
-															let info = mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId);
-															info.borderType = v;
-
-														}}
-													/>
-												{/if}
-												<FilterOptions 
-													layer={obj}
-													layerViews={mirrors.get('layerFilterViewInfo')}
-													metadataFilters={mirrors.get('layerMetadataFilters').get(obj.vector.vectorId)}
-													layerFilters={mirrors.get('layerLayerFilters').get(obj.vector.vectorId)}
-													onAddFilterMetadata = {async (metadataName) => {
-														await obj.vector.addMetadataFilter(metadataName, obj.metadataToNode.get(metadataName), map);
-													}}
-													onAddMetadataFilter = {(metadataFilter) => {
-														const key = metadataFilter.metadataName + '-' + metadataFilter.fieldName + '-' + metadataFilter.symbol;
-														obj.vector.addMetadataFilterOperation(metadataFilter.metadataName, metadataFilter.fieldName, key, metadataFilter.symbol, metadataFilter.value);
-														let mapping = mirrors.get('layerMetadataFilters').get(obj.vector.vectorId);
-														mapping.set(key, metadataFilter);
-													}}
-													onRemoveMetadataFilter = {async (metadataFilter) => {
-														const key = metadataFilter.metadataName + '-' + metadataFilter.fieldName + '-' + metadataFilter.symbol;
-														obj.vector.removeMetadataFilterOperation(metadataFilter.metadataName, key);
-
-														if (obj.vector.filterMap.get(metadataFilter.metadataName).operations.length == 0) {
-															await obj.vector.removeMetadataFilter(metadataFilter.metadataName, map);
-														}
-
-														let mapping = mirrors.get('layerMetadataFilters').get(obj.vector.vectorId);
-														mapping.delete(key);
-													}}
-													onAddLayerFilter = {(layerFilter) => {
-														const key = layerFilter.layerName + '-' + layerFilter.symbol;
-														obj.vector.addLayerFilter(layerFilter.layerName, obj.layers.get(layerFilter.layerName), layerFilter.symbol, key, map);
-														let mapping = mirrors.get('layerLayerFilters').get(obj.vector.vectorId);
-														mapping.set(key, layerFilter);
-													}}
-													onRemoveLayerFilter = {(layerFilter) => {
-														const key = layerFilter.layerName + '-' + layerFilter.symbol;
-														obj.vector.removeLayerFilter(key);
-
-														let mapping = mirrors.get('layerLayerFilters').get(obj.vector.vectorId);
-														mapping.delete(key);
-													}}
-													/>
-											</div>
+												</div>
 											{/key}
 											<Card.Root>
 												<Card.Header class="p-1">
 													<Card.Title class="text-md">Active Metadata</Card.Title>
 												</Card.Header>
 												<Card.Content class="p-1 pt-0">
-													
 													<LayerOptions
 														layer={obj}
 														getCurrentObjectType={() => obj.vector.getCurrentObjectType(map)}
 														onMetadataChange={async (metadataName) => {
-															await obj.vector.setMetadata(metadataName, obj.metadataToNode.get(metadataName), map);
+															await obj.vector.setMetadata(
+																metadataName,
+																obj.metadataToNode.get(metadataName),
+																map
+															);
 
 															// we need to resynch view options
-															let info = mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId);
+															let info = mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId);
 															info.fillOpacity = obj.vector.vectorView.fillOpacity;
 															info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
 															info.strokeWidth = obj.vector.vectorView.strokeWidth;
@@ -788,14 +869,17 @@
 															obj.vector.setFeatureFillColor(fieldName, hex)}
 														onFieldShapeChange={(fieldName, shape) =>
 															obj.vector.setFeatureShapeType(fieldName, shape)}
-														onFieldPaletteChange={(fieldName, palette) => obj.vector.setPalette(palette)}
+														onFieldPaletteChange={(fieldName, palette) =>
+															obj.vector.setPalette(palette)}
 														onFieldVisibilityChange={(fieldName, isVisible) =>
 															toggleFeature(fieldName, obj.vector, isVisible)}
-														onFieldVMinChange={(fieldName, vMin) => obj.vector.setVMin(fieldName, vMin)}
-														onFieldVMaxChange={(fieldName, vMax) => obj.vector.setVMax(fieldName, vMax)}
-														onFieldVCenterChange={(fieldName, vCenter) => obj.vector.setVCenter(fieldName, vCenter)}
+														onFieldVMinChange={(fieldName, vMin) =>
+															obj.vector.setVMin(fieldName, vMin)}
+														onFieldVMaxChange={(fieldName, vMax) =>
+															obj.vector.setVMax(fieldName, vMax)}
+														onFieldVCenterChange={(fieldName, vCenter) =>
+															obj.vector.setVCenter(fieldName, vCenter)}
 													/>
-													
 												</Card.Content>
 											</Card.Root>
 										</Accordion.Content>

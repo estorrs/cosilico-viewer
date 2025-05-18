@@ -7,7 +7,7 @@ import { get, slice } from "@zarrita/indexing";
 import GeoJSON from 'ol/format/GeoJSON.js';
 import TileGrid from 'ol/tilegrid/TileGrid';
 
-
+ 
 function extractVertices(data, shape, strides) {
     const [n, z, _] = shape;
     const [sN, sZ, sXY] = strides;
@@ -169,6 +169,8 @@ export class GroupedZarrVectorLoader {
                         featureProjection: this.projection,
                         dataProjection: this.projection,
                     });
+
+                    console.log('features', features);
 
                     tile.setFeatures(features); // Manually set features
                 } else {

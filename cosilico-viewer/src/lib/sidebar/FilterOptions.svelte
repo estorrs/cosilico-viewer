@@ -16,9 +16,10 @@
 
 	let {
 		layer,
-		layerViews,
+		layers,
 		metadataFilters,
 		layerFilters,
+		vectorToGeomType = (layer) => null,
 		onAddFilterMetadata = (metadataName) => null,
 		onAddMetadataFilter = (metadataFilter) => null,
 		onAddLayerFilter = (layerFilter) => null,
@@ -57,8 +58,6 @@
 	let layerIsDisabled = $state(true);
 	// let layerType = $state(null); // point or polygon
 
-
-
 	// let metadataFilters = $state([
 	// 	{
 	// 		name: 'blah a',
@@ -86,6 +85,10 @@
 		metadataFields = [...opts.metadataFields];
 		metadataType = opts.metadataType;
 		currentMetadataFilter.metadataName = name;
+
+		if (layer.isGrouped) {
+			onMetadataFieldSelection(name);
+		}
 
 		rerenderFields = !rerenderFields;
 	}
@@ -125,7 +128,6 @@
 
 	function onMetadataValueSelection(v) {
 		currentMetadataFilter.value = v;
-		console.log('current filter', $state.snapshot(currentMetadataFilter));
 		onAddMetadataFilter(currentMetadataFilter);
 	}
 
@@ -142,9 +144,15 @@
 		await onRemoveMetadataFilter(filter);
 	}
 
-
 	function onLayerNameSelection(name) {
 		currentLayerFilter.layerName = name;
+		let layerId = null;
+		for (const [key, obj] of layers) {
+			if (obj.vector.name == name) {
+				layerId = obj.vector.vectorId;
+			}
+		}
+		currentLayerFilter.layerId = layerId;
 	}
 
 	function onLayerSymbolSelection(symbol) {
@@ -163,20 +171,17 @@
 
 	function onLayerFilterDeletion(filter) {
 		onRemoveLayerFilter(filter);
+		layerNames.push(filter.layerName);
 	}
-
-
-
-
 
 	onMount(() => {
 		metadataNames = Array.from(layer.metadataToNode.keys());
-		for (const view of layerViews) {
-			if (view.geometryType == 'polygon') {
-				layerNames.push(view.name);
+		for (const [key, obj] of layers) {
+			const geometryType = vectorToGeomType(obj.vector);
+			if (geometryType == 'polygon' && obj.vector.name != layer.vector.name) {
+				layerNames.push(obj.vector.name);
 			}
 		}
-		console.log('layerNames', $state.snapshot(layerNames));
 	});
 </script>
 
@@ -225,13 +230,15 @@
 								entityName="options"
 							/>
 							{#key rerenderFields}
-								<p>Select Field</p>
-								<SearchableOptions
-									names={metadataFields}
-									displayNFields={100}
-									onSelection={(name) => onMetadataFieldSelection(name)}
-									entityName="options"
-								/>
+								{#if layer.vector.isGrouped}
+									<p>Select Field</p>
+									<SearchableOptions
+										names={metadataFields}
+										displayNFields={100}
+										onSelection={(name) => onMetadataFieldSelection(name)}
+										entityName="options"
+									/>
+								{/if}
 								<p>Select Symbol</p>
 								{#if metadataType == 'categorical'}
 									<SearchableOptions
@@ -288,17 +295,23 @@
 							{#if filter.value}
 								<Popover.Root
 									onOpenChange={() => {
-											currentMetadataFilter = filter;
-											value = filter.value;
+										currentMetadataFilter = filter;
+										value = filter.value;
 
-											opts = layer.vector.filterMap.get(filter.metadataName);
-											const fidx = opts.metadataFields.indexOf(filter.fieldName);
-											vMin = opts.vmins[fidx];
-											vMax = opts.vmaxs[fidx];
-											console.log('current metadata filter is', $state.snapshot(currentMetadataFilter));
+										opts = layer.vector.filterMap.get(filter.metadataName);
+										const fidx = opts.metadataFields.indexOf(filter.fieldName);
+										vMin = opts.vmins[fidx];
+										vMax = opts.vmaxs[fidx];
+										console.log(
+											'current metadata filter is',
+											$state.snapshot(currentMetadataFilter)
+										);
 									}}
 								>
-									<Popover.Trigger title='Adjust threshold value' class={buttonVariants({ variant: 'outline' })}>
+									<Popover.Trigger
+										title="Adjust threshold value"
+										class={buttonVariants({ variant: 'outline' })}
+									>
 										<SlidersHorizontal />
 									</Popover.Trigger>
 									<Popover.Content class="sm:max-w-[425px]">
@@ -332,7 +345,6 @@
 						onOpenChange={() => {
 							if (layerOpen) {
 								currentLayerFilter = {};
-								layerNames = [];
 								layerIsDisabled = true;
 							}
 						}}
@@ -342,22 +354,21 @@
 						</Popover.Trigger>
 						<Popover.Content class="sm:max-w-[425px]">
 							<p>Select Layer</p>
-							{console.log('layerNamesz', $state.snapshot(layerNames))}
 							<SearchableOptions
 								names={layerNames}
 								displayNFields={100}
 								onSelection={(name) => onLayerNameSelection(name)}
 								entityName="options"
 							/>
-							
-								<p>Select Symbol</p>
-								
-									<SearchableOptions
-										names={layerSymbols}
-										displayNFields={100}
-										onSelection={(symbol) => onLayerSymbolSelection(symbol)}
-										entityName="options"
-									/>
+
+							<p>Select Symbol</p>
+
+							<SearchableOptions
+								names={layerSymbols}
+								displayNFields={100}
+								onSelection={(symbol) => onLayerSymbolSelection(symbol)}
+								entityName="options"
+							/>
 
 							<Button
 								disabled={layerIsDisabled}
@@ -375,7 +386,6 @@
 						<div class="flex items-center gap-2 pt-1">
 							<p>{filter.layerName}</p>
 							<p>{filter.symbol}</p>
-				
 
 							<Button
 								title="Remove filter"

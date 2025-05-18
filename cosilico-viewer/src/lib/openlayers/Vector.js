@@ -13,6 +13,7 @@ import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba, adjustH
 import { generateShape } from "./ShapeHelpers";
 import { initZarr } from "./ZarrHelpers";
 import { scaleFromCenter } from "ol/extent";
+import { render } from "svelte/server";
 
 function getClosestResolution(map, availableResolutions, tileSize) {
     let current = map.getView().getResolution();
@@ -24,12 +25,76 @@ function getClosestResolution(map, availableResolutions, tileSize) {
     );
 }
 
+// function getVisibleFeatures(map, vectorTileSource) {
+// 	const extent = map.getView().calculateExtent(map.getSize());
+// 	const resolution = map.getView().getResolution();
+// 	const projection = map.getView().getProjection();
+
+// 	const tileGrid = vectorTileSource.getTileGrid();
+// 	const z = tileGrid.getZForResolution(resolution);
+// 	const tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
+
+// 	const features = [];
+
+// 	for (let x = tileRange.minX; x <= tileRange.maxX; x++) {
+// 		for (let y = tileRange.minY; y <= tileRange.maxY; y++) {
+// 			const tileCoord = [z, x, y];
+// 			const tile = vectorTileSource.getTile(z, x, y, resolution, projection);
+
+// 			if (tile && tile.getFeatures) {
+// 				const tileFeatures = tile.getFeatures(); // Array<ol/Feature>
+// 				if (tileFeatures) {
+// 					features.push(...tileFeatures);
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return features;
+// }
+// import { getKey } from 'ol/tilecoord';
+
+// function getVisibleFeatures(map, vectorTileSource) {
+// 	const view = map.getView();
+// 	const resolution = view.getResolution();
+// 	const extent = view.calculateExtent(map.getSize());
+// 	const projection = view.getProjection();
+
+// 	const tileGrid = vectorTileSource.getTileGrid();
+// 	const z = tileGrid.getZForResolution(resolution);
+// 	const tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
+
+// 	const features = [];
+//     console.log('tileRange', tileRange);
+
+// 	for (let x = tileRange.minX; x <= tileRange.maxX; x++) {
+// 		for (let y = tileRange.minY; y <= tileRange.maxY; y++) {
+// 			const tileCoord = [z, x, y];
+// 			const key = getKey(tileCoord);
+//             console.log('tile cache', vectorTileSource.tileCache);
+
+// 			const tile = vectorTileSource.tileCache.get(key);
+// 			if (tile && tile.getState() === 2) { // 2 === TileState.LOADED
+// 				const tileFeatures = tile.getFeatures?.();
+// 				if (tileFeatures) {
+// 					features.push(...tileFeatures);
+// 				}
+// 			}
+// 		}
+// 	}
+
+// 	return features;
+// }
+
+
+
 export class FeatureGroupVector {
     constructor(
         node,
         vectorId,
         featureMetaToNode,
         baseImage,
+        insertionIdx,
     ) {
         this.node = node;
         this.isVisible = false;
@@ -46,6 +111,8 @@ export class FeatureGroupVector {
         this.filterMap = new Map();
         this.maskingMap = new Map();
 
+        this.insertionIdx = insertionIdx;
+
         this.currentFeature = undefined;
 
         this.isLoaded = false;
@@ -59,8 +126,8 @@ export class FeatureGroupVector {
         return this;
     }
 
-    static async create(node, vectorId, featureMetaToNode, baseImage) {
-        const instance = new FeatureGroupVector(node, vectorId, featureMetaToNode, baseImage);
+    static async create(node, vectorId, featureMetaToNode, baseImage, insertionIdx) {
+        const instance = new FeatureGroupVector(node, vectorId, featureMetaToNode, baseImage, insertionIdx);
         return await instance.init();
     }
 
@@ -81,7 +148,7 @@ export class FeatureGroupVector {
         const vectorTileStyle = (feature) => {
             const idx = feature.values_.feature_index;
             const name = this.featureNames[idx];
-            if (this.vectorView.visibleFeatureIndices.includes(idx)) {
+            if (this.vectorView.visibleFeatureIndices.includes(idx) && this.featureIsVisible(feature)) {
                 return new Style({
                     image: this.vectorView.featureNameToView.get(name).shape
                 });
@@ -97,6 +164,22 @@ export class FeatureGroupVector {
         return layer;
     }
 
+    restyleLayers(renderDependents = true) {
+        for (const featureName of this.vectorView.visibleFeatureNames) {
+            const l = this.featureNameToLayer.get(featureName);
+            l.setStyle(l.getStyle());
+        }
+
+        if (renderDependents) { // here we run everything that would depend on anotehr layer, such as filters
+            // do layer filters
+            for (const [key, filter] of this.maskingMap) {
+                filter.layer.restyleLayers(renderDependents=false);
+            }
+        }
+    }
+
+   
+
     setFeatureMetadata(featureMetaToNode, map) {
         this.featureMetaToNode = featureMetaToNode
 
@@ -106,12 +189,14 @@ export class FeatureGroupVector {
             const oldLayer = this.featureNameToLayer.get(featureName);
 
             // remove old layer
+            const idx = map.getLayers().getArray().indexOf(oldLayer);
             map.removeLayer(oldLayer);
             this.featureNameToLayer.delete(featureName);
 
             // add new layer
             const layer = this.createLayer(featureGroup);
-            map.addLayer(layer);
+            // map.addLayer(layer);
+            map.getLayers().insertAt(idx, layer);
             this.featureNameToLayer.set(featureName, layer);
         }
     }
@@ -121,6 +206,117 @@ export class FeatureGroupVector {
         const idx = this.resolutions.indexOf(res);
         const objType = this.objectTypes[idx];
         return objType;
+    }
+
+    async addMetadataFilter(metadataName, map) {
+        if (!this.filterMap.has(metadataName)) {
+            const node = this.featureMetaToNode.get(metadataName);
+
+            // let vmins = null;
+            // let vmaxs = null;
+            // if (node.attrs.type == 'continuous') {
+            //     let chunk;
+            //     chunk = await get(await open(node.resolve('/metadata/vmins'), { kind: "array" }), [null]);
+            //     vmins = chunk.data;
+            //     chunk = await get(await open(node.resolve('/metadata/vmaxs'), { kind: "array" }), [null]);
+            //     vmaxs = chunk.data;
+            // }
+
+            this.filterMap.set(metadataName, {
+                metadataName: metadataName,
+                metadataNode: node,
+                metadataType: node.attrs.type,
+                metadataFields: [metadataName],
+                vmins: [node.attrs.vmin],
+                vmaxs: [node.attrs.vmax],
+                operations: new Map(),
+            });
+        }
+
+    }
+
+    async removeMetadataFilter(metadataName, map) {
+        this.filterMap.delete(metadataName);
+    }
+
+    addMetadataFilterOperation(metadataName, field, key, symbol, value) {
+        this.filterMap.get(metadataName).operations.set(key, {
+            symbol: symbol,
+            value: value,
+            field: null,
+            fieldIdx: null,
+        });
+
+        this.restyleLayers();
+    }
+
+    removeMetadataFilterOperation(metadataName, key) {
+        this.filterMap.get(metadataName).operations.delete(key);
+
+        this.restyleLayers();
+    }
+
+    addLayerFilter(layerName, layer, symbol, key, map) {
+        if (layer.getCurrentObjectType(map) == 'polygon') {
+            // console.log('active features are', layer.visibleFeatures);
+            // const gc = new GeometryCollection(layer.visibleFeatures.map(f => f.getGeometry()));
+
+            this.maskingMap.set(key, {symbol: symbol, name: layerName, layer: layer });
+
+            this.restyleLayers();
+        }
+    }
+
+    removeLayerFilter(key) {
+        this.maskingMap.delete(key);
+
+        this.restyleLayers();
+    }
+
+    featureIsVisible(feature) {
+        let passesMetadata = true;
+        let passesLayer = true;
+        const props = feature.values_;
+
+        for (const [layerName, filter] of this.maskingMap) {
+
+            const coord = feature.getGeometry().getCoordinates();
+
+            console.log('active geometry is', filter.layer.activeGeometryCollection);
+            const doesIntersect = filter.layer.activeGeometryCollection.intersectsCoordinate(coord);
+            let passesOperation = false;
+            if (doesIntersect && filter.symbol == 'is in') {
+                passesOperation = true
+            } else if (!doesIntersect && filter.symbol == 'is not in') {
+                passesOperation = true
+            }
+            console.log('passes op', passesOperation);
+            passesLayer = passesLayer && passesOperation;
+        }
+
+        for (const [metadataName, filter] of this.filterMap) {
+            let passesOperation = false;
+            const value = props[filter.metadataName];
+            for (const [k, op] of filter.operations) {
+                if (op.symbol == '=') {
+                    passesOperation = value == op.value;
+                } else if (op.symbol == '<=') {
+                    passesOperation = value <= op.value;
+                } else if (op.symbol == '<') {
+                    passesOperation = value < op.value;
+                } else if (op.symbol == '>=') {
+                    passesOperation = value >= op.value;
+                } else if (op.symbol == '>') {
+                    passesOperation = value > op.value;
+                }
+
+                passesMetadata = passesMetadata && passesOperation;
+            }
+        }
+
+        return passesMetadata && passesLayer;
+
+
     }
 
     // setFeatureToolTip(map, info) {
@@ -188,7 +384,8 @@ export class FeatureGroupVector {
         const layer = this.createLayer(featureGroup);
         layer.setVisible(this.isVisible);
 
-        map.addLayer(layer);
+        // map.addLayer(layer);
+        map.getLayers().insertAt(this.insertionIdx, layer);
 
         this.featureNameToLayer.set(featureName, layer);
 
@@ -247,10 +444,7 @@ export class FeatureGroupVector {
             fview.shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(fview.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
         }
 
-        for (const featureName of this.vectorView.visibleFeatureNames) {
-            const layer = this.featureNameToLayer.get(featureName);
-            layer.setStyle(layer.getStyle());
-        }
+        this.restyleLayers();
     }
 
     setScale(scale) {
@@ -336,6 +530,7 @@ export class FeatureVector {
         node,
         vectorId,
         baseImage,
+        insertionIdx,
     ) {
         this.node = node;
         this.isVisible = false;
@@ -359,6 +554,10 @@ export class FeatureVector {
         this.filterMap = new Map();
         this.maskingMap = new Map();
         this.layer = null;
+        this.visibleFeatures = [];
+        this.activeGeometryCollection = null;
+
+        this.insertionIdx = insertionIdx;
 
         this.currentFeature = undefined;
 
@@ -372,8 +571,8 @@ export class FeatureVector {
         return this;
     }
 
-    static async create(node, vectorId, baseImage) {
-        const instance = new FeatureVector(node, vectorId, baseImage);
+    static async create(node, vectorId, baseImage, insertionIdx) {
+        const instance = new FeatureVector(node, vectorId, baseImage, insertionIdx);
         return await instance.init();
     }
 
@@ -436,10 +635,12 @@ export class FeatureVector {
                 const view = v.fieldToView.get(field);
                 if (this.vectorView.visibleFieldIndices.includes(fieldIdx)) {
                     if (props.isPoint) {
+                        this.visibleFeatures.push(feature);
                         return new Style({
                             image: view.shape
                         });
                     } else {
+                        this.visibleFeatures.push(feature);
                         const style = new Style({
                             fill: new Fill({ color: hexToRgba(view.fillColor, v.fillOpacity) }),
                             stroke: new Stroke({ color: hexToRgba(view.strokeColor, v.strokeOpacity), width: v.strokeWidth })
@@ -450,11 +651,13 @@ export class FeatureVector {
             } else {
                 if (v.visibleFieldIndices.length == 0) {
                     if (props.isPoint) {
+                        this.visibleFeatures.push(feature);
                         const shape = generateShape(v.featureView.shapeType, v.strokeWidth, hexToRgba(v.strokeColor, v.strokeOpacity), hexToRgba('#aaaaaa', v.fillOpacity), v.scale);
                         return new Style({
                             image: shape
                         });
                     } else {
+                        this.visibleFeatures.push(feature);
                         return new Style({
                             fill: new Fill({ color: hexToRgba('#aaaaaa', v.fillOpacity) }),
                             stroke: new Stroke({ color: hexToRgba(v.strokeColor, v.strokeOpacity), width: v.strokeWidth })
@@ -491,11 +694,13 @@ export class FeatureVector {
                     }
 
                     if (props.isPoint) {
+                        this.visibleFeatures.push(feature);
                         const shape = generateShape(v.featureView.shapeType, v.strokeWidth, hexToRgba(strokeColor, v.strokeOpacity), hexToRgba(fillColor, v.fillOpacity), v.scale);
                         return new Style({
                             image: shape
                         });
                     } else {
+                        this.visibleFeatures.push(feature);
                         return new Style({
                             fill: new Fill({ color: hexToRgba(fillColor, v.fillOpacity) }),
                             stroke: new Stroke({ color: hexToRgba(strokeColor, v.strokeOpacity), width: v.strokeWidth })
@@ -600,13 +805,35 @@ export class FeatureVector {
     }
 
     replaceLayer(layer, map) {
+        let idx;
         if (this.layer) {
+            idx = map.getLayers().getArray().indexOf(this.layer);
             map.removeLayer(this.layer);
+        } else {
+            idx = this.insertionIdx;
         }
 
         this.layer = layer;
-        map.addLayer(layer);
+
+        map.getLayers().insertAt(idx, layer);
+        
+        this.restyleLayers();
     }
+
+    restyleLayers(renderDependents = true) {
+        this.visibleFeatures = [];
+        this.layer.setStyle(this.layer.getStyle());
+
+        this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
+
+        if (renderDependents) { // here we run everything that would depend on anotehr layer, such as filters
+            // do layer filters
+            for (const [key, filter] of this.maskingMap) {
+                filter.layer.restyleLayers(renderDependents=false);
+            }
+        }
+    }
+
 
     async setMetadata(metadataName, metadataNode, map) {
         if (this.metadataName) {
@@ -681,7 +908,6 @@ export class FeatureVector {
             obj = this.createLayer(false);
             this.vectorView.zarrVectorLoader = obj.vectorLoader;
         }
-
         this.replaceLayer(obj.layer, map);
 
     }
@@ -692,12 +918,12 @@ export class FeatureVector {
             const fieldsArr = await open(metadataNode.resolve(path), { kind: "array" });
             let chunk = await get(fieldsArr, [null]);
             let metadataFields = chunk.data;
-    
+
             let metadataFieldIdxs = [];
             for (let i = 0; i < metadataFields.length; i++) {
                 metadataFieldIdxs.push(i);
             }
-    
+
             let vmins = null;
             let vmaxs = null;
             if (metadataNode.attrs.type == 'continuous') {
@@ -705,8 +931,8 @@ export class FeatureVector {
                 vmins = chunk.data;
                 chunk = await get(await open(metadataNode.resolve('/metadata/vmaxs'), { kind: "array" }), [null]);
                 vmaxs = chunk.data;
-            } 
-    
+            }
+
             this.filterMap.set(metadataName, {
                 metadataName: metadataName,
                 metadataNode: metadataNode,
@@ -718,12 +944,12 @@ export class FeatureVector {
                 vmaxs: vmaxs,
                 operations: new Map(),
             });
-    
+
             let obj = this.createLayer();
             this.vectorView.zarrVectorLoader = obj.vectorLoader;
             this.replaceLayer(obj.layer, map);
         }
-        
+
     }
 
     async removeMetadataFilter(metadataName, map) {
@@ -738,48 +964,42 @@ export class FeatureVector {
             symbol: symbol,
             value: value,
             field: field,
-            fieldIdx:  this.filterMap.get(metadataName).metadataFields.indexOf(field)
+            fieldIdx: this.filterMap.get(metadataName).metadataFields.indexOf(field)
         });
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     removeMetadataFilterOperation(metadataName, key) {
         this.filterMap.get(metadataName).operations.delete(key);
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     addLayerFilter(layerName, layer, symbol, key, map) {
         if (layer.getCurrentObjectType(map) == 'polygon') {
-            const polygonFeatures = layer.getSource().getFeatures(); // mask
-            const gc = polygonFeatures.length === 1
-                ? polygonFeatures[0].getGeometry()
-                : new GeometryCollection(polygonFeatures.map(f => f.getGeometry()));
-    
-            this.maskingMap.set(key, {maskingGeometry: gc, symbol: symbol, name: layerName});
-            this.layer.setStyle(this.layer.getStyle());
+            this.maskingMap.set(key, { symbol: symbol, name: layerName });
+            this.restyleLayers();
         }
     }
 
     removeLayerFilter(layerName, key) {
         this.maskingMap.delete(key);
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     featureIsVisible(feature, props) {
         let passesMetadata = true;
         let passesLayer = true;
 
-        for (const [layerName, filter] of this.maskingMap) { 
+        for (const [layerName, filter] of this.maskingMap) {
             let coord;
             if (props.isPoint) {
                 coord = feature.getGeometry().getCoordinates();
             } else {
                 coord = feature.getGeometry().getInteriorPoint().getCoordinates();
-
             }
 
-            const doesIntersect = filter.maskingGeometry.intersectsCoordinate(coord);
+            const doesIntersect = filter.layer.activeGeometryCollection.intersectsCoordinate(coord);
             let passesOperation = false;
             if (doesIntersect && filter.symbol == 'is in') {
                 passesOperation = true
@@ -801,7 +1021,7 @@ export class FeatureVector {
                         passesMetadata = passesMetadata && op.field != field
                     }
                 }
-                
+
             } else {
                 const obj = props[filter.metadataName];
                 for (const [k, op] of filter.operations) {
@@ -838,7 +1058,7 @@ export class FeatureVector {
 
         return passesMetadata && passesLayer;
 
-        
+
     }
 
     // setFeatureToolTip(map, info) {
@@ -914,8 +1134,7 @@ export class FeatureVector {
             this.vectorView.visibleFieldIndices = [fieldIndex];
             this.vectorView.visibleFields = [featureName];
         }
-        // this.layer.getSource().changed();
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     removeFeature(featureName) {
@@ -924,8 +1143,7 @@ export class FeatureVector {
         this.vectorView.visibleFieldIndices.splice(fieldIndex, 1);
         this.vectorView.visibleFields.splice(fieldIndex, 1);
 
-        // this.layer.getSource().changed();
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setVisibility(value) {
@@ -941,7 +1159,7 @@ export class FeatureVector {
             this.setBorderColoring(this.vectorView?.strokeDarkness);
         }
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setFeatureShapeType(featureName, shapeName) {
@@ -952,7 +1170,7 @@ export class FeatureVector {
                 this.vectorView.featureView.shapeType = shapeName;
             }
 
-            this.layer.setStyle(this.layer.getStyle());
+            this.restyleLayers();
         }
 
     }
@@ -960,25 +1178,25 @@ export class FeatureVector {
     setScale(scale) {
         this.vectorView.scale = scale;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setFillOpacity(fillOpacity) {
         this.vectorView.fillOpacity = fillOpacity;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setStrokeWidth(strokeWidth) {
         const v = Math.max(.01, strokeWidth);
         this.vectorView.strokeWidth = v; //cant be zero
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setFieldStrokeColor(featureName, hex) {
         this.vectorView.fieldToView.get(featureName).strokeColor = hex;
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setStrokeColor(hex) {
@@ -989,40 +1207,40 @@ export class FeatureVector {
             }
         }
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setStrokeOpacity(strokeOpacity) {
         this.vectorView.strokeOpacity = strokeOpacity;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setPalette(palette) {
         this.vectorView.palette = palette;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setVMin(fieldName, value) {
         const idx = this.metadataFields.indexOf(fieldName);
         this.metadataFieldToVInfo.get(idx).vMin = value;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setVMax(fieldName, value) {
         const idx = this.metadataFields.indexOf(fieldName);
         this.metadataFieldToVInfo.get(idx).vMax = value;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setVCenter(fieldName, value) {
         const idx = this.metadataFields.indexOf(fieldName);
         this.metadataFieldToVInfo.get(idx).vCenter = value;
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
     setBorderType(value) {
@@ -1043,9 +1261,9 @@ export class FeatureVector {
             }
         }
 
-        this.layer.setStyle(this.layer.getStyle());
+        this.restyleLayers();
     }
 
-    
+
 
 }

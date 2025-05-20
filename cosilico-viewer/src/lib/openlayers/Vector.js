@@ -110,6 +110,8 @@ export class FeatureGroupVector {
         this.featureMetaToNode = featureMetaToNode;
         this.filterMap = new Map();
         this.maskingMap = new Map();
+        this.visibleFeatures = [];
+        this.dependentLayers = new Map();
 
         this.insertionIdx = insertionIdx;
 
@@ -161,10 +163,19 @@ export class FeatureGroupVector {
             style: vectorTileStyle,
         });
 
+        // layer.on('prerender', (event) => {
+        //     this.visibleFeatures = [];
+        // });
+        // layer.on('postrender', (event) => {
+        //     this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
+        // });
+
         return layer;
     }
 
     restyleLayers(renderDependents = true) {
+        this.visibleFeatures = [];
+        
         for (const featureName of this.vectorView.visibleFeatureNames) {
             const l = this.featureNameToLayer.get(featureName);
             l.setStyle(l.getStyle());
@@ -172,6 +183,10 @@ export class FeatureGroupVector {
 
         if (renderDependents) { // here we run everything that would depend on anotehr layer, such as filters
             // do layer filters
+            // for (const [_, filter] of this.dependentLayers) {
+            //     console.log('restyling dependent', _);
+            //     filter.layer.restyleLayers(renderDependents=false);
+            // }
             for (const [key, filter] of this.maskingMap) {
                 filter.layer.restyleLayers(renderDependents=false);
             }
@@ -211,16 +226,6 @@ export class FeatureGroupVector {
     async addMetadataFilter(metadataName, map) {
         if (!this.filterMap.has(metadataName)) {
             const node = this.featureMetaToNode.get(metadataName);
-
-            // let vmins = null;
-            // let vmaxs = null;
-            // if (node.attrs.type == 'continuous') {
-            //     let chunk;
-            //     chunk = await get(await open(node.resolve('/metadata/vmins'), { kind: "array" }), [null]);
-            //     vmins = chunk.data;
-            //     chunk = await get(await open(node.resolve('/metadata/vmaxs'), { kind: "array" }), [null]);
-            //     vmaxs = chunk.data;
-            // }
 
             this.filterMap.set(metadataName, {
                 metadataName: metadataName,
@@ -262,12 +267,14 @@ export class FeatureGroupVector {
             // const gc = new GeometryCollection(layer.visibleFeatures.map(f => f.getGeometry()));
 
             this.maskingMap.set(key, {symbol: symbol, name: layerName, layer: layer });
-
             this.restyleLayers();
+
+            layer.dependentLayers.set(this.vectorId, this);
         }
     }
 
     removeLayerFilter(key) {
+        this.maskingMap.get(key).layer.dependentLayers.delete(this.vectorId);
         this.maskingMap.delete(key);
 
         this.restyleLayers();
@@ -282,15 +289,14 @@ export class FeatureGroupVector {
 
             const coord = feature.getGeometry().getCoordinates();
 
-            console.log('active geometry is', filter.layer.activeGeometryCollection);
             const doesIntersect = filter.layer.activeGeometryCollection.intersectsCoordinate(coord);
+            
             let passesOperation = false;
             if (doesIntersect && filter.symbol == 'is in') {
                 passesOperation = true
             } else if (!doesIntersect && filter.symbol == 'is not in') {
                 passesOperation = true
             }
-            console.log('passes op', passesOperation);
             passesLayer = passesLayer && passesOperation;
         }
 
@@ -556,6 +562,8 @@ export class FeatureVector {
         this.layer = null;
         this.visibleFeatures = [];
         this.activeGeometryCollection = null;
+        this.dependentLayers = new Map();
+        this.needsRegen = false;
 
         this.insertionIdx = insertionIdx;
 
@@ -657,6 +665,7 @@ export class FeatureVector {
                             image: shape
                         });
                     } else {
+                        // console.log('pushing feature');
                         this.visibleFeatures.push(feature);
                         return new Style({
                             fill: new Fill({ color: hexToRgba('#aaaaaa', v.fillOpacity) }),
@@ -716,6 +725,18 @@ export class FeatureVector {
             style: vectorTileStyle,
         });
         layer.setVisible(this.isVisible);
+
+        // layer.on('prerender', (event) => {
+        //     this.visibleFeatures = [];
+        // });
+        layer.on('postrender', (event) => {
+            console.log('generating geom collections, regen is', this.needsRegen, this.visibleFeatures.length);
+
+            if (this.needsRegen && this.visibleFeatures.length > 0) {
+                this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
+                this.needsRegen = false;
+            }
+        });
 
         return { layer, vectorLoader };
     }
@@ -821,16 +842,18 @@ export class FeatureVector {
     }
 
     restyleLayers(renderDependents = true) {
+        this.needsRegen = true;
         this.visibleFeatures = [];
         this.layer.setStyle(this.layer.getStyle());
 
-        this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
 
         if (renderDependents) { // here we run everything that would depend on anotehr layer, such as filters
-            // do layer filters
             for (const [key, filter] of this.maskingMap) {
                 filter.layer.restyleLayers(renderDependents=false);
             }
+            // for (const [_, filter] of this.dependentLayers) {
+            //     filter.layer.restyleLayers(renderDependents=false);
+            // }
         }
     }
 
@@ -979,10 +1002,12 @@ export class FeatureVector {
         if (layer.getCurrentObjectType(map) == 'polygon') {
             this.maskingMap.set(key, { symbol: symbol, name: layerName });
             this.restyleLayers();
+            layer.dependentLayers.set(this.vectorId, this);
         }
     }
 
     removeLayerFilter(layerName, key) {
+        this.maskingMap.get(key).layer.dependentLayers.delete(this.vectorId);
         this.maskingMap.delete(key);
         this.restyleLayers();
     }
@@ -998,6 +1023,7 @@ export class FeatureVector {
             } else {
                 coord = feature.getGeometry().getInteriorPoint().getCoordinates();
             }
+            // const activeGeometryCollection = new GeometryCollection(filter.layer.visibleFeatures.map(f => f.getGeometry()));
 
             const doesIntersect = filter.layer.activeGeometryCollection.intersectsCoordinate(coord);
             let passesOperation = false;

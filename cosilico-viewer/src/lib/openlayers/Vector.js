@@ -111,7 +111,6 @@ export class FeatureGroupVector {
         this.filterMap = new Map();
         this.maskingMap = new Map();
         this.visibleFeatures = [];
-        this.dependentLayers = new Map();
 
         this.insertionIdx = insertionIdx;
 
@@ -164,7 +163,6 @@ export class FeatureGroupVector {
         });
 
         // layer.on('prerender', (event) => {
-        //     this.visibleFeatures = [];
         // });
         // layer.on('postrender', (event) => {
         //     this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
@@ -173,23 +171,11 @@ export class FeatureGroupVector {
         return layer;
     }
 
-    restyleLayers(renderDependents = true) {
+    restyleLayers() {
         this.visibleFeatures = [];
-        
         for (const featureName of this.vectorView.visibleFeatureNames) {
             const l = this.featureNameToLayer.get(featureName);
             l.setStyle(l.getStyle());
-        }
-
-        if (renderDependents) { // here we run everything that would depend on anotehr layer, such as filters
-            // do layer filters
-            // for (const [_, filter] of this.dependentLayers) {
-            //     console.log('restyling dependent', _);
-            //     filter.layer.restyleLayers(renderDependents=false);
-            // }
-            for (const [key, filter] of this.maskingMap) {
-                filter.layer.restyleLayers(renderDependents=false);
-            }
         }
     }
 
@@ -267,17 +253,21 @@ export class FeatureGroupVector {
             // const gc = new GeometryCollection(layer.visibleFeatures.map(f => f.getGeometry()));
 
             this.maskingMap.set(key, {symbol: symbol, name: layerName, layer: layer });
+            this.updateLayerFilterGeoms();
             this.restyleLayers();
-
-            layer.dependentLayers.set(this.vectorId, this);
         }
     }
 
     removeLayerFilter(key) {
-        this.maskingMap.get(key).layer.dependentLayers.delete(this.vectorId);
         this.maskingMap.delete(key);
 
         this.restyleLayers();
+    }
+
+    updateLayerFilterGeoms() {
+        for (const [key, filter] of this.maskingMap) {
+            filter.layer.activeGeometryCollection = new GeometryCollection(filter.layer.visibleFeatures.map(f => f.getGeometry()));
+        }
     }
 
     featureIsVisible(feature) {
@@ -562,8 +552,6 @@ export class FeatureVector {
         this.layer = null;
         this.visibleFeatures = [];
         this.activeGeometryCollection = null;
-        this.dependentLayers = new Map();
-        this.needsRegen = false;
 
         this.insertionIdx = insertionIdx;
 
@@ -727,16 +715,13 @@ export class FeatureVector {
         layer.setVisible(this.isVisible);
 
         // layer.on('prerender', (event) => {
-        //     this.visibleFeatures = [];
         // });
-        layer.on('postrender', (event) => {
-            console.log('generating geom collections, regen is', this.needsRegen, this.visibleFeatures.length);
-
-            if (this.needsRegen && this.visibleFeatures.length > 0) {
-                this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
-                this.needsRegen = false;
-            }
-        });
+        // layer.on('postrender', (event) => {
+        //     if (this.needsRegen && this.visibleFeatures.length > 0) {
+        //         this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
+        //         this.needsRegen = false;
+        //     }
+        // });
 
         return { layer, vectorLoader };
     }
@@ -841,20 +826,9 @@ export class FeatureVector {
         this.restyleLayers();
     }
 
-    restyleLayers(renderDependents = true) {
-        this.needsRegen = true;
+    restyleLayers() {
         this.visibleFeatures = [];
         this.layer.setStyle(this.layer.getStyle());
-
-
-        if (renderDependents) { // here we run everything that would depend on anotehr layer, such as filters
-            for (const [key, filter] of this.maskingMap) {
-                filter.layer.restyleLayers(renderDependents=false);
-            }
-            // for (const [_, filter] of this.dependentLayers) {
-            //     filter.layer.restyleLayers(renderDependents=false);
-            // }
-        }
     }
 
 
@@ -1000,16 +974,22 @@ export class FeatureVector {
 
     addLayerFilter(layerName, layer, symbol, key, map) {
         if (layer.getCurrentObjectType(map) == 'polygon') {
-            this.maskingMap.set(key, { symbol: symbol, name: layerName });
+            this.maskingMap.set(key, { symbol: symbol, name: layerName, layer: layer });
+            this.updateLayerFilterGeoms();
             this.restyleLayers();
-            layer.dependentLayers.set(this.vectorId, this);
         }
     }
 
     removeLayerFilter(layerName, key) {
-        this.maskingMap.get(key).layer.dependentLayers.delete(this.vectorId);
         this.maskingMap.delete(key);
         this.restyleLayers();
+    }
+
+    updateLayerFilterGeoms() {
+        for (const [key, filter] of this.maskingMap) {
+            console.log('updating layer filter geoms for', filter.name, filter);
+            filter.layer.activeGeometryCollection = new GeometryCollection(filter.layer.visibleFeatures.map(f => f.getGeometry()));
+        }
     }
 
     featureIsVisible(feature, props) {

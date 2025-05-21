@@ -13,6 +13,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import { Slider } from '$lib/components/ui/slider';
+	import { Circle2 } from 'svelte-loading-spinners';
 	import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
 	import PointViewOptions from './sidebar/PointViewOptions.svelte';
 	import PolygonViewOptions from './sidebar/PolygonViewOptions.svelte';
@@ -29,6 +30,7 @@
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
 	let metadataChangeKey = $state(true);
+	let mapIsLoading = $state(true);
 	let map;
 	let experiment = $state(null);
 	let mirrors = $state(null);
@@ -136,9 +138,6 @@
 
 		incrementInsertionIndices(id, increment = 1) {
 			let ids = [...this.imageOrder, ...this.layerOrder];
-			// if (increment < 0) {
-			// 	ids = ids.reverse();
-			// }
 
 			let doIncrement = false;
 			for (const objId of ids) {
@@ -266,6 +265,26 @@
 				zoom: 1
 			})
 		});
+
+		map.on('moveend', () => {
+			for (const [_, layer] of experiment.layers) {
+				layer.vector.updateLayerFilterGeoms();
+				if (layer.vector.maskingMap.size > 0) {
+					layer.vector.restyleLayers();
+				}
+			}
+			
+		});
+
+		map.on('loadstart', () => {
+			mapIsLoading = true;
+		});
+
+		map.on('loadend', () => {
+			mapIsLoading = false;
+		});
+
+		
 	}
 
 	function initializeMirrors() {
@@ -402,6 +421,7 @@
 
 		reloadImageInfoKey = !reloadImageInfoKey;
 		reloadLayerInfoKey = !reloadLayerInfoKey;
+		mapIsLoading = false;
 	});
 
 	async function toggleLayer(vector, value) {
@@ -523,10 +543,19 @@
 	}
 </script>
 
-<div>
+<div class='h-full'>
 	<div id="info" class="ol-tooltip hidden"></div>
-	<div id="map"></div>
-	<div class="absolute right-4 top-4 z-50 w-96">
+	<div id="map" class="bg-black w-full h-full relative"></div>
+	{#key mapIsLoading}
+		{#if mapIsLoading}
+			<div class="absolute inset-0 flex items-center justify-center z-51 pointer-events-none">
+				<Circle2 size="60" colorInner="#FF0000" colorCenter='#00FF00' colorOuter="#0000FF" unit="px" />
+			</div>
+		{/if}
+	{/key}
+	<div class="absolute right-4 top-4 bottom-4 w-96 z-50 overflow-y-auto">
+  	<!-- <div class="h-full overflow-y-auto rounded-xl bg-white shadow p-4"> -->
+	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
 		{#if experiment && mirrors != null}
 			{#key reloadImageInfoKey}
 				<ScrollArea orientation="both">
@@ -891,6 +920,7 @@
 				</ScrollArea>
 			{/key}
 		{/if}
+	<!-- </div> -->
 	</div>
 </div>
 
@@ -944,12 +974,7 @@
 		{/key}  -->
 
 <style global>
-	#map {
-		background-color: black; /* Change this to any color you want */
-		width: 100%;
-		height: 500px;
-		position: relative;
-	}
+
 	#info {
 		position: absolute;
 		display: inline-block;

@@ -43,6 +43,7 @@
 	"dependencies": {
 		"ol": "^10.5.0",
 		"svelte-awesome-color-picker": "^4.0.1",
+		"svelte-loading-spinners": "^0.3.6",
 		"zarrita": "^0.5.1"
 	}
 }

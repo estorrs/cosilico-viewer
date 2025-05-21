@@ -111,6 +111,7 @@ export class FeatureGroupVector {
         this.filterMap = new Map();
         this.maskingMap = new Map();
         this.visibleFeatures = [];
+        // this.countNode = this.featureMetaToNode.get('count');
 
         this.insertionIdx = insertionIdx;
 
@@ -150,8 +151,17 @@ export class FeatureGroupVector {
             const idx = feature.values_.feature_index;
             const name = this.featureNames[idx];
             if (this.vectorView.visibleFeatureIndices.includes(idx) && this.featureIsVisible(feature)) {
+                const fview = this.vectorView.featureNameToView.get(name);
+                const maxCount = this.featureMetaToNode.get('count').attrs.vmax;
+                // const scaler = feature.values_.count / maxCount * 10;
+                const scaler = 1.;
+
+                console.log('scaler is', scaler);
+                const shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(fview.fillColor, this.vectorView.fillOpacity), this.vectorView.scale * scaler);
+
                 return new Style({
-                    image: this.vectorView.featureNameToView.get(name).shape
+                    // image: this.vectorView.featureNameToView.get(name).shape
+                    image: shape
                 });
             }
         }
@@ -165,7 +175,6 @@ export class FeatureGroupVector {
         // layer.on('prerender', (event) => {
         // });
         // layer.on('postrender', (event) => {
-        //     this.activeGeometryCollection = new GeometryCollection(this.visibleFeatures.map(f => f.getGeometry()));
         // });
 
         return layer;
@@ -249,9 +258,6 @@ export class FeatureGroupVector {
 
     addLayerFilter(layerName, layer, symbol, key, map) {
         if (layer.getCurrentObjectType(map) == 'polygon') {
-            // console.log('active features are', layer.visibleFeatures);
-            // const gc = new GeometryCollection(layer.visibleFeatures.map(f => f.getGeometry()));
-
             this.maskingMap.set(key, {symbol: symbol, name: layerName, layer: layer });
             this.updateLayerFilterGeoms();
             this.restyleLayers();

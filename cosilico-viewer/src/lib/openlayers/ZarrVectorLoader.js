@@ -170,7 +170,6 @@ export class GroupedZarrVectorLoader {
                         dataProjection: this.projection,
                     });
 
-                    console.log('features', features);
 
                     tile.setFeatures(features); // Manually set features
                 } else {
@@ -325,7 +324,6 @@ export class ZarrVectorLoader {
                                     entities.push(obj);
                                 }
                             }
-                            console.log('entity length', entities.length);
                             metadataToData.set(metadataName, entities);
                         }
 
@@ -375,8 +373,7 @@ export class ZarrVectorLoader {
                         dataProjection: this.projection,
                     });
 
-                    console.log('feature length', features.length);
-                    console.log('features', features);
+    
 
 
                     tile.setFeatures(features);

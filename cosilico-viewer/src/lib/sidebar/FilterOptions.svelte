@@ -82,6 +82,7 @@
 	async function onMetadataNameSelection(name) {
 		await onAddFilterMetadata(name);
 		opts = layer.vector.filterMap.get(name);
+		console.log('opts are', $state.snapshot(opts));
 		metadataFields = [...opts.metadataFields];
 		metadataType = opts.metadataType;
 		currentMetadataFilter.metadataName = name;
@@ -98,8 +99,10 @@
 
 		if (metadataType == 'continuous') {
 			const fidx = opts.metadataFields.indexOf(fieldName);
+			console.log('index of fname', fieldName, fidx);
 			vMin = opts.vmins[fidx];
 			vMax = opts.vmaxs[fidx];
+			console.log('vmin vmax', vMin, vMax);
 		}
 
 		if (currentMetadataFilter.fieldName && currentMetadataFilter.symbol) {
@@ -230,7 +233,7 @@
 								entityName="options"
 							/>
 							{#key rerenderFields}
-								{#if layer.vector.isGrouped}
+								{#if !layer.isGrouped}
 									<p>Select Field</p>
 									<SearchableOptions
 										names={metadataFields}

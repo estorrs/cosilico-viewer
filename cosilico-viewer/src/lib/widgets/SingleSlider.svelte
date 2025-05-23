@@ -10,7 +10,8 @@
         title = 'Adjust value',
         onValueChange = (v) => null,
 		step = 0.01,
-        location = 'left' // right or left
+        location = 'left', // right or left or top or bottom
+        orientation = 'horizontal',
 	} = $props();
 
 	function vSliderSetValues(vs) {
@@ -40,6 +41,7 @@
             {/if}
             <Slider
                 bind:value={() => [value], (vs) => vSliderSetValues(vs)}
+                orientation={orientation}
                 min={vMin}
                 max={vMax}
                 {step}

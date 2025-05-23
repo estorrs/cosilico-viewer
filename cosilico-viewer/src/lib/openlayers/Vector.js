@@ -11,19 +11,11 @@ import { Style, Fill, Stroke } from "ol/style";
 import { GroupedZarrVectorLoader, ZarrVectorLoader } from './ZarrVectorLoader';
 import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba, adjustHexLightness } from './ColorHelpers';
 import { generateShape } from "./ShapeHelpers";
-import { initZarr } from "./ZarrHelpers";
+import { extractRows } from "./ZarrHelpers";
+import { getClosestResolution } from "./OpenlayersHelpers";
 import { scaleFromCenter } from "ol/extent";
 import { render } from "svelte/server";
 
-function getClosestResolution(map, availableResolutions, tileSize) {
-    let current = map.getView().getResolution();
-    if (!current) return null;
-    current = current * tileSize;
-
-    return availableResolutions.reduce((prev, curr) =>
-        Math.abs(curr - current) < Math.abs(prev - current) ? curr : prev
-    );
-}
 
 // function getVisibleFeatures(map, vectorTileSource) {
 // 	const extent = map.getView().calculateExtent(map.getSize());
@@ -104,14 +96,21 @@ export class FeatureGroupVector {
         this.vectorId = vectorId;
         this.resolutions = this.node.attrs.resolutions.sort((a, b) => b - a);
         this.objectTypes = this.resolutions.map((res) => 'point'); // for now just prepopulate
+        this.currentRes = this.resolutions[0];
+        this.closestRes = this.resolutions[0];
+        
         this.sizeY = baseImage.sizeY;
         this.sizeX = baseImage.sizeX;
         this.tileSize = baseImage.tileSize;
+        this.upp = baseImage.upp;
+        this.unit = baseImage.unit;
+        this.currentZoom = this.resolutions[0] / this.tileSize;
+
         this.featureMetaToNode = featureMetaToNode;
         this.filterMap = new Map();
         this.maskingMap = new Map();
         this.visibleFeatures = [];
-        // this.countNode = this.featureMetaToNode.get('count');
+        this.resToFeatureInfo = new Map();
 
         this.insertionIdx = insertionIdx;
 
@@ -152,11 +151,14 @@ export class FeatureGroupVector {
             const name = this.featureNames[idx];
             if (this.vectorView.visibleFeatureIndices.includes(idx) && this.featureIsVisible(feature)) {
                 const fview = this.vectorView.featureNameToView.get(name);
-                const maxCount = this.featureMetaToNode.get('count').attrs.vmax;
-                // const scaler = feature.values_.count / maxCount * 10;
-                const scaler = 1.;
+                const info = this.resToFeatureInfo.get(this.closestRes);
 
-                console.log('scaler is', scaler);
+
+                const maxCount = info.vmaxs[idx];
+                // const maxCount = this.featureMetaToNode.get('count').attrs.vmax;
+                const scaler = feature.values_.count / maxCount;
+                // const scaler = 1.;
+
                 const shape = generateShape(fview.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(fview.fillColor, this.vectorView.fillOpacity), this.vectorView.scale * scaler);
 
                 return new Style({
@@ -180,6 +182,13 @@ export class FeatureGroupVector {
         return layer;
     }
 
+    updateResolutionInfo(map) {
+        const current = map.getView().getResolution();
+        this.currentZoom = current;
+        this.currentRes = current * this.tileSize;
+        this.closestRes = getClosestResolution(map, this.resolutions, this.tileSize);
+    }
+
     restyleLayers() {
         this.visibleFeatures = [];
         for (const featureName of this.vectorView.visibleFeatureNames) {
@@ -187,8 +196,6 @@ export class FeatureGroupVector {
             l.setStyle(l.getStyle());
         }
     }
-
-   
 
     setFeatureMetadata(featureMetaToNode, map) {
         this.featureMetaToNode = featureMetaToNode
@@ -379,14 +386,12 @@ export class FeatureGroupVector {
     // }
 
     addFeature(featureName, map) {
-        // @ts-ignore
         const featureIndex = this.featureNames.indexOf(featureName);
         const featureGroup = this.featureGroups[featureIndex];
 
         const layer = this.createLayer(featureGroup);
         layer.setVisible(this.isVisible);
 
-        // map.addLayer(layer);
         map.getLayers().insertAt(this.insertionIdx, layer);
 
         this.featureNameToLayer.set(featureName, layer);
@@ -475,7 +480,28 @@ export class FeatureGroupVector {
         const featureNamesChunk = await get(featureNamesArr, [null]);
         this.featureNames = featureNamesChunk.data;
 
+        this.resToFeatureInfo = new globalThis.Map();
+
+        const countNode = this.featureMetaToNode.get('count');
+        let arr = await open(countNode.resolve('/metadata/vmins_by_res'), { kind: "array" });
+        let chunk = await get(arr, [null, null]);
+        const rowToVmins = extractRows(chunk);
+        arr = await open(countNode.resolve('/metadata/vmaxs_by_res'), { kind: "array" });
+        chunk = await get(arr, [null, null]);
+        const rowToVmaxs = extractRows(chunk);
+        
+        for (let i = 0; i < rowToVmins.size; i++) {
+            // const res = this.node.attrs.resolutions[i];
+            const res = [...this.resolutions].reverse()[i];
+            const info = {
+                'vmins': rowToVmins.get(i),
+                'vmaxs': rowToVmaxs.get(i)
+            }
+            this.resToFeatureInfo.set(res, info);
+        }
+
         this.featureGroupsMap = new globalThis.Map();
+        
 
         for (let i = 0; i < this.resolutions.length; i++) {
             const res = this.resolutions[i];
@@ -545,6 +571,8 @@ export class FeatureVector {
         this.sizeX = baseImage.sizeX;
         this.sizeY = baseImage.sizeY;
         this.tileSize = baseImage.tileSize;
+        this.upp = baseImage.upp;
+        this.unit = baseImage.unit;
         this.metadataToView = new Map();
         this.metadataName = null;
         this.metadataNode = null;
@@ -558,6 +586,9 @@ export class FeatureVector {
         this.layer = null;
         this.visibleFeatures = [];
         this.activeGeometryCollection = null;
+        this.currentZoom = this.resolutions[0] / this.tileSize;
+        this.currentRes = this.resolutions[0];
+        this.closestRes = this.currentRes;
 
         this.insertionIdx = insertionIdx;
 
@@ -730,6 +761,13 @@ export class FeatureVector {
         // });
 
         return { layer, vectorLoader };
+    }
+
+    updateResolutionInfo(map) {
+        const current = map.getView().getResolution();
+        this.currentRes = current * this.tileSize;
+        this.closestRes = getClosestResolution(map, this.resolutions, this.tileSize);
+        this.currentZoom = current;        
     }
 
     initializeContinuousView() {
@@ -993,7 +1031,6 @@ export class FeatureVector {
 
     updateLayerFilterGeoms() {
         for (const [key, filter] of this.maskingMap) {
-            console.log('updating layer filter geoms for', filter.name, filter);
             filter.layer.activeGeometryCollection = new GeometryCollection(filter.layer.visibleFeatures.map(f => f.getGeometry()));
         }
     }

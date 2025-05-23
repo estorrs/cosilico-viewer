@@ -32,3 +32,17 @@ export async function printZarrTree(group, prefix = "") {
       }
     }
   }
+
+export function extractRows(chunk) {
+  const { data, shape, stride } = chunk;
+  const [numRows, numCols] = shape;
+  const map = new Map();
+
+  for (let row = 0; row < numRows; row++) {
+    const offset = row * stride[0];
+    const rowData = data.subarray(offset, offset + numCols);
+    map.set(row, rowData);
+  }
+
+  return map;
+}

@@ -11,6 +11,7 @@
     import FilterOptions from "$lib/sidebar/FilterOptions.svelte";
     import DoubleSlider from "$lib/widgets/DoubleSlider.svelte";
     import SingleSlider from "$lib/widgets/SingleSlider.svelte";
+	import ZoomPanel from "$lib/zooming/ZoomPanel.svelte";
    </script>
 
 <!-- <SingleSlider
@@ -45,6 +46,11 @@
 <!-- <PointViewOptions /> -->
 
 <!-- <ContinuousOptions /> -->
+ <!-- <ZoomPanel /> -->
+
+
+
+
  <div class='h-screen'>
     <ZarrTileViewer />
  </div>

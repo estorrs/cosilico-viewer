@@ -9,6 +9,7 @@ import View from "ol/View";
 
 
 import ZarrTileSource from './ZarrTileSource';
+import { getClosestResolution } from './OpenlayersHelpers';
 import { applyPseudocolorToPixel, minMaxRangePixelTransform, hexToInt, intToHex } from './PixelTransforms.js';
 import { generateColorMapping, defaultPalettes } from './ColorHelpers';
 import { getOmeChannelNames } from './OmeHelpers';
@@ -54,6 +55,10 @@ export class Image {
     // this.overviewSources = [];
     this.isLoaded = false;
     this.insertionIdx = insertionIdx;
+
+    this.currentRes = this.resolutions[0];
+    this.closestRes = this.resolutions[0];
+    this.currentZoom = this.resolutions[0] / this.tileSize;
 
     this.loadGenerationCounter = 0;
 
@@ -157,6 +162,13 @@ export class Image {
       });
       return rasterLayer;
     }
+  }
+
+  updateResolutionInfo(map) {
+      const current = map.getView().getResolution();
+      this.currentRes = current * this.tileSize;
+      this.closestRes = getClosestResolution(map, this.resolutions, this.tileSize);
+      this.currentZoom = current;
   }
 
   async addChannel(channelName, map) {

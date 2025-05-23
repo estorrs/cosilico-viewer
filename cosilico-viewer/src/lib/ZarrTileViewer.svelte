@@ -5,6 +5,9 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import OverviewMap from 'ol/control/OverviewMap.js';
 	import { defaults as defaultControls } from 'ol/control/defaults.js';
+	import MouseWheelZoom from 'ol/interaction/MouseWheelZoom.js';
+	import PinchZoom from 'ol/interaction/PinchZoom.js';
+	import DoubleClickZoom from 'ol/interaction/DoubleClickZoom.js';
 
 	import * as Accordion from '$lib/components/ui/accordion';
 	import * as Card from '$lib/components/ui/card';
@@ -23,6 +26,7 @@
 	import { initZarr } from './openlayers/ZarrHelpers';
 	import { Image } from './openlayers/Image';
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
+	import ZoomPanel from './zooming/ZoomPanel.svelte';
 
 	import Check from '@lucide/svelte/icons/check';
 	import { apply } from 'ol/transform';
@@ -267,7 +271,20 @@
 		});
 
 		map.on('moveend', () => {
+			for (const [_, image] of experiment.images) {
+				image.image.updateResolutionInfo(map);
+			}
+
+			if (mirrors != null) {
+				mirrors.get('zoomPanelInfo').currentZoom = experiment.baseImage.currentZoom;
+				console.log('current mirror zoom info is', mirrors.get('zoomPanelInfo'));
+			}
+
 			for (const [_, layer] of experiment.layers) {
+				// update current res
+				layer.vector.updateResolutionInfo(map);
+
+				// do filter synching
 				layer.vector.updateLayerFilterGeoms();
 				if (layer.vector.maskingMap.size > 0) {
 					layer.vector.restyleLayers();
@@ -319,6 +336,11 @@
 		for (const [imageId, obj] of experiment.images) {
 			imageVisibilityInfo.set(imageId, obj.image.isVisible);
 		}
+
+		// let imageResolutionInfo = $state(new SvelteMap());
+		// for (const [imageId, obj] of experiment.images) {
+		// 	imageResolutionInfo.set('currentUpp', obj.image.currentUpp);
+		// }
 
 		let layerVisabilityInfo = $state(new SvelteMap());
 		for (const [vectorId, obj] of experiment.layers) {
@@ -390,6 +412,14 @@
 		mirrors.set('layerPolygonViewInfo', layerPolygonViewInfo);
 		mirrors.set('layerMetadataFilters', layerMetadataFilters);
 		mirrors.set('layerLayerFilters', layerLayerFilters);
+		mirrors.set('zoomPanelInfo', {
+			currentZoom: experiment.baseImage.currentZoom,
+			isLocked: false,
+			upp: experiment.baseImage.upp,
+			unit: experiment.baseImage.unit,
+			minZoom: .01,
+			maxZoom: experiment.baseImage.resolutions[0] / experiment.baseImage.tileSize * 2,
+		})
 	}
 
 	onMount(async () => {
@@ -445,10 +475,10 @@
 
 		if (visible.includes(featureName)) {
 			vector.removeFeature(featureName, map);
-			experiment.incrementInsertionIndices(vector.vectorId);
+			experiment.incrementInsertionIndices(vector.vectorId, -1);
 		} else {
 			vector.addFeature(featureName, map);
-			experiment.incrementInsertionIndices(vector.vectorId, -1);
+			experiment.incrementInsertionIndices(vector.vectorId);
 		}
 
 		// reloadLayerInfoKey = !reloadLayerInfoKey;
@@ -544,7 +574,7 @@
 </script>
 
 <div class='h-full'>
-	<div id="info" class="ol-tooltip hidden"></div>
+	<!-- <div id="info" class="ol-tooltip hidden"></div> -->
 	<div id="map" class="bg-black w-full h-full relative"></div>
 	{#key mapIsLoading}
 		{#if mapIsLoading}
@@ -558,6 +588,48 @@
 	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
 		{#if experiment && mirrors != null}
 			{#key reloadImageInfoKey}
+				<div class='bg-gray-500'>
+					<ZoomPanel
+						zoom={mirrors.get('zoomPanelInfo').currentZoom}
+						isLocked={mirrors.get('zoomPanelInfo').isLocked}
+						upp={mirrors.get('zoomPanelInfo').upp}
+						unit={experiment.baseImage.unit}
+						minZoom={mirrors.get('zoomPanelInfo').minUpp}
+						maxZoom={mirrors.get('zoomPanelInfo').maxUpp}
+						onZoomChange={(v) => {
+							const view = map.getView();
+							view.setZoom(v);
+							console.log('setting zoom to', v);
+							mirrors.get('zoomPanelInfo').currentZoom = v;
+							console.log('zoom info', mirrors.get('zoomPanelInfo'));
+						}}
+						onLockedChange={(v) => {
+							mirrors.get('zoomPanelInfo').isLocked = v;
+							if (v) {
+								map.getInteractions().forEach((interaction) => {
+									if (
+										interaction instanceof MouseWheelZoom ||
+										interaction instanceof PinchZoom ||
+										interaction instanceof DoubleClickZoom
+									) {
+										interaction.setActive(false);
+									}
+								});
+							} else {
+								map.getInteractions().forEach((interaction) => {
+									if (
+										interaction instanceof MouseWheelZoom ||
+										interaction instanceof PinchZoom ||
+										interaction instanceof DoubleClickZoom
+									) {
+										interaction.setActive(true);
+									}
+								});
+							}
+						}}
+						step={.01}
+						/>
+				</div>
 				<ScrollArea orientation="both">
 					<Card.Root>
 						<Card.Header>

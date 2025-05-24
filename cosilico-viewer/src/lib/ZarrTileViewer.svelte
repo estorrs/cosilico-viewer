@@ -598,6 +598,7 @@
 
 <div class='h-full'>
 	<!-- <div id="info" class="ol-tooltip hidden"></div> -->
+
 	<div id="map" class="bg-black w-full h-full relative"></div>
 	{#key mapIsLoading}
 		{#if mapIsLoading}
@@ -606,54 +607,12 @@
 			</div>
 		{/if}
 	{/key}
-	<div class="absolute right-4 top-4 bottom-4 w-96 z-50 overflow-y-auto">
+	<!-- <div class="absolute right-4 top-4 bottom-4 w-96 z-50 overflow-y-auto"> -->
   	<!-- <div class="h-full overflow-y-auto rounded-xl bg-white shadow p-4"> -->
 	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
 		{#if experiment && mirrors != null}
 			{#key reloadImageInfoKey}
-			{#key zoomChangeKey}
-				<div class='bg-gray-500'>
-					<ZoomPanel
-						zoom={mirrors.get('zoomPanelInfo').currentZoom}
-						isLocked={mirrors.get('zoomPanelInfo').isLocked}
-						upp={mirrors.get('zoomPanelInfo').upp}
-						unit={experiment.baseImage.unit}
-						minZoom={mirrors.get('zoomPanelInfo').minZoom}
-						maxZoom={mirrors.get('zoomPanelInfo').maxZoom}
-						onZoomChange={(v) => {
-							const view = map.getView();
-							// view.setZoom(v);
-							view.setResolution(v);
-							mirrors.get('zoomPanelInfo').currentZoom = v;
-						}}
-						onLockedChange={(v) => {
-							mirrors.get('zoomPanelInfo').isLocked = v;
-							if (v) {
-								map.getInteractions().forEach((interaction) => {
-									if (
-										interaction instanceof MouseWheelZoom ||
-										interaction instanceof PinchZoom ||
-										interaction instanceof DoubleClickZoom
-									) {
-										interaction.setActive(false);
-									}
-								});
-							} else {
-								map.getInteractions().forEach((interaction) => {
-									if (
-										interaction instanceof MouseWheelZoom ||
-										interaction instanceof PinchZoom ||
-										interaction instanceof DoubleClickZoom
-									) {
-										interaction.setActive(true);
-									}
-								});
-							}
-						}}
-						step={.01}
-						/>
-				</div>
-				{/key}
+			<div class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto">
 				<ScrollArea orientation="both">
 					<Card.Root>
 						<Card.Header>
@@ -1014,10 +973,55 @@
 						</Card.Content>
 					</Card.Root>
 				</ScrollArea>
+			</div>
 			{/key}
+			
+			{#key zoomChangeKey}
+				<div class='absolute right-4 bottom-4 w-96 z-50 overflow-y-auto'>
+					<ZoomPanel
+						zoom={mirrors.get('zoomPanelInfo').currentZoom}
+						isLocked={mirrors.get('zoomPanelInfo').isLocked}
+						upp={mirrors.get('zoomPanelInfo').upp}
+						unit={experiment.baseImage.unit}
+						minZoom={mirrors.get('zoomPanelInfo').minZoom}
+						maxZoom={mirrors.get('zoomPanelInfo').maxZoom}
+						onZoomChange={(v) => {
+							const view = map.getView();
+							// view.setZoom(v);
+							view.setResolution(v);
+							mirrors.get('zoomPanelInfo').currentZoom = v;
+						}}
+						onLockedChange={(v) => {
+							mirrors.get('zoomPanelInfo').isLocked = v;
+							if (v) {
+								map.getInteractions().forEach((interaction) => {
+									if (
+										interaction instanceof MouseWheelZoom ||
+										interaction instanceof PinchZoom ||
+										interaction instanceof DoubleClickZoom
+									) {
+										interaction.setActive(false);
+									}
+								});
+							} else {
+								map.getInteractions().forEach((interaction) => {
+									if (
+										interaction instanceof MouseWheelZoom ||
+										interaction instanceof PinchZoom ||
+										interaction instanceof DoubleClickZoom
+									) {
+										interaction.setActive(true);
+									}
+								});
+							}
+						}}
+						step={.01}
+						/>
+				</div>
+				{/key}
 		{/if}
 	<!-- </div> -->
-	</div>
+	<!-- </div> -->
 </div>
 
 <!-- on:change={(e) => updateMaxValue(obj.image, channelName, e)} -->

@@ -51,8 +51,6 @@
     // const resolution = map.getView().getResolution();
     const steps = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1]; // descending order
     const obj = getScaleBar(zoom, upp, 50, steps);
-    console.log('scale line obj', obj);
-    // console.log(obj);
 
 </script>
 

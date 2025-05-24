@@ -57,13 +57,11 @@ import { render } from "svelte/server";
 // 	const tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
 
 // 	const features = [];
-//     console.log('tileRange', tileRange);
 
 // 	for (let x = tileRange.minX; x <= tileRange.maxX; x++) {
 // 		for (let y = tileRange.minY; y <= tileRange.maxY; y++) {
 // 			const tileCoord = [z, x, y];
 // 			const key = getKey(tileCoord);
-//             console.log('tile cache', vectorTileSource.tileCache);
 
 // 			const tile = vectorTileSource.tileCache.get(key);
 // 			if (tile && tile.getState() === 2) { // 2 === TileState.LOADED
@@ -331,8 +329,6 @@ export class FeatureGroupVector {
     // setFeatureToolTip(map, info) {
     //     const displayFeatureInfo = (pixel, target) => {
     //         const res = map.getView().getResolution();
-    //         // console.log('current map resolution', res);
-    //         // console.log('current map z', this.vectorView.featureNameToViewtileGrid.getZForResolution(map.getView().getResolution()));
     //         const feature = target.closest('.ol-control')
     //             ? undefined
     //             : map.forEachFeatureAtPixel(pixel, function (feature) {
@@ -690,7 +686,6 @@ export class FeatureVector {
                             image: shape
                         });
                     } else {
-                        // console.log('pushing feature');
                         this.visibleFeatures.push(feature);
                         return new Style({
                             fill: new Fill({ color: hexToRgba('#aaaaaa', v.fillOpacity) }),

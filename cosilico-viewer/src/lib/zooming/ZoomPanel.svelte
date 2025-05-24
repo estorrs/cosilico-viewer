@@ -2,6 +2,7 @@
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Slider } from '$lib/components/ui/slider';
+    // import { Slider } from 'bits-ui';
 	import { Toggle } from '$lib/components/ui/toggle';
 	import Lock from '@lucide/svelte/icons/lock';
 
@@ -38,9 +39,22 @@
 			min={minZoom}
 			max={maxZoom}
 			{step}
-			class="flex-1"
+			class="flex-1 bg-yellow-500"
 
 		/>
+            
+        <!-- <Slider.Root
+        bind:value={() => [zoom], (vs) => vSliderSetValues(vs)}
+			orientation={'horizontal'}
+			min={minZoom}
+			max={maxZoom}
+			{step}
+			class="flex-1 "
+        >
+            <Slider.Track class="bg-yellow-100">
+    <Slider.Range class="bg-yellow-500" />
+  </Slider.Track>
+        </Slider.Root> -->
 		<Input
 			type="number"
 			value={zoom}
@@ -57,7 +71,7 @@
 				onLockedChange(v);
 			}}
 		>
-			<Lock />
+			<Lock color='white'/>
 		</Toggle>
 	</div>
 	<div class='ml-auto'>

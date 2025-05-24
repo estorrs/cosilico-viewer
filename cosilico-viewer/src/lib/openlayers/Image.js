@@ -166,7 +166,6 @@ export class Image {
 
   updateResolutionInfo(map) {
       const current = map.getView().getResolution();
-      console.log('updating res info', current);
       this.currentRes = current * this.tileSize;
       this.closestRes = getClosestResolution(map, this.resolutions, this.tileSize);
       this.currentZoom = current;

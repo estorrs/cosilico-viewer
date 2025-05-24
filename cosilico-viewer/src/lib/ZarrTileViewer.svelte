@@ -34,6 +34,7 @@
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
 	let metadataChangeKey = $state(true);
+	let zoomChangeKey = $state(true);
 	let mapIsLoading = $state(true);
 	let map;
 	let experiment = $state(null);
@@ -277,7 +278,6 @@
 
 			if (mirrors != null) {
 				mirrors.get('zoomPanelInfo').currentZoom = experiment.baseImage.currentZoom;
-				console.log('current mirror zoom info is', mirrors.get('zoomPanelInfo'));
 			}
 
 			for (const [_, layer] of experiment.layers) {
@@ -300,6 +300,33 @@
 		map.on('loadend', () => {
 			mapIsLoading = false;
 		});
+
+		const mouseWheel = map.getInteractions().getArray().find(
+			i => i instanceof MouseWheelZoom
+		);
+
+		if (mouseWheel) {
+			// mouseWheel.on('change:active', () => {
+			// 	console.log('MouseWheelZoom toggled');
+			// });
+
+			// To track wheel usage, use the event handler override
+			const originalHandleEvent = mouseWheel.handleEvent.bind(mouseWheel);
+
+			mouseWheel.handleEvent = function (event) {
+				if (event.type === 'wheel') {
+				console.log('Mouse wheel zoom detected');
+				for (const [_, image] of experiment.images) {
+				image.image.updateResolutionInfo(map);
+			}
+				if (mirrors != null) {
+				mirrors.get('zoomPanelInfo').currentZoom = experiment.baseImage.currentZoom;
+			}
+				zoomChangeKey = !zoomChangeKey
+				}
+				return originalHandleEvent(event);
+			};
+		}
 
 		
 	}
@@ -486,10 +513,8 @@
 
 	async function toggleChannel(channelName, image) {
 		if (image.imageView.visibleChannelNames.includes(channelName)) {
-			console.log('removing', channelName);
 			await image.removeChannel(channelName, map);
 		} else {
-			console.log('adding', channelName);
 			await image.addChannel(channelName, map);
 		}
 
@@ -500,7 +525,6 @@
 	}
 
 	function changeChannelColor(channelName, image, value) {
-		console.log('setting channel color', channelName, value);
 		image.setChannelColor(channelName, value);
 		mirrors.get('imageDisplayInfo').get(image.imageId).get(channelName).color = value;
 
@@ -517,7 +541,6 @@
 		return mirrors.get('imageDisplayInfo').get(image.imageId).get(channelName).maxValue;
 	}
 	function setMinThresholdValue(image, channelName, value) {
-		console.log('min threshold change', value);
 		let view = image.imageView.channelNameToView.get(channelName);
 		value = Number(value);
 		if (value >= view.maxValue) {
@@ -588,20 +611,20 @@
 	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
 		{#if experiment && mirrors != null}
 			{#key reloadImageInfoKey}
+			{#key zoomChangeKey}
 				<div class='bg-gray-500'>
 					<ZoomPanel
 						zoom={mirrors.get('zoomPanelInfo').currentZoom}
 						isLocked={mirrors.get('zoomPanelInfo').isLocked}
 						upp={mirrors.get('zoomPanelInfo').upp}
 						unit={experiment.baseImage.unit}
-						minZoom={mirrors.get('zoomPanelInfo').minUpp}
-						maxZoom={mirrors.get('zoomPanelInfo').maxUpp}
+						minZoom={mirrors.get('zoomPanelInfo').minZoom}
+						maxZoom={mirrors.get('zoomPanelInfo').maxZoom}
 						onZoomChange={(v) => {
 							const view = map.getView();
-							view.setZoom(v);
-							console.log('setting zoom to', v);
+							// view.setZoom(v);
+							view.setResolution(v);
 							mirrors.get('zoomPanelInfo').currentZoom = v;
-							console.log('zoom info', mirrors.get('zoomPanelInfo'));
 						}}
 						onLockedChange={(v) => {
 							mirrors.get('zoomPanelInfo').isLocked = v;
@@ -630,6 +653,7 @@
 						step={.01}
 						/>
 				</div>
+				{/key}
 				<ScrollArea orientation="both">
 					<Card.Root>
 						<Card.Header>

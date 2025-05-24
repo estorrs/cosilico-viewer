@@ -32,7 +32,7 @@
 
             if (pixelWidth <= maxPixelWidth) {
             return {
-                label: `${step} units`,
+                label: `${step} ${unit}`,
                 width: pixelWidth,
                 value: step
             };
@@ -49,8 +49,8 @@
     }
 
     // const resolution = map.getView().getResolution();
-    const steps = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10]; // descending order
-    const obj = getScaleBar(zoom, upp, 25, steps);
+    const steps = [10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1]; // descending order
+    const obj = getScaleBar(zoom, upp, 50, steps);
     console.log('scale line obj', obj);
     // console.log(obj);
 

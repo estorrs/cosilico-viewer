@@ -69,7 +69,7 @@
     <Slider.Range class="bg-yellow-500" />
   </Slider.Track>
         </Slider.Root> -->
-		<!-- <Input
+		<Input
 			type="number"
 			value={zoom}
 			{step}
@@ -78,12 +78,13 @@
 				onZoomChange(zoom);
 			}}
 			class="w-[70px] py-1 text-left"
-		/> -->
+		/>
 		<Toggle
 			bind:pressed={isLocked}
 			onPressedChange={(v) => {
 				onLockedChange(v);
 			}}
+            class="data-[state=on]:bg-yellow-500 hover:bg-yellow-500 p-2 rounded"
 		>
 			<Lock color='white'/>
 		</Toggle>

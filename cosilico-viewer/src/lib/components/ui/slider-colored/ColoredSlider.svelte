@@ -8,7 +8,7 @@
 		orientation = "horizontal",
         primaryHex = '#ffffff',
         secondaryHex = '#ffffff',
-        primaryHexBorder = '#ffff00',
+        primaryHexBorder = '#dddddd',
 		class: className,
 		...restProps
 	}: WithoutChildrenOrChild<SliderPrimitive.RootProps> = $props();

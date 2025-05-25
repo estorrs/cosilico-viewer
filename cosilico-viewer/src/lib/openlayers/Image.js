@@ -100,6 +100,11 @@ export class Image {
       collapsed: false,
       collapsible: false,
       layers: [this.overviewLayer],
+      view: new View({
+        projection: this.projection,
+        resolutions: [3 * this.resolutions[0] / this.tileSize],
+        constrainOnlyCenter: true,
+      }),
     });
 
     map.addControl(this.overviewControl);

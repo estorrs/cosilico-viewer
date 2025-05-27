@@ -10,6 +10,7 @@
 	import DoubleClickZoom from 'ol/interaction/DoubleClickZoom.js';
 
 	import * as Accordion from '$lib/components/ui/accordion';
+	import Button from './components/ui/button/button.svelte';
 	import * as Card from '$lib/components/ui/card';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
@@ -27,8 +28,10 @@
 	import { Image } from './openlayers/Image';
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
 	import ZoomPanel from './zooming/ZoomPanel.svelte';
+	import { captureScreen } from './openlayers/OpenlayersHelpers';
 
 	import Check from '@lucide/svelte/icons/check';
+	import Camera from '@lucide/svelte/icons/camera';
 	import { apply } from 'ol/transform';
 
 	let reloadImageInfoKey = $state(true);
@@ -612,6 +615,13 @@
 	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
 		{#if experiment && mirrors != null}
 			{#key reloadImageInfoKey}
+			<div class="absolute left-4 top-4 right-96 z-50">
+				<div class='w-full'>
+					<Button onclick={() => captureScreen(map)}>
+						<Camera color='#ffffff'/>
+					</Button>
+				</div>
+			</div>
 			<div class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto">
 				<ScrollArea orientation="both">
 					<Card.Root>

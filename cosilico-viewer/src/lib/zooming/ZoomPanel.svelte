@@ -37,15 +37,6 @@
 	<div class="flex w-full items-center gap-3"> -->
 <div class="flex items-center gap-2 pt-1 w-full">
 	<div class="flex items-center gap-2 pt-1 w-64">
-		<!-- <Slider
-			bind:value={() => [zoom], (vs) => vSliderSetValues(vs)}
-			orientation={'horizontal'}
-			min={minZoom}
-			max={maxZoom}
-			{step}
-			class="flex-1 bg-yellow-500"
-
-		/> -->
 
         <ColoredSlider
 			bind:value={() => [zoom], (vs) => vSliderSetValues(vs)}
@@ -57,18 +48,6 @@
 
 		/>
             
-        <!-- <Slider.Root
-        bind:value={() => [zoom], (vs) => vSliderSetValues(vs)}
-			orientation={'horizontal'}
-			min={minZoom}
-			max={maxZoom}
-			{step}
-			class="flex-1 "
-        >
-            <Slider.Track class="bg-yellow-100">
-    <Slider.Range class="bg-yellow-500" />
-  </Slider.Track>
-        </Slider.Root> -->
 		<Input
 			type="number"
 			value={zoom}

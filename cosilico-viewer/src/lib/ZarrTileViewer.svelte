@@ -29,8 +29,9 @@
 	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
 	import ZoomPanel from './zooming/ZoomPanel.svelte';
 	import { captureScreen } from './openlayers/OpenlayersHelpers';
+	import * as Alert from "$lib/components/ui/alert/index.js";
 
-	import Check from '@lucide/svelte/icons/check';
+	import Info from '@lucide/svelte/icons/info';
 	import Camera from '@lucide/svelte/icons/camera';
 	import { apply } from 'ol/transform';
 
@@ -113,8 +114,7 @@
 						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
 					}
 				]
-			},
-			
+			}
 		]
 	};
 
@@ -293,7 +293,6 @@
 					layer.vector.restyleLayers();
 				}
 			}
-			
 		});
 
 		map.on('loadstart', () => {
@@ -304,9 +303,10 @@
 			mapIsLoading = false;
 		});
 
-		const mouseWheel = map.getInteractions().getArray().find(
-			i => i instanceof MouseWheelZoom
-		);
+		const mouseWheel = map
+			.getInteractions()
+			.getArray()
+			.find((i) => i instanceof MouseWheelZoom);
 
 		if (mouseWheel) {
 			// mouseWheel.on('change:active', () => {
@@ -318,20 +318,18 @@
 
 			mouseWheel.handleEvent = function (event) {
 				if (event.type === 'wheel') {
-				console.log('Mouse wheel zoom detected');
-				for (const [_, image] of experiment.images) {
-				image.image.updateResolutionInfo(map);
-			}
-				if (mirrors != null) {
-				mirrors.get('zoomPanelInfo').currentZoom = experiment.baseImage.currentZoom;
-			}
-				zoomChangeKey = !zoomChangeKey
+					console.log('Mouse wheel zoom detected');
+					for (const [_, image] of experiment.images) {
+						image.image.updateResolutionInfo(map);
+					}
+					if (mirrors != null) {
+						mirrors.get('zoomPanelInfo').currentZoom = experiment.baseImage.currentZoom;
+					}
+					zoomChangeKey = !zoomChangeKey;
 				}
 				return originalHandleEvent(event);
 			};
 		}
-
-		
 	}
 
 	function initializeMirrors() {
@@ -447,9 +445,9 @@
 			isLocked: false,
 			upp: experiment.baseImage.upp,
 			unit: experiment.baseImage.unit,
-			minZoom: .01,
-			maxZoom: experiment.baseImage.resolutions[0] / experiment.baseImage.tileSize * 2,
-		})
+			minZoom: 0.01,
+			maxZoom: (experiment.baseImage.resolutions[0] / experiment.baseImage.tileSize) * 2
+		});
 	}
 
 	onMount(async () => {
@@ -502,13 +500,35 @@
 		} else {
 			visible = vector.vectorView.visibleFeatureNames;
 		}
+		// console.log('current insertion indices are');
+		// let ids = [...experiment.imageOrder, ...experiment.layerOrder];
+
+		// for (const objId of ids) {
+		// 	let obj;
+		// 	if (experiment.imageOrder.includes(objId)) {
+		// 		obj = experiment.images.get(objId).image;
+		// 	} else {
+		// 		obj = experiment.layers.get(objId).vector;
+		// 	}
+		// 	console.log(obj.name, obj.insertionIdx);
+		// }
+
+		// console.log('current map layers are');
+		// console.log(map.getLayers());
+
+		let doIncrement = vector instanceof FeatureGroupVector;
 
 		if (visible.includes(featureName)) {
 			vector.removeFeature(featureName, map);
-			experiment.incrementInsertionIndices(vector.vectorId, -1);
+
+			if (doIncrement) {
+				experiment.incrementInsertionIndices(vector.vectorId, -1);
+			}
 		} else {
 			vector.addFeature(featureName, map);
-			experiment.incrementInsertionIndices(vector.vectorId);
+			if (doIncrement) {
+				experiment.incrementInsertionIndices(vector.vectorId);
+			}
 		}
 
 		// reloadLayerInfoKey = !reloadLayerInfoKey;
@@ -599,437 +619,433 @@
 	}
 </script>
 
-<div class='h-full'>
+<div class="h-full">
 	<!-- <div id="info" class="ol-tooltip hidden"></div> -->
 
 	<div id="map" class="bg-black w-full h-full relative"></div>
 	{#key mapIsLoading}
 		{#if mapIsLoading}
 			<div class="absolute inset-0 flex items-center justify-center z-51 pointer-events-none">
-				<Circle2 size="60" colorInner="#FF0000" colorCenter='#00FF00' colorOuter="#0000FF" unit="px" />
+				<Circle2
+					size="80"
+					colorInner="#FF0000"
+					colorCenter="#00FF00"
+					colorOuter="#0000FF"
+					unit="px"
+				/>
 			</div>
 		{/if}
 	{/key}
 	<!-- <div class="absolute right-4 top-4 bottom-4 w-96 z-50 overflow-y-auto"> -->
-  	<!-- <div class="h-full overflow-y-auto rounded-xl bg-white shadow p-4"> -->
+	<!-- <div class="h-full overflow-y-auto rounded-xl bg-white shadow p-4"> -->
 	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
-		{#if experiment && mirrors != null}
-			{#key reloadImageInfoKey}
+	{#if experiment && mirrors != null}
+		{#key reloadImageInfoKey}
 			<div class="absolute left-4 top-4 right-96 z-50">
-				<div class='w-full'>
-					<Button onclick={() => captureScreen(map)}>
-						<Camera color='#ffffff'/>
+				<div class="w-full">
+					<Button onclick={() => captureScreen(map, experiment)}>
+						<Camera color="#ffffff" />
 					</Button>
 				</div>
 			</div>
 			<div class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto">
-				<ScrollArea orientation="both">
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Images</Card.Title>
-						</Card.Header>
-						<Card.Content>
-							<Accordion.Root type="single">
-								{#each Array.from(experiment.images.values()) as obj}
-									<Accordion.Item value="{obj.image.imageId}-item">
-										<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
-											<Checkbox
-												checked={mirrors.get('imageVisabilityInfo').get(obj.image.imageId)}
-												id="{obj.image.imageId}-visibility-checkbox"
-												onCheckedChange={(v) => {
-													obj.image.setVisibility(v);
-													mirrors.get('imageVisabilityInfo').set(obj.image.imageId, v);
-												}}
-											/>
-											<Accordion.Trigger>
-												<span id="{obj.image.name}-trigger-text" class="text-left"
-													>{obj.image.name}</span
-												>
-											</Accordion.Trigger>
-										</div>
-										<Accordion.Content class="ml-3">
-											<Accordion.Root>
-												{#each obj.image.channelNames as channelName}
-													<Accordion.Item value="{obj.image.imageId}-{channelName}-item">
-														<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
-															<div class="flex items-center gap-2">
-																<Checkbox
-																	checked={obj.image.imageView.visibleChannelNames.includes(
-																		channelName
-																	)}
-																	onCheckedChange={(v) => toggleChannel(channelName, obj.image)}
-																/>
-																<SwatchSelector
-																	hex={mirrors
-																		.get('imageDisplayInfo')
-																		.get(obj.image.imageId)
-																		.get(channelName).color}
-																	swatchHexs={mirrors.get('imageSwatches').get(obj.image.imageId)}
-																	onColorSelection={(value) =>
-																		changeChannelColor(channelName, obj.image, value)}
-																/>
-															</div>
-															<Accordion.Trigger>
-																<span id="{obj.image.imageId}-{channelName}-text" class="text-left"
-																	>{channelName}</span
-																>
-															</Accordion.Trigger>
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Images</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<Accordion.Root type="single">
+							{#each Array.from(experiment.images.values()) as obj}
+								<Accordion.Item value="{obj.image.imageId}-item">
+									{#if !obj.isVisible}
+										<Alert.Root>
+											<Info class="size-4" />
+											<Alert.Title>Info!</Alert.Title>
+											<Alert.Description>Layer is hidden. Unhide to view.</Alert.Description>
+										</Alert.Root>
+									{/if}
+									<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+										<Checkbox
+											checked={mirrors.get('imageVisabilityInfo').get(obj.image.imageId)}
+											id="{obj.image.imageId}-visibility-checkbox"
+											onCheckedChange={(v) => {
+												obj.image.setVisibility(v);
+												mirrors.get('imageVisabilityInfo').set(obj.image.imageId, v);
+											}}
+										/>
+										<Accordion.Trigger>
+											<span id="{obj.image.name}-trigger-text" class="text-left"
+												>{obj.image.name}</span
+											>
+										</Accordion.Trigger>
+									</div>
+									<Accordion.Content class="ml-3">
+										<Accordion.Root>
+											{#each obj.image.channelNames as channelName}
+												<Accordion.Item value="{obj.image.imageId}-{channelName}-item">
+													<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+														<div class="flex items-center gap-2">
+															<Checkbox
+																checked={obj.image.imageView.visibleChannelNames.includes(
+																	channelName
+																)}
+																onCheckedChange={(v) => toggleChannel(channelName, obj.image)}
+															/>
+															<SwatchSelector
+																hex={mirrors
+																	.get('imageDisplayInfo')
+																	.get(obj.image.imageId)
+																	.get(channelName).color}
+																swatchHexs={mirrors.get('imageSwatches').get(obj.image.imageId)}
+																onColorSelection={(value) =>
+																	changeChannelColor(channelName, obj.image, value)}
+															/>
 														</div>
-														<Accordion.Content class="ml-3">
-															<Card.Root class="p-1">
-																<Card.Header class="p-1">
-																	<Card.Title class="text-sm">Intensity Threshold</Card.Title>
-																	<!-- <Card.Description>Intensity Threshold</Card.Description> -->
-																</Card.Header>
-																<Card.Content class="p-1 pt-0">
-																	<div class="flex w-full items-center gap-3">
-																		<Input
-																			type="number"
-																			value={mirrors
-																				.get('imageDisplayInfo')
-																				.get(obj.image.imageId)
-																				.get(channelName).minValue}
-																			onchange={(e) =>
-																				setMinThresholdValue(
-																					obj.image,
-																					channelName,
-																					e.target.value
-																				)}
-																			class="w-[70px] px-1 text-left"
-																		/>
-																		<Slider
-																			bind:value={
-																				() => getThresholdValues(obj.image, channelName),
-																				(vs) => setThresholdValues(obj.image, channelName, vs)
-																			}
-																			min={obj.image.dtypeMin}
-																			max={obj.image.dtypeMax}
-																			step={1}
-																			class="flex-1"
-																		/>
-																		<Input
-																			type="number"
-																			value={mirrors
-																				.get('imageDisplayInfo')
-																				.get(obj.image.imageId)
-																				.get(channelName).maxValue}
-																			onchange={(e) =>
-																				setMaxThresholdValue(
-																					obj.image,
-																					channelName,
-																					e.target.value
-																				)}
-																			class="w-[70px] px-1 text-left"
-																		/>
-																	</div>
-																</Card.Content>
-															</Card.Root>
-														</Accordion.Content>
-													</Accordion.Item>
-												{/each}
-											</Accordion.Root>
-										</Accordion.Content>
-									</Accordion.Item>
-								{/each}
-							</Accordion.Root>
-						</Card.Content>
-					</Card.Root>
-					<Card.Root>
-						<Card.Header>
-							<Card.Title>Layers</Card.Title>
-						</Card.Header>
-						<Card.Content>
-							<Accordion.Root type="single">
-								{#each Array.from(experiment.layers.values()) as obj}
-									<Accordion.Item value="{obj.vector.vectorId}-item">
-										<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
-											<Checkbox
-												checked={mirrors.get('layerVisabilityInfo').get(obj.vector.vectorId)}
-												id="{obj.vector.vectorId}-visibility-checkbox"
-												onCheckedChange={(v) => {
-													obj.vector.setVisibility(v);
-													mirrors.get('layerVisabilityInfo').set(obj.vector.vectorId, v);
-												}}
-											/>
-											<Accordion.Trigger>
-												<span id="{obj.vector.name}-trigger-text" class="text-left"
-													>{obj.vector.name}</span
-												>
-											</Accordion.Trigger>
-										</div>
-										<Accordion.Content class="ml-3">
-											{#key metadataChangeKey}
-												<div class="flex w-full items-center gap-3">
-													<p>View options</p>
-													{#if obj.vector.objectTypes.includes('point')}
-														<PointViewOptions
-															view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
-															onPointScaleChange={(v) => {
-																obj.vector.setScale(v);
-																mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale =
-																	v;
-															}}
-															onFillOpacityChange={(v) => {
-																obj.vector.setFillOpacity(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).fillOpacity = v;
-															}}
-															onStrokeOpacityChange={(v) => {
-																obj.vector.setStrokeOpacity(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).strokeOpacity = v;
-															}}
-															onStrokeWidthChange={(v) => {
-																obj.vector.setStrokeWidth(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).strokeWidth = v;
-															}}
-															onStrokeColorChange={(v) => {
-																obj.vector.setStrokeColor(v);
-																mirrors
-																	.get('layerPointViewInfo')
-																	.get(obj.vector.vectorId).strokeColor = v;
-															}}
-														/>
-													{/if}
-													{#if obj.vector.objectTypes.includes('polygon')}
-														<PolygonViewOptions
-															view={mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId)}
-															onFillOpacityChange={(v) => {
-																obj.vector.setFillOpacity(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).fillOpacity = v;
-															}}
-															onStrokeOpacityChange={(v) => {
-																obj.vector.setStrokeOpacity(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeOpacity = v;
-															}}
-															onStrokeWidthChange={(v) => {
-																obj.vector.setStrokeWidth(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeWidth = v;
-															}}
-															onStrokeColorChange={(v) => {
-																obj.vector.setStrokeColor(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeColor = v;
-															}}
-															onBorderColoring={(v) => {
-																obj.vector.setBorderColoring(v);
-																mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId).strokeDarkness = v;
-															}}
-															onBorderTypeChange={(v) => {
-																obj.vector.setBorderType(v);
-																let info = mirrors
-																	.get('layerPolygonViewInfo')
-																	.get(obj.vector.vectorId);
-																info.borderType = v;
-															}}
-														/>
-													{/if}
-													<FilterOptions
-														layer={obj}
-														layers={experiment.layers}
-														vectorToGeomType={(v) => v.getCurrentObjectType(map)}
-														metadataFilters={mirrors
-															.get('layerMetadataFilters')
-															.get(obj.vector.vectorId)}
-														layerFilters={mirrors.get('layerLayerFilters').get(obj.vector.vectorId)}
-														onAddFilterMetadata={async (metadataName) => {
-															await obj.vector.addMetadataFilter(
-																metadataName,
-																obj.metadataToNode.get(metadataName),
-																map
-															);
+														<Accordion.Trigger>
+															<span id="{obj.image.imageId}-{channelName}-text" class="text-left"
+																>{channelName}</span
+															>
+														</Accordion.Trigger>
+													</div>
+													<Accordion.Content class="ml-3">
+														<Card.Root class="p-1">
+															<Card.Header class="p-1">
+																<Card.Title class="text-sm">Intensity Threshold</Card.Title>
+																<!-- <Card.Description>Intensity Threshold</Card.Description> -->
+															</Card.Header>
+															<Card.Content class="p-1 pt-0">
+																<div class="flex w-full items-center gap-3">
+																	<Input
+																		type="number"
+																		value={mirrors
+																			.get('imageDisplayInfo')
+																			.get(obj.image.imageId)
+																			.get(channelName).minValue}
+																		onchange={(e) =>
+																			setMinThresholdValue(obj.image, channelName, e.target.value)}
+																		class="w-[70px] px-1 text-left"
+																	/>
+																	<Slider
+																		bind:value={
+																			() => getThresholdValues(obj.image, channelName),
+																			(vs) => setThresholdValues(obj.image, channelName, vs)
+																		}
+																		min={obj.image.dtypeMin}
+																		max={obj.image.dtypeMax}
+																		step={1}
+																		class="flex-1"
+																	/>
+																	<Input
+																		type="number"
+																		value={mirrors
+																			.get('imageDisplayInfo')
+																			.get(obj.image.imageId)
+																			.get(channelName).maxValue}
+																		onchange={(e) =>
+																			setMaxThresholdValue(obj.image, channelName, e.target.value)}
+																		class="w-[70px] px-1 text-left"
+																	/>
+																</div>
+															</Card.Content>
+														</Card.Root>
+													</Accordion.Content>
+												</Accordion.Item>
+											{/each}
+										</Accordion.Root>
+									</Accordion.Content>
+								</Accordion.Item>
+							{/each}
+						</Accordion.Root>
+					</Card.Content>
+				</Card.Root>
+				<Card.Root>
+					<Card.Header>
+						<Card.Title>Layers</Card.Title>
+					</Card.Header>
+					<Card.Content>
+						<Accordion.Root type="single">
+							{#each Array.from(experiment.layers.values()) as obj}
+								<Accordion.Item value="{obj.vector.vectorId}-item">
+									<div class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
+										<Checkbox
+											checked={mirrors.get('layerVisabilityInfo').get(obj.vector.vectorId)}
+											id="{obj.vector.vectorId}-visibility-checkbox"
+											onCheckedChange={(v) => {
+												obj.vector.setVisibility(v);
+												mirrors.get('layerVisabilityInfo').set(obj.vector.vectorId, v);
+											}}
+										/>
+										<Accordion.Trigger>
+											<span id="{obj.vector.name}-trigger-text" class="text-left"
+												>{obj.vector.name}</span
+											>
+										</Accordion.Trigger>
+									</div>
+									<Accordion.Content class="ml-3">
+										{#key metadataChangeKey}
+											<div class="flex w-full items-center gap-3">
+												<p>View options</p>
+												{#if obj.vector.objectTypes.includes('point')}
+													<PointViewOptions
+														view={mirrors.get('layerPointViewInfo').get(obj.vector.vectorId)}
+														onPointScaleChange={(v) => {
+															obj.vector.setScale(v);
+															mirrors.get('layerPointViewInfo').get(obj.vector.vectorId).scale = v;
 														}}
-														onAddMetadataFilter={(metadataFilter) => {
-															const key =
-																metadataFilter.metadataName +
-																'-' +
-																metadataFilter.fieldName +
-																'-' +
-																metadataFilter.symbol;
-															obj.vector.addMetadataFilterOperation(
-																metadataFilter.metadataName,
-																metadataFilter.fieldName,
-																key,
-																metadataFilter.symbol,
-																metadataFilter.value
-															);
-															let mapping = mirrors
-																.get('layerMetadataFilters')
-																.get(obj.vector.vectorId);
-															mapping.set(key, metadataFilter);
+														onFillOpacityChange={(v) => {
+															obj.vector.setFillOpacity(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).fillOpacity = v;
 														}}
-														onRemoveMetadataFilter={async (metadataFilter) => {
-															const key =
-																metadataFilter.metadataName +
-																'-' +
-																metadataFilter.fieldName +
-																'-' +
-																metadataFilter.symbol;
-															obj.vector.removeMetadataFilterOperation(
-																metadataFilter.metadataName,
-																key
-															);
-
-															if (
-																obj.vector.filterMap.get(metadataFilter.metadataName).operations
-																	.length == 0
-															) {
-																await obj.vector.removeMetadataFilter(
-																	metadataFilter.metadataName,
-																	map
-																);
-															}
-
-															let mapping = mirrors
-																.get('layerMetadataFilters')
-																.get(obj.vector.vectorId);
-															mapping.delete(key);
+														onStrokeOpacityChange={(v) => {
+															obj.vector.setStrokeOpacity(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).strokeOpacity = v;
 														}}
-														onAddLayerFilter={(layerFilter) => {
-															const key = layerFilter.layerName + '-' + layerFilter.symbol;
-															obj.vector.addLayerFilter(
-																layerFilter.layerName,
-																experiment.layers.get(layerFilter.layerId).vector,
-																layerFilter.symbol,
-																key,
-																map
-															);
-															let mapping = mirrors
-																.get('layerLayerFilters')
-																.get(obj.vector.vectorId);
-															mapping.set(key, layerFilter);
+														onStrokeWidthChange={(v) => {
+															obj.vector.setStrokeWidth(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).strokeWidth = v;
 														}}
-														onRemoveLayerFilter={(layerFilter) => {
-															const key = layerFilter.layerName + '-' + layerFilter.symbol;
-															obj.vector.removeLayerFilter(key);
-
-															let mapping = mirrors
-																.get('layerLayerFilters')
-																.get(obj.vector.vectorId);
-															mapping.delete(key);
+														onStrokeColorChange={(v) => {
+															obj.vector.setStrokeColor(v);
+															mirrors
+																.get('layerPointViewInfo')
+																.get(obj.vector.vectorId).strokeColor = v;
 														}}
 													/>
-												</div>
-											{/key}
-											<Card.Root>
-												<Card.Header class="p-1">
-													<Card.Title class="text-md">Active Metadata</Card.Title>
-												</Card.Header>
-												<Card.Content class="p-1 pt-0">
-													<LayerOptions
-														layer={obj}
-														getCurrentObjectType={() => obj.vector.getCurrentObjectType(map)}
-														onMetadataChange={async (metadataName) => {
-															await obj.vector.setMetadata(
-																metadataName,
-																obj.metadataToNode.get(metadataName),
-																map
-															);
-
-															// we need to resynch view options
+												{/if}
+												{#if obj.vector.objectTypes.includes('polygon')}
+													<PolygonViewOptions
+														view={mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId)}
+														onFillOpacityChange={(v) => {
+															obj.vector.setFillOpacity(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).fillOpacity = v;
+														}}
+														onStrokeOpacityChange={(v) => {
+															obj.vector.setStrokeOpacity(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeOpacity = v;
+														}}
+														onStrokeWidthChange={(v) => {
+															obj.vector.setStrokeWidth(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeWidth = v;
+														}}
+														onStrokeColorChange={(v) => {
+															obj.vector.setStrokeColor(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeColor = v;
+														}}
+														onBorderColoring={(v) => {
+															obj.vector.setBorderColoring(v);
+															mirrors
+																.get('layerPolygonViewInfo')
+																.get(obj.vector.vectorId).strokeDarkness = v;
+														}}
+														onBorderTypeChange={(v) => {
+															obj.vector.setBorderType(v);
 															let info = mirrors
 																.get('layerPolygonViewInfo')
 																.get(obj.vector.vectorId);
-															info.fillOpacity = obj.vector.vectorView.fillOpacity;
-															info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
-															info.strokeWidth = obj.vector.vectorView.strokeWidth;
-															info.strokeColor = obj.vector.vectorView.strokeColor;
-															info.strokeDarkness = obj.vector.vectorView.strokeDarkness;
-															info.borderType = obj.vector.vectorView.borderType;
-
-															info = mirrors.get('layerPointViewInfo').get(obj.vector.vectorId);
-															info.viewAs = obj.vector.getCurrentObjectType(map);
-															info.scale = obj.vector.vectorView.scale;
-															info.fillOpacity = obj.vector.vectorView.fillOpacity;
-															info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
-															info.strokeWidth = obj.vector.vectorView.strokeWidth;
-															info.strokeColor = obj.vector.vectorView.strokeColor;
+															info.borderType = v;
 														}}
-														onPaletteChange={(palette) => obj.vector.setPalette(palette)}
-														onFieldColorChange={(fieldName, hex) =>
-															obj.vector.setFeatureFillColor(fieldName, hex)}
-														onFieldShapeChange={(fieldName, shape) =>
-															obj.vector.setFeatureShapeType(fieldName, shape)}
-														onFieldPaletteChange={(fieldName, palette) =>
-															obj.vector.setPalette(palette)}
-														onFieldVisibilityChange={(fieldName, isVisible) =>
-															toggleFeature(fieldName, obj.vector, isVisible)}
-														onFieldVMinChange={(fieldName, vMin) =>
-															obj.vector.setVMin(fieldName, vMin)}
-														onFieldVMaxChange={(fieldName, vMax) =>
-															obj.vector.setVMax(fieldName, vMax)}
-														onFieldVCenterChange={(fieldName, vCenter) =>
-															obj.vector.setVCenter(fieldName, vCenter)}
 													/>
-												</Card.Content>
-											</Card.Root>
-										</Accordion.Content>
-									</Accordion.Item>
-								{/each}
-							</Accordion.Root>
-						</Card.Content>
-					</Card.Root>
-				</ScrollArea>
+												{/if}
+												<FilterOptions
+													layer={obj}
+													layers={experiment.layers}
+													vectorToGeomType={(v) => v.getCurrentObjectType(map)}
+													metadataFilters={mirrors
+														.get('layerMetadataFilters')
+														.get(obj.vector.vectorId)}
+													layerFilters={mirrors.get('layerLayerFilters').get(obj.vector.vectorId)}
+													onAddFilterMetadata={async (metadataName) => {
+														await obj.vector.addMetadataFilter(
+															metadataName,
+															obj.metadataToNode.get(metadataName),
+															map
+														);
+													}}
+													onAddMetadataFilter={(metadataFilter) => {
+														const key =
+															metadataFilter.metadataName +
+															'-' +
+															metadataFilter.fieldName +
+															'-' +
+															metadataFilter.symbol;
+														obj.vector.addMetadataFilterOperation(
+															metadataFilter.metadataName,
+															metadataFilter.fieldName,
+															key,
+															metadataFilter.symbol,
+															metadataFilter.value
+														);
+														let mapping = mirrors
+															.get('layerMetadataFilters')
+															.get(obj.vector.vectorId);
+														mapping.set(key, metadataFilter);
+													}}
+													onRemoveMetadataFilter={async (metadataFilter) => {
+														const key =
+															metadataFilter.metadataName +
+															'-' +
+															metadataFilter.fieldName +
+															'-' +
+															metadataFilter.symbol;
+														obj.vector.removeMetadataFilterOperation(
+															metadataFilter.metadataName,
+															key
+														);
+
+														if (
+															obj.vector.filterMap.get(metadataFilter.metadataName).operations
+																.length == 0
+														) {
+															await obj.vector.removeMetadataFilter(
+																metadataFilter.metadataName,
+																map
+															);
+														}
+
+														let mapping = mirrors
+															.get('layerMetadataFilters')
+															.get(obj.vector.vectorId);
+														mapping.delete(key);
+													}}
+													onAddLayerFilter={(layerFilter) => {
+														const key = layerFilter.layerName + '-' + layerFilter.symbol;
+														obj.vector.addLayerFilter(
+															layerFilter.layerName,
+															experiment.layers.get(layerFilter.layerId).vector,
+															layerFilter.symbol,
+															key,
+															map
+														);
+														let mapping = mirrors.get('layerLayerFilters').get(obj.vector.vectorId);
+														mapping.set(key, layerFilter);
+													}}
+													onRemoveLayerFilter={(layerFilter) => {
+														const key = layerFilter.layerName + '-' + layerFilter.symbol;
+														obj.vector.removeLayerFilter(key);
+
+														let mapping = mirrors.get('layerLayerFilters').get(obj.vector.vectorId);
+														mapping.delete(key);
+													}}
+												/>
+											</div>
+										{/key}
+										<Card.Root>
+											<Card.Header class="p-1">
+												<Card.Title class="text-md">Active Metadata</Card.Title>
+											</Card.Header>
+											<Card.Content class="p-1 pt-0">
+												<LayerOptions
+													layer={obj}
+													getCurrentObjectType={() => obj.vector.getCurrentObjectType(map)}
+													onMetadataChange={async (metadataName) => {
+														await obj.vector.setMetadata(
+															metadataName,
+															obj.metadataToNode.get(metadataName),
+															map
+														);
+
+														// we need to resynch view options
+														let info = mirrors.get('layerPolygonViewInfo').get(obj.vector.vectorId);
+														info.fillOpacity = obj.vector.vectorView.fillOpacity;
+														info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
+														info.strokeWidth = obj.vector.vectorView.strokeWidth;
+														info.strokeColor = obj.vector.vectorView.strokeColor;
+														info.strokeDarkness = obj.vector.vectorView.strokeDarkness;
+														info.borderType = obj.vector.vectorView.borderType;
+
+														info = mirrors.get('layerPointViewInfo').get(obj.vector.vectorId);
+														info.viewAs = obj.vector.getCurrentObjectType(map);
+														info.scale = obj.vector.vectorView.scale;
+														info.fillOpacity = obj.vector.vectorView.fillOpacity;
+														info.strokeOpacity = obj.vector.vectorView.strokeOpacity;
+														info.strokeWidth = obj.vector.vectorView.strokeWidth;
+														info.strokeColor = obj.vector.vectorView.strokeColor;
+													}}
+													onPaletteChange={(palette) => obj.vector.setPalette(palette)}
+													onFieldColorChange={(fieldName, hex) =>
+														obj.vector.setFeatureFillColor(fieldName, hex)}
+													onFieldShapeChange={(fieldName, shape) =>
+														obj.vector.setFeatureShapeType(fieldName, shape)}
+													onFieldPaletteChange={(fieldName, palette) =>
+														obj.vector.setPalette(palette)}
+													onFieldVisibilityChange={(fieldName, isVisible) =>
+														toggleFeature(fieldName, obj.vector, isVisible)}
+													onFieldVMinChange={(fieldName, vMin) =>
+														obj.vector.setVMin(fieldName, vMin)}
+													onFieldVMaxChange={(fieldName, vMax) =>
+														obj.vector.setVMax(fieldName, vMax)}
+													onFieldVCenterChange={(fieldName, vCenter) =>
+														obj.vector.setVCenter(fieldName, vCenter)}
+												/>
+											</Card.Content>
+										</Card.Root>
+									</Accordion.Content>
+								</Accordion.Item>
+							{/each}
+						</Accordion.Root>
+					</Card.Content>
+				</Card.Root>
 			</div>
-			{/key}
-			
-			{#key zoomChangeKey}
-				<div class='absolute right-4 bottom-4 w-96 z-50 overflow-y-auto'>
-					<ZoomPanel
-						zoom={mirrors.get('zoomPanelInfo').currentZoom}
-						isLocked={mirrors.get('zoomPanelInfo').isLocked}
-						upp={mirrors.get('zoomPanelInfo').upp}
-						unit={experiment.baseImage.unit}
-						minZoom={mirrors.get('zoomPanelInfo').minZoom}
-						maxZoom={mirrors.get('zoomPanelInfo').maxZoom}
-						onZoomChange={(v) => {
-							const view = map.getView();
-							// view.setZoom(v);
-							view.setResolution(v);
-							mirrors.get('zoomPanelInfo').currentZoom = v;
-						}}
-						onLockedChange={(v) => {
-							mirrors.get('zoomPanelInfo').isLocked = v;
-							if (v) {
-								map.getInteractions().forEach((interaction) => {
-									if (
-										interaction instanceof MouseWheelZoom ||
-										interaction instanceof PinchZoom ||
-										interaction instanceof DoubleClickZoom
-									) {
-										interaction.setActive(false);
-									}
-								});
-							} else {
-								map.getInteractions().forEach((interaction) => {
-									if (
-										interaction instanceof MouseWheelZoom ||
-										interaction instanceof PinchZoom ||
-										interaction instanceof DoubleClickZoom
-									) {
-										interaction.setActive(true);
-									}
-								});
-							}
-						}}
-						step={.01}
-						/>
-				</div>
-				{/key}
-		{/if}
+		{/key}
+
+		{#key zoomChangeKey}
+			<div class="absolute right-4 bottom-4 w-96 z-50 overflow-y-auto">
+				<ZoomPanel
+					zoom={mirrors.get('zoomPanelInfo').currentZoom}
+					isLocked={mirrors.get('zoomPanelInfo').isLocked}
+					upp={mirrors.get('zoomPanelInfo').upp}
+					unit={experiment.baseImage.unit}
+					minZoom={mirrors.get('zoomPanelInfo').minZoom}
+					maxZoom={mirrors.get('zoomPanelInfo').maxZoom}
+					onZoomChange={(v) => {
+						const view = map.getView();
+						// view.setZoom(v);
+						view.setResolution(v);
+						mirrors.get('zoomPanelInfo').currentZoom = v;
+					}}
+					onLockedChange={(v) => {
+						mirrors.get('zoomPanelInfo').isLocked = v;
+						if (v) {
+							map.getInteractions().forEach((interaction) => {
+								if (
+									interaction instanceof MouseWheelZoom ||
+									interaction instanceof PinchZoom ||
+									interaction instanceof DoubleClickZoom
+								) {
+									interaction.setActive(false);
+								}
+							});
+						} else {
+							map.getInteractions().forEach((interaction) => {
+								if (
+									interaction instanceof MouseWheelZoom ||
+									interaction instanceof PinchZoom ||
+									interaction instanceof DoubleClickZoom
+								) {
+									interaction.setActive(true);
+								}
+							});
+						}
+					}}
+					step={0.01}
+				/>
+			</div>
+		{/key}
+	{/if}
 	<!-- </div> -->
 	<!-- </div> -->
 </div>
@@ -1084,7 +1100,6 @@
 		{/key}  -->
 
 <style global>
-
 	#info {
 		position: absolute;
 		display: inline-block;

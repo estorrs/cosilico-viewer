@@ -1,5 +1,5 @@
 <script>
-    const { profiles } = $props();
+    const { data } = $props();
+    console.log(data);
 </script>
 
-console.log(profiles);

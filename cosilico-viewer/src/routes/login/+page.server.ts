@@ -1,4 +1,5 @@
 import { supabase } from "$lib/server/supabase/supabaseClient";
+import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from "./$types.js";
 import { fail } from "@sveltejs/kit";
 import { setError, superValidate, message } from "sveltekit-superforms";
@@ -25,25 +26,13 @@ export const actions: Actions = {
         email: form.data.email,
         password: form.data.password,
     })
-    // const { data, error } = await supabase.auth.signUp({
-    //   email: form.data.email,
-    //   password: form.data.password,
-    //   options: {
-    //     data: {
-    //       display_name: form.data.name
-    //     }
-    //   }
-    // })
-    // console.log('data', data);
-    // console.log('error', error);
+
     if (error) {
-        // return setError(form, '', error.message);
         return message(form, error.message);
     }
 
-    // if (error) {
-    //   return setError(form, 'email', error.message);
-    // }
+    throw redirect(303, '/get-user');
+    
     return {
       form,
     };

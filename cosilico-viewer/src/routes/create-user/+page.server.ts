@@ -32,43 +32,18 @@ export const actions: Actions = {
     })
 
     if (error) {
-      if (error.message.toLowerCase().includes('email')) {
-        return setError(form, 'email', error.message);
-      } else {
-        return setError(form, 'password', error.message);
-      }
+        return message(form, error.message);
     }
+
+    // if (error) {
+    //   if (error.message.toLowerCase().includes('email')) {
+    //     return setError(form, 'email', error.message);
+    //   } else {
+    //     return setError(form, 'password', error.message);
+    //   }
+    // }
     return {
       form,
     };
   },
 };
-// const { data, error } = await supabase.auth.admin.createUser({
-//   email: 'test@example.com',
-//   password: 'testpassword',
-//   email_confirm: true,
-// })
-
-// export async function load() {
-//   const { data, error } = await supabase.from('profiles').select('*')
-//   return { profiles: data }
-// }
-
-// export const actions = {
-// 	create: async ({ cookies, request }) => {
-// 		const data = await request.formData();
-
-//         // can do error checking
-//         // return fail(422, {
-//         //     description: data.get('description'),
-//         //     error: error.message
-//         // });
-
-// 		db.createTodo(cookies.get('userid'), data.get('description'));
-// 	},
-
-// 	delete: async ({ cookies, request }) => {
-// 		const data = await request.formData();
-// 		db.deleteTodo(cookies.get('userid'), data.get('id'));
-// 	}
-// };

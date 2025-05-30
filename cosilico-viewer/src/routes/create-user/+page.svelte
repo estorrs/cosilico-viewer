@@ -1,4 +1,5 @@
 <script lang="ts">
+    import * as Alert from '$lib/components/ui/alert/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Form from '$lib/components/ui/form/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
@@ -7,6 +8,7 @@
 	import { zodClient } from 'sveltekit-superforms/adapters';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
+    import CircleAlertIcon from '@lucide/svelte/icons/circle-alert';
 
 	let { data } = $props();
 
@@ -16,7 +18,7 @@
 		timeoutMs: 8000
 	});
 
-	const { form: formData, enhance, submitting, delayed, timeout } = form;
+	const { form: formData, enhance, submitting, delayed, timeout, message } = form;
 </script>
 
 <div class="flex-1">
@@ -40,7 +42,6 @@
 						<Input {...props} bind:value={$formData.email} />
 					{/snippet}
 				</Form.Control>
-				<Form.Description>This is your email.</Form.Description>
 				<Form.FieldErrors />
 			</Form.Field>
 			<Form.Field {form} name="password">
@@ -50,7 +51,6 @@
 						<Input {...props} bind:value={$formData.password} type="password" />
 					{/snippet}
 				</Form.Control>
-				<Form.Description>This is your password.</Form.Description>
 				<Form.FieldErrors />
 			</Form.Field>
 			<Form.Field {form} name="name">
@@ -71,6 +71,13 @@
 					<LoaderCircleIcon class="animate-spin" />
 					Submit
 				</Button>
+			{/if}
+            {#if $message}
+				<Alert.Root variant="destructive" class="top-2">
+					<CircleAlertIcon class="size-4" />
+					<Alert.Title>Error</Alert.Title>
+					<Alert.Description>{$message}</Alert.Description>
+				</Alert.Root>
 			{/if}
 		</form>
 	</Card.Content>

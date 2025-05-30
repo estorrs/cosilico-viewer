@@ -48,9 +48,13 @@
 <!-- <ContinuousOptions /> -->
  <!-- <ZoomPanel /> -->
 
-
-
+<nav>
+	<a href="/">home</a>
+	<a href="/create-user">create user</a>
+   <a href="/get-user">get user</a>
+</nav>
+<!-- 
 
  <div class='h-screen'>
     <ZarrTileViewer />
- </div>
+ </div> -->

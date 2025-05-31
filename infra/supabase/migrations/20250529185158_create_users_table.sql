@@ -2,7 +2,7 @@ create type user_role as enum ('user', 'admin');
 
 create table public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  display_name text,
+  name text,
   role user_role not null default 'user'
 );
 
@@ -22,6 +22,17 @@ create policy "Users can update their own profile (excluding role)"
   using (auth.uid() = id)
   with check (auth.uid() = id and role = profiles.role);
 
+create policy "Admins and service_role can read any profile"
+  on public.profiles for select
+  to authenticated, service_role
+  using (
+    auth.role() = 'service_role'
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
 create policy "Admins and service_role can update any profile"
   on public.profiles for update
   to authenticated, service_role
@@ -33,15 +44,27 @@ create policy "Admins and service_role can update any profile"
     )
   );
 
+create policy "Admins and service_role can delete any profile"
+  on public.profiles for delete
+  to authenticated, service_role
+  using (
+    auth.role() = 'service_role'
+    or exists (
+      select 1 from public.profiles p
+      where p.id = auth.uid() and p.role = 'admin'
+    )
+  );
+
+
 create function public.handle_new_user()
 returns trigger as $$
 declare
-  display_name text;
+  name text;
 begin
-  display_name := new.raw_user_meta_data->>'display_name';
+  name := new.raw_user_meta_data->>'name';
 
-  insert into public.profiles (id, display_name, role)
-  values (new.id, display_name, 'user');
+  insert into public.profiles (id, name, role)
+  values (new.id, name, 'user');
 
   return new;
 end;

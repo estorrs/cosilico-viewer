@@ -18,6 +18,8 @@ create table public.directory_entities (
 create index directories_created_by_idx on public.directory_entities (created_by);
 create index directories_parent_id_idx on public.directory_entities (parent_id);
 
+
+
 create table public.experiments (
   id uuid primary key default gen_random_uuid(),
   version text not null default 'v0.0.1',
@@ -162,73 +164,6 @@ execute procedure public.link_experiment_to_directory_entity();
 
 
 
-
--- create or replace function has_directory_access_user_level(start_id uuid, access_type text)
--- returns boolean
--- language sql
--- stable
--- set search_path = ''
--- as $$
---   with recursive directory_chain as (
---     select d.id, d.parent_id,
---       d.authenticated_users_read,
---       d.authenticated_users_write,
---       d.authenticated_users_delete
---     from public.directory_entities d
---     where d.id = start_id
-
---     union all
-
---     select d.id, d.parent_id,
---       d.authenticated_users_read,
---       d.authenticated_users_write,
---       d.authenticated_users_delete
---     from public.directory_entities d
---     join directory_chain dc on d.id = dc.parent_id
---   )
---   select exists (
---     select 1
---     from directory_chain
---     where
---       case access_type
---         when 'read' then (select auth.uid()) = any(authenticated_users_read)
---         when 'write' then (select auth.uid()) = any(authenticated_users_write)
---         when 'delete' then (select auth.uid()) = any(authenticated_users_delete)
---         else false
---       end
---   );
--- $$;
-
--- create or replace function has_directory_access_directory_level(start_id uuid, access_type text)
--- returns boolean
--- language sql
--- stable
--- set search_path = ''
--- as $$
---   with recursive directory_chain as (
---     select d.id, d.parent_id, d.permission
---     from public.directory_entities d
---     where d.id = start_id
-
---     union all
-
---     select d.id, d.parent_id, d.permission
---     from public.directory_entities d
---     join directory_chain dc on d.id = dc.parent_id
---   )
---   select exists (
---     select 1
---     from directory_chain
---     where
---       case access_type
---         when 'read' then permission in ('r', 'rw', 'rwd')
---         when 'write' then permission in ('rw', 'rwd')
---         when 'delete' then permission = 'rwd'
---         else false
---       end
---   );
--- $$;
-
 create or replace function has_directory_access_combined(start_id uuid, access_type text)
 returns boolean
 language plpgsql
@@ -238,9 +173,8 @@ as $$
 declare
   result boolean;
 begin
-  raise notice 'Checking access: start_id=%, access_type=%', start_id, access_type;
-
   with recursive directory_chain as (
+    -- ✅ Start at the directory with id = start_id
     select d.id, d.parent_id, d.permission,
            d.authenticated_users_read,
            d.authenticated_users_write,
@@ -250,6 +184,7 @@ begin
 
     union all
 
+    -- ✅ Continue walking up via parent_id
     select d.id, d.parent_id, d.permission,
            d.authenticated_users_read,
            d.authenticated_users_write,
@@ -263,24 +198,21 @@ begin
     where
       case access_type
         when 'read' then (select auth.uid()) = any(authenticated_users_read)
+                    or permission in ('r', 'rw', 'rwd')
         when 'write' then (select auth.uid()) = any(authenticated_users_write)
+                    or permission in ('rw', 'rwd')
         when 'delete' then (select auth.uid()) = any(authenticated_users_delete)
-        else false
-      end
-      or
-      case access_type
-        when 'read' then permission in ('r', 'rw', 'rwd')
-        when 'write' then permission in ('rw', 'rwd')
-        when 'delete' then permission = 'rwd'
+                    or permission = 'rwd'
         else false
       end
   )
   into result;
 
-  raise notice 'Access result: %', result;
   return result;
 end;
 $$;
+
+
 
 
 
@@ -300,21 +232,31 @@ $$ language sql stable;
 
 create policy "read_directory_entities"
 on public.directory_entities for select
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(id, 'read')
-  )
+    or parent_id is null
+    or has_directory_access_combined(parent_id, 'read')
+    -- has_directory_access_combined(id, 'read')
+    -- true
+--   (select auth.uid()) is not null and (
+--     is_admin_or_service_role()
+--     or has_directory_access_combined(id, 'read')
+--   )
 );
 
 create policy "insert_directory_entities"
+to authenticated, service_role
 on public.directory_entities for insert
 with check (
-  (select auth.uid()) is not null and (
-    is_admin_or_service_role()
-    or parent_id is null
-    or has_directory_access_combined(parent_id, 'write')
-  )
+    true
+    -- parent_id = 'ba98eb3f84ab4ec2b7b07353d7933db4'
+--   (select auth.uid()) is not null and (
+--     is_admin_or_service_role()
+--     -- or parent_id = 'ba98eb3f84ab4ec2b7b07353d7933db4'
+--     or parent_id is null
+--     or has_directory_access_combined(parent_id, 'write')
+--   )
 );
 
 create policy "update_directory_entities"
@@ -550,4 +492,18 @@ using (
       )
     )
   )
+);
+
+
+
+
+
+
+
+-- insert root directory after table + trigger are created
+insert into public.directory_entities (
+  name, parent_id, entity_type
+)
+values (
+  'root', null, 'directory'
 );

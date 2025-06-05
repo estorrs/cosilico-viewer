@@ -1,3 +1,12 @@
+set client_min_messages = notice;
+
+create table public.debug (
+  log_time timestamptz default now(),
+  message text
+);
+
+
+
 create type permission_role as enum ('', 'r', 'rw', 'rwd');
 create type platform_name as enum ('10X Xenium', '10X Visium', '10X Visium HD', 'H&E', 'IHC', 'NanoString GeoMx', 'Curio Bioscience Slide-seq', 'NanoString CosMx', 'Vizgen MERSCOPE', 'Unknown');
 create type layer_metadata_type as enum('categorical', 'continuous');
@@ -163,57 +172,157 @@ for each row
 execute procedure public.link_experiment_to_directory_entity();
 
 
+create or replace function public.set_created_by()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  new.created_by := auth.uid();
+  return new;
+end;
+$$;
 
-create or replace function has_directory_access_combined(start_id uuid, access_type text)
+create trigger set_created_by_experiments
+before insert on public.experiments
+for each row
+execute procedure public.set_created_by();
+
+create trigger set_created_by_images
+before insert on public.images
+for each row
+execute procedure public.set_created_by();
+
+create trigger set_created_by_layers
+before insert on public.layers
+for each row
+execute procedure public.set_created_by();
+
+create trigger set_created_by_layer_metadata
+before insert on public.layer_metadata
+for each row
+execute procedure public.set_created_by();
+
+
+
+
+create or replace function has_directory_access(start_id uuid, access_type text)
 returns boolean
 language plpgsql
 stable
 set search_path = ''
 as $$
 declare
-  result boolean;
+  result boolean := false;
+  log_output text;
 begin
   with recursive directory_chain as (
-    -- ✅ Start at the directory with id = start_id
-    select d.id, d.parent_id, d.permission,
-           d.authenticated_users_read,
-           d.authenticated_users_write,
-           d.authenticated_users_delete
+    select
+      d.id,
+      d.parent_id,
+      d.permission,
+      d.authenticated_users_read,
+      d.authenticated_users_write,
+      d.authenticated_users_delete,
+      0 as depth
     from public.directory_entities d
     where d.id = start_id
 
     union all
 
-    -- ✅ Continue walking up via parent_id
-    select d.id, d.parent_id, d.permission,
-           d.authenticated_users_read,
-           d.authenticated_users_write,
-           d.authenticated_users_delete
+    select
+      d.id,
+      d.parent_id,
+      d.permission,
+      d.authenticated_users_read,
+      d.authenticated_users_write,
+      d.authenticated_users_delete,
+      dc.depth + 1
     from public.directory_entities d
     join directory_chain dc on d.id = dc.parent_id
-  )
-  select exists (
-    select 1
+  ),
+  nearest_user_permission as (
+    select *
     from directory_chain
-    where
+    where (select auth.uid()) = any(authenticated_users_read)
+       or (select auth.uid()) = any(authenticated_users_write)
+       or (select auth.uid()) = any(authenticated_users_delete)
+    order by depth asc
+    limit 1
+  ),
+  user_has_permission as (
+    select *,
       case access_type
         when 'read' then (select auth.uid()) = any(authenticated_users_read)
-                    or permission in ('r', 'rw', 'rwd')
         when 'write' then (select auth.uid()) = any(authenticated_users_write)
-                    or permission in ('rw', 'rwd')
         when 'delete' then (select auth.uid()) = any(authenticated_users_delete)
-                    or permission = 'rwd'
         else false
-      end
+      end as uhp
+    from nearest_user_permission
+  ),
+  nearest_directory_permission as (
+    select *
+    from directory_chain
+    where permission in ('r', 'rw', 'rwd')
+    order by depth asc
+    limit 1
+  ),
+  directory_has_permission as (
+    select *,
+      case access_type
+        when 'read' then permission in ('r', 'rw', 'rwd')
+        when 'write' then permission in ('rw', 'rwd')
+        when 'delete' then permission = 'rwd'
+        else false
+      end as dhp
+    from nearest_directory_permission
   )
-  into result;
+
+--   select string_agg(format('id = %s authenticated_users_read=%s, authenticated_users_write=%s, authenticated_users_delete=%s, depth=%s', id, authenticated_users_read, authenticated_users_write, authenticated_users_delete, depth), E'\n')
+--   into log_output
+--   from nearest_user_permission;
+
+--   raise log E'nearest_user_permission:\n%s', log_output;
+
+--   return true;
+
+--   -- Evaluate logic: user-level takes priority
+--   select true into result
+--   from user_has_permission
+--   where uhp = true
+--   limit 1;
+
+--   raise log 'result 1: %s', result;
+
+-- --   if not result then
+-- if result is null then
+--     select dhp into result
+--     from directory_has_permission
+--     limit 1;
+--   end if;
+
+--   raise log 'result 2: %s', result;
+
+  select coalesce(
+    (select uhp from user_has_permission where uhp = true limit 1),
+    (select dhp from directory_has_permission limit 1),
+    false
+  ) into result;
 
   return result;
 end;
 $$;
 
 
+-- select string_agg(
+--       format('user_has_permission=%s, permission=%s, depth=%s', user_has_permission, permission, depth),
+--       E'\n'
+--   )
+--   into log_output
+--   from fallback_default_permission;
 
+--   raise log E'fallback_default_permission:\n%s', log_output;
 
 
 create function is_admin_or_service_role()
@@ -228,282 +337,306 @@ $$ language sql stable;
 
 
 
-
-
 create policy "read_directory_entities"
 on public.directory_entities for select
 to authenticated, service_role
 using (
     is_admin_or_service_role()
+    or has_directory_access(id, 'read')
+);
+
+create policy "read_directory_entities_for_insert"
+on public.directory_entities for select
+to authenticated, service_role
+using (
+    is_admin_or_service_role()
     or parent_id is null
-    or has_directory_access_combined(parent_id, 'read')
-    -- has_directory_access_combined(id, 'read')
-    -- true
---   (select auth.uid()) is not null and (
---     is_admin_or_service_role()
---     or has_directory_access_combined(id, 'read')
---   )
+    or has_directory_access(parent_id, 'read')
 );
 
 create policy "insert_directory_entities"
-to authenticated, service_role
 on public.directory_entities for insert
+to authenticated, service_role
 with check (
-    true
-    -- parent_id = 'ba98eb3f84ab4ec2b7b07353d7933db4'
---   (select auth.uid()) is not null and (
---     is_admin_or_service_role()
---     -- or parent_id = 'ba98eb3f84ab4ec2b7b07353d7933db4'
---     or parent_id is null
---     or has_directory_access_combined(parent_id, 'write')
---   )
+    is_admin_or_service_role()
+    or parent_id is null
+    or has_directory_access(parent_id, 'write')
 );
 
 create policy "update_directory_entities"
 on public.directory_entities for update
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(id, 'write')
-  )
+    or has_directory_access(id, 'write')
 );
 
 create policy "delete_directory_entities"
 on public.directory_entities for delete
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(id, 'delete')
-  )
+    or has_directory_access(id, 'delete')
 );
+
+
 
 
 
 create policy "read_experiments"
 on public.experiments for select
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(directory_entity_id, 'read')
-  )
+    or has_directory_access(id, 'read')
+);
+
+create policy "read_experiments_for_insert"
+on public.experiments for select
+to authenticated, service_role
+using (
+    is_admin_or_service_role()
+    or has_directory_access(parent_id, 'read')
 );
 
 create policy "insert_experiments"
 on public.experiments for insert
+to authenticated, service_role
 with check (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(parent_id, 'write')
-  )
+    or has_directory_access(parent_id, 'write')
 );
 
 create policy "update_experiments"
 on public.experiments for update
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(directory_entity_id, 'write')
-  )
+    or has_directory_access(id, 'write')
 );
 
 create policy "delete_experiments"
 on public.experiments for delete
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
-    or has_directory_access_combined(directory_entity_id, 'delete')
-  )
+    or has_directory_access(id, 'delete')
 );
+
+
+
+
+
 
 create policy "read_images"
 on public.images for select
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.directory_entity_id, 'read')
+        has_directory_access(e.directory_entity_id, 'read')
       )
     )
-  )
+);
+
+create policy "read_images_for_insert"
+on public.images for select
+to authenticated, service_role
+using (
+    is_admin_or_service_role()
+    or exists (
+      select 1 from public.experiments e
+      where e.id = experiment_id and (
+        has_directory_access(e.directory_entity_id, 'read')
+      )
+    )
 );
 
 create policy "insert_images"
 on public.images for insert
+to authenticated, service_role
 with check (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.parent_id, 'write')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
 );
-
 
 create policy "update_images"
 on public.images for update
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.directory_entity_id, 'write')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
 );
 
 create policy "delete_images"
 on public.images for delete
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.directory_entity_id, 'delete')
+        has_directory_access(e.directory_entity_id, 'write') -- write access to experiment allows image deletion
       )
     )
-  )
 );
+
+
+
 
 create policy "read_layers"
 on public.layers for select
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.directory_entity_id, 'read')
+        has_directory_access(e.directory_entity_id, 'read')
       )
     )
-  )
+);
+
+create policy "read_layers_for_insert"
+on public.layers for select
+to authenticated, service_role
+using (
+    is_admin_or_service_role()
+    or exists (
+      select 1 from public.experiments e
+      where e.id = experiment_id and (
+        has_directory_access(e.directory_entity_id, 'read')
+      )
+    )
 );
 
 create policy "insert_layers"
 on public.layers for insert
+to authenticated, service_role
 with check (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.parent_id, 'write')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
 );
-
 
 create policy "update_layers"
 on public.layers for update
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.directory_entity_id, 'read')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
 );
 
 create policy "delete_layers"
 on public.layers for delete
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1 from public.experiments e
       where e.id = experiment_id and (
-        has_directory_access_combined(e.directory_entity_id, 'delete')
+        has_directory_access(e.directory_entity_id, 'write') -- write access to experiment allows layer deletion
       )
     )
-  )
 );
+
+
+
+
+
 
 create policy "read_layer_metadata"
 on public.layer_metadata for select
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1
       from public.layers l
       join public.experiments e on l.experiment_id = e.id
       where l.id = layer_id and (
-        has_directory_access_combined(e.directory_entity_id, 'read')
+        has_directory_access(e.directory_entity_id, 'read')
       )
     )
-  )
+);
+
+create policy "read_layer_metadata_for_insert"
+on public.layer_metadata for select
+to authenticated, service_role
+using (
+    is_admin_or_service_role()
+    or exists (
+      select 1
+      from public.layers l
+      join public.experiments e on l.experiment_id = e.id
+      where l.id = layer_id and (
+        has_directory_access(e.directory_entity_id, 'read')
+      )
+    )
 );
 
 create policy "insert_layer_metadata"
 on public.layer_metadata for insert
+to authenticated, service_role
 with check (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1
       from public.layers l
       join public.experiments e on l.experiment_id = e.id
       where l.id = layer_id and (
-        has_directory_access_combined(e.parent_id, 'write')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
 );
-
 
 create policy "update_layer_metadata"
 on public.layer_metadata for update
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1
       from public.layers l
       join public.experiments e on l.experiment_id = e.id
       where l.id = layer_id and (
-        has_directory_access_combined(e.directory_entity_id, 'write')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
 );
 
 create policy "delete_layer_metadata"
 on public.layer_metadata for delete
+to authenticated, service_role
 using (
-  (select auth.uid()) is not null and (
     is_admin_or_service_role()
     or exists (
       select 1
       from public.layers l
       join public.experiments e on l.experiment_id = e.id
       where l.id = layer_id and (
-        has_directory_access_combined(e.directory_entity_id, 'delete')
+        has_directory_access(e.directory_entity_id, 'write')
       )
     )
-  )
-);
-
-
-
-
-
-
-
--- insert root directory after table + trigger are created
-insert into public.directory_entities (
-  name, parent_id, entity_type
-)
-values (
-  'root', null, 'directory'
 );

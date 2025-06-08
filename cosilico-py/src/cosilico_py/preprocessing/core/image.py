@@ -172,15 +172,22 @@ def write_image_zarr_from_ome(
 
     ome_metadata = tifffile.TiffFile(ome_tiff_path).ome_metadata
     ome_model = from_xml(ome_metadata)
+    size_c = ome_model.images[0].pixels.size_c
 
     with tifffile.TiffFile(ome_tiff_path) as tif:
-        image = tif.aszarr()
-        image = da.from_zarr(image, chunks=(1, 2048, 2048))
+        if size_c == 1:
+            image = tif.pages[0].aszarr()
+            image = da.from_zarr(image, chunks=(2048, 2048))
+        else:
+            image = tif.aszarr()
+            image = da.from_zarr(image, chunks=(1, 2048, 2048))
 
     # tifffile will automatically remove the T/Z dimension, adding it back in if needed
-    if len(image.shape) == 3:   
+    if len(image.shape) == 2:   
+        image = da.expand_dims(image, axis=(2, 3, 4))
+    elif len(image.shape) == 3:
         image = da.expand_dims(image, axis=(3, 4))
-        image = image.transpose(2, 1, 3, 0, 4) # now image is XYZCT
+    image = image.transpose(2, 1, 3, 0, 4) # now image is XYZCT
 
     if to_uint8:
         image = da_to_uint8(image)

@@ -1,12 +1,3 @@
-set client_min_messages = notice;
-
-create table public.debug (
-  log_time timestamptz default now(),
-  message text
-);
-
-
-
 create type permission_role as enum ('', 'r', 'rw', 'rwd');
 create type platform_name as enum ('10X Xenium', '10X Visium', '10X Visium HD', 'H&E', 'IHC', 'NanoString GeoMx', 'Curio Bioscience Slide-seq', 'NanoString CosMx', 'Vizgen MERSCOPE', 'Unknown');
 create type layer_metadata_type as enum('categorical', 'continuous');

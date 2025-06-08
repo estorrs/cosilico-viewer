@@ -1,8 +1,11 @@
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Annotated, Union
+import datetime
+import json
 import os
 
+from dateutil import parser
 import numpy as np
 import pandas as pd
 import zarr
@@ -23,6 +26,8 @@ from cosilico_py.preprocessing.core.layer import (
 )
 
 PLATFORM_VERSIONS = ['Prime VV']
+
+
 
 def load_transcript_df(filepath, mpp=1., bbox=None):
     # Read only necessary columns & use `dtype` hints for memory efficiency
@@ -77,30 +82,39 @@ def load_cell_df(filepath, mpp=1., bbox=None):
 
 
 
-def experiment_from_x10_directory(
+def experiment_from_x10_xenium_cellranger(
         directory: Annotated[os.PathLike, 'Path to CellRanger outs directory.'],
-        name: Annotated[str, 'Name of experiment.'],
-        platform_version: Annotated[str, f'Platform version used. Must be one of {PLATFORM_VERSIONS}']='Prime VV',
+        name: Annotated[str, 'Name of experiment.'] = None,
         bbox: Annotated[Union[Iterable[int], None], 'Bounding box to crop to. Format is [top, bottom, left, right]. Default is None.'] = None,
         to_uint8: Annotated[bool, 'Default is False. If True, will convert the Xenium IHC image to UINT8. This can save space for images that are UINT16.'] = False,
     ):
     assert os.path.isdir(directory), f'Input directory {directory} is not a directory.'
-    assert platform_version in PLATFORM_VERSIONS, f'Platform version {platform_version} is not one of: {PLATFORM_VERSIONS}.'
     directory = Path(directory)
 
     config = get_config()
     output_directory = config['cache_dir']
 
+    path = directory / 'experiment.xenium'
+    assert path.is_file(), f'Could not find experiment file at: {path}.'
+    xenium_metadata = json.load(path)
+    if name is None:
+        name = xenium_metadata['run_name'] + '-' + xenium_metadata['region_name']
+    dt = parser.isoparse(xenium_metadata['run_start_time'])
+
     experiment = Experiment(
         name = name,
+        experiment_date = dt,
         platform = '10X Xenium',
-        platform_version = platform_version,
-        parent_id=None # none for now, get's set at upload time.
+        platform_version = xenium_metadata['panel_name'],
+        metadata = xenium_metadata,
+        parent_id = None # none for now, get's set at upload time.
     )
 
     # upload ihc image
-    ome_tiff_path = directory / 'morphology_focus' / 'morphology_focus_0002.ome.tif'
-    assert ome_tiff_path.is_file(), f'Could not find Xenium morphology image at {ome_tiff_path}.'
+    ome_tiff_path = directory / 'morphology_focus.ome.tif'
+    if not ome_tiff_path.is_file():
+        ome_tiff_path = directory / 'morphology_focus' / 'morphology_focus_0002.ome.tif'
+    assert ome_tiff_path.is_file(), 'Could not find Xenium morphology image at morphology_focus.ome.tif or morphology_focus/.'
     image = write_image_zarr_from_ome(
         experiment.id,
         ome_tiff_path,

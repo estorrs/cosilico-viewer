@@ -1,9 +1,10 @@
 from uuid import uuid4
 from enum import Enum
 from datetime import datetime, timezone
+from typing import Annotated
 
 from ome_types import OME
-from pydantic import BaseModel, Field, FilePath, AwareDatetime
+from pydantic import BaseModel, Field, FilePath, DirectoryPath, AwareDatetime
 
 
 class RoleEnum(str, Enum):
@@ -120,7 +121,7 @@ class LayerMetadata(BaseModel):
     tags: list[str] = [] 
     local_path: FilePath | None = None
     path: str = ''
-        
+
     def model_post_init(self, __context):
         object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
 
@@ -129,3 +130,12 @@ class ExperimentUploadBundle(BaseModel):
     images: list[Image]
     layers: list[Layer]
     layer_metadata: list[LayerMetadata]
+
+class ExperimentInput(BaseModel):
+    name: Annotated[str, Field(description='Name of the experiment. If not provided will attempt to populate from input files.')]
+    bbox: Annotated[list[Annotated[int, Field(gt=0)]], Field(min_length=4, max_length=4, description='Bounding box to use to crop the experiment. By default none is applied. Should be [top, bottom, right, left].')] | None = None
+
+class X10XeniumInput(ExperimentInput):
+    platform: Annotated[PlatformEnum, Field(description='Experimental platform.')] = PlatformEnum.x10_xenium
+    cellranger_outs: Annotated[DirectoryPath, Field(description='CellRanger output directory for the Xenium run.')]
+    to_uint8: Annotated[bool, Field(description='Whether to convert image to UINT8. Can save space compared to UINT16 images')] = False

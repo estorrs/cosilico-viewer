@@ -26,7 +26,7 @@ export const actions: Actions = {
       password: form.data.password,
       options: {
         data: {
-          display_name: form.data.name
+          name: form.data.name
         }
       }
     })

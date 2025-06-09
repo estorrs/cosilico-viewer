@@ -5,6 +5,7 @@ from typing import Annotated, Union
 import os
 
 from scipy.sparse import issparse, coo_matrix
+import numcodecs
 import numpy as np
 import pandas as pd
 import zarr
@@ -116,8 +117,8 @@ def write_points_zarr_grouped(
     metadata_root = root.create_group("metadata")
     feature_meta_group = metadata_root.create_group("features")
 
-    names = source['feature_name'].cat.categories.to_numpy(dtype=str)
-    fnames = feature_meta_group.create_array("feature_names", shape=(len(names),), chunks=(len(names),), dtype='U50')
+    names = source['feature_name'].cat.categories.to_numpy(dtype=object)
+    fnames = feature_meta_group.create_dataset("feature_names", shape=(len(names),), chunks=(len(names),), dtype=object, object_codec=numcodecs.VLenUTF8())
     fnames[:] = names
 
     fg_group = feature_meta_group.create_group('feature_groups')
@@ -128,12 +129,12 @@ def write_points_zarr_grouped(
 
     zoom_root = root.create_group("zooms")
     for zoom, sub_dfs in zoom_to_sub_dfs.items():
-        zoom_group = zoom_root.create_group(zoom)
+        zoom_group = zoom_root.create_group(str(zoom))
         
         group_to_features = zoom_to_df[zoom].groupby("group", observed=False)["feature_index"].agg(set).to_dict()
         group_to_feature_names = {k:[source['feature_name'].cat.categories[v] for v in vs] for k, vs in group_to_features.items()}
         feature_to_group = {feat:g for g, feats in group_to_feature_names.items() for feat in feats}
-        fgroups = fg_group.create_array(zoom, shape=(len(names),), chunks=(len(names),), dtype=np.int32)
+        fgroups = fg_group.create_dataset(str(zoom), shape=(len(names),), chunks=(len(names),), dtype=np.int32)
         fgroups[:] = np.asarray([feature_to_group.get(x, -1) for x in names], dtype=np.int32)
 
         block_ids = []
@@ -144,22 +145,22 @@ def write_points_zarr_grouped(
                 block_idxs = np.arange(len(block_ids), len(block_ids) + f.shape[0])
                 block_ids += f[id_col].to_list()
 
-                channel_group = grid_group.create_group(group_idx)
+                channel_group = grid_group.create_group(str(group_idx))
 
-                location = channel_group.create_array("location", shape=(f.shape[0], 2), chunks=(f.shape[0], 1), dtype='float32')
+                location = channel_group.create_dataset("location", shape=(f.shape[0], 2), chunks=(f.shape[0], 1), dtype='float32')
                 location[:] = f[['x_location', 'y_location']].values
 
-                fidxs = channel_group.create_array("feature_index", shape=(f.shape[0],), chunks=(f.shape[0],), dtype='uint32')
+                fidxs = channel_group.create_dataset("feature_index", shape=(f.shape[0],), chunks=(f.shape[0],), dtype='uint32')
                 fidxs[:] = f[['feature_index']].values.flatten()
 
-                transcript_id = channel_group.create_array("id", shape=(f.shape[0],), chunks=(f.shape[0],), dtype='U50')
-                transcript_id[:] = f[[id_col]].astype(str).values.flatten()
+                transcript_id = channel_group.create_dataset("id", shape=(f.shape[0],), chunks=(f.shape[0],), dtype=object, object_codec=numcodecs.VLenUTF8())
+                transcript_id[:] = f[[id_col]].astype(object).values.flatten()
 
-                transcript_idx = channel_group.create_array("id_idxs", shape=(f.shape[0],), chunks=(f.shape[0],), dtype='uint32')
+                transcript_idx = channel_group.create_dataset("id_idxs", shape=(f.shape[0],), chunks=(f.shape[0],), dtype='uint32')
                 transcript_idx[:] = block_idxs
 
-        ids = ids_group.create_array(zoom, shape=(len(block_ids),), dtype='U50')
-        ids[:] = np.asarray(block_ids, dtype=str)
+        ids = ids_group.create_dataset(str(zoom), shape=(len(block_ids),), dtype=object, object_codec=numcodecs.VLenUTF8())
+        ids[:] = np.asarray(block_ids, dtype=object)
 
     store.close()
 
@@ -260,8 +261,8 @@ def write_grouped_metadata_zarr(
     
     metadata_root = root.create_group("metadata")
 
-    xs = metadata_root.create_array('categories', shape=(len(fnames),), chunks=(len(fnames),), dtype='U50')
-    xs[:] = np.asarray(fnames, dtype=str)
+    xs = metadata_root.create_dataset('categories', shape=(len(fnames),), chunks=(len(fnames),), dtype=object, object_codec=numcodecs.VLenUTF8())
+    xs[:] = np.asarray(fnames, dtype=object)
 
     object_root = root.create_group("object")
     vmin_stack = []
@@ -272,7 +273,7 @@ def write_grouped_metadata_zarr(
         if value_col not in df.columns:
             df[value_col] = 1
         
-        xs = object_root.create_array(zoom, shape=(df.shape[0],), chunks=50_000, dtype='uint32' if feat_type == 'categorical' else 'float32')    
+        xs = object_root.create_dataset(str(zoom), shape=(df.shape[0],), chunks=50_000, dtype='uint32' if feat_type == 'categorical' else 'float32')    
         xs[:] = df[value_col].values
         
         if feat_type == 'continuous':
@@ -289,14 +290,14 @@ def write_grouped_metadata_zarr(
         if absolute_vmax is not None:
             vmaxs_arr = np.full_like(vmaxs_arr, absolute_vmax)
 
-        vmins = metadata_root.create_array('vmins', shape=(len(fnames),), chunks=(len(fnames),), dtype='float32')
-        vmaxs = metadata_root.create_array('vmaxs', shape=(len(fnames),), chunks=(len(fnames),), dtype='float32')
+        vmins = metadata_root.create_dataset('vmins', shape=(len(fnames),), chunks=(len(fnames),), dtype='float32')
+        vmaxs = metadata_root.create_dataset('vmaxs', shape=(len(fnames),), chunks=(len(fnames),), dtype='float32')
         vmaxs[:] = vmaxs_arr
         vmins[:] = vmins_arr
         
         shape = (len(parent_attrs['resolutions']), len(fnames),)
-        vmins_by_res = metadata_root.create_array('vmins_by_res', shape=shape, chunks=shape, dtype='float32')
-        vmaxs_by_res = metadata_root.create_array('vmaxs_by_res', shape=shape, chunks=shape, dtype='float32')
+        vmins_by_res = metadata_root.create_dataset('vmins_by_res', shape=shape, chunks=shape, dtype='float32')
+        vmaxs_by_res = metadata_root.create_dataset('vmaxs_by_res', shape=shape, chunks=shape, dtype='float32')
         vmins_by_res[:] = vmin_stack
         vmaxs_by_res[:] = vmax_stack
                 
@@ -440,7 +441,6 @@ def get_zoom_to_subs(
         downsample = downsample_map[res]
 
         X, ids = extract_polygons_fast(df, id_col, max_verts=max_verts)
-
         if downsample > 0 and downsample < X.shape[0] - 1:
             idxs = np.linspace(0, X.shape[0] - 1, downsample, dtype=int)
             X, ids = X[idxs], ids[idxs]
@@ -496,7 +496,7 @@ def write_ungrouped_layer_zarr(
 
     zoom_root = root.create_group("zooms")
     for zoom, grid_to_info in zoom_to_subs.items():
-        zoom_group = zoom_root.create_group(zoom)
+        zoom_group = zoom_root.create_group(str(zoom))
 
         block_ids = []        
         for grid, info in grid_to_info.items():
@@ -504,17 +504,17 @@ def write_ungrouped_layer_zarr(
             block_idxs = np.arange(len(block_ids), len(block_ids) + len(info['ids']))
             block_ids += info['ids']
 
-            xs = grid_group.create_array("id", shape=(len(info['ids']),), chunks=(len(info['ids']),), dtype='U50')
-            xs[:] = np.asarray(info['ids'], str)
+            xs = grid_group.create_dataset("id", shape=(len(info['ids']),), chunks=(len(info['ids']),), dtype=object, object_codec=numcodecs.VLenUTF8())
+            xs[:] = np.asarray(info['ids'], object)
 
-            xs = grid_group.create_array("id_idxs", shape=(len(info['ids']),), chunks=(len(info['ids']),), dtype='uint32')
+            xs = grid_group.create_dataset("id_idxs", shape=(len(info['ids']),), chunks=(len(info['ids']),), dtype='uint32')
             xs[:] = block_idxs
 
-            xs = grid_group.create_array("vertices", shape=info['X'].shape, chunks=info['X'].shape, dtype='float32')
+            xs = grid_group.create_dataset("vertices", shape=info['X'].shape, chunks=info['X'].shape, dtype='float32')
             xs[:] = info['X']
 
-        ids = ids_group.create_array(zoom, shape=(len(block_ids),), chunks=(len(block_ids),), dtype='U50')
-        ids[:] = np.asarray(block_ids, dtype=str)
+        ids = ids_group.create_dataset(str(zoom), shape=(len(block_ids),), chunks=(len(block_ids),), dtype=object, object_codec=numcodecs.VLenUTF8())
+        ids[:] = np.asarray(block_ids, dtype=object)
 
     store.close()
 
@@ -606,7 +606,7 @@ def combine_barcoded_data(
 
     # Concatenate final results and reset index
     final_df = pd.concat(results)
-    final_df['feature_name'] = final_df['feature_name'].astype("category")
+    final_df['feature_name'] = final_df['feature_name'].astype(str).astype("category")
     final_df['feature_index'] = pd.Categorical(final_df["feature_name"].cat.codes)
 
     return final_df
@@ -655,33 +655,33 @@ def write_sparse_continuous_metadata_zarr(
 
     metadata_root = root.create_group("metadata")
     s = (len(fnames),)
-    xs = metadata_root.create_array('fields', shape=s, chunks=s, dtype='U50')
-    xs[:] = np.asarray(fnames, dtype=str)
+    xs = metadata_root.create_dataset('fields', shape=s, chunks=s, dtype=object, object_codec=numcodecs.VLenUTF8())
+    xs[:] = np.asarray(fnames, dtype=object)
     
-    xs = metadata_root.create_array('vmins', shape=s, chunks=s, dtype='float32')
+    xs = metadata_root.create_dataset('vmins', shape=s, chunks=s, dtype='float32')
     xs[:] = vmins
     
-    xs = metadata_root.create_array('vmaxs', shape=s, chunks=s, dtype='float32')
+    xs = metadata_root.create_dataset('vmaxs', shape=s, chunks=s, dtype='float32')
     xs[:] = vmaxs
     
-    xs = metadata_root.create_array('vcenters', shape=s, chunks=s, dtype='float32')
+    xs = metadata_root.create_dataset('vcenters', shape=s, chunks=s, dtype='float32')
     if vcenters is None:
         xs[:] = np.full_like(vmaxs, -99999, dtype=np.float32)
     
 
     zoom_root = root.create_group("zooms")
     for zoom, d in zoom_to_dfs.items():
-        group = zoom_root.create_group(zoom)
+        group = zoom_root.create_group(str(zoom))
         for grid, df in d.items():
             grid_group = group.create_group(grid)
         
-            xs = grid_group.create_array('ids', shape=df.shape[0], chunks=df.shape[0], dtype='U50')    
-            xs[:] = np.asarray(df.index.astype(str).to_list())
+            xs = grid_group.create_dataset('ids', shape=df.shape[0], chunks=df.shape[0], dtype=object, object_codec=numcodecs.VLenUTF8())    
+            xs[:] = np.asarray(df.index.astype(object).to_list())
             
-            xs = grid_group.create_array('values', shape=df.shape[0], chunks=df.shape[0], dtype='float32')    
+            xs = grid_group.create_dataset('values', shape=df.shape[0], chunks=df.shape[0], dtype='float32')    
             xs[:] = df[value_col].values
             
-            xs = grid_group.create_array('feature_indices', shape=df.shape[0], chunks=df.shape[0], dtype='uint32')    
+            xs = grid_group.create_dataset('feature_indices', shape=df.shape[0], chunks=df.shape[0], dtype='uint32')    
             xs[:] = df['feature_index'].astype(int).values
     
     store.close()
@@ -703,12 +703,12 @@ def write_categorical_metadata_zarr(
     })
     
     metadata_root = root.create_group("metadata")
-    xs = metadata_root.create_array('fields', shape=(len(fnames),), chunks=(len(fnames),), dtype='U50')
-    xs[:] = np.asarray(fnames, str)
+    xs = metadata_root.create_dataset('fields', shape=(len(fnames),), chunks=(len(fnames),), dtype=object, object_codec=numcodecs.VLenUTF8())
+    xs[:] = np.asarray(fnames, object)
 
     object_group = root.create_group("object")
     for zoom, values in zoom_to_values.items():
-        xs = object_group.create_array(zoom, shape=(len(values),), chunks=50_000, dtype='uint32') 
+        xs = object_group.create_dataset(str(zoom), shape=(len(values),), chunks=50_000, dtype='uint32') 
         xs[:] = values
     
     store.close()
@@ -735,29 +735,30 @@ def write_continuous_metadata_zarr(
     
     metadata_root = root.create_group("metadata")
     s = (len(fnames),)
-    xs = metadata_root.create_array('fields', shape=s, chunks=s, dtype='U50')
-    xs[:] = np.asarray(fnames, dtype=str)
+    xs = metadata_root.create_dataset('fields', shape=s, chunks=s, dtype=object, object_codec=numcodecs.VLenUTF8())
+    xs[:] = np.asarray(fnames, dtype=object)
     
-    xs = metadata_root.create_array('vmins', shape=s, chunks=s, dtype='float32')
+    xs = metadata_root.create_dataset('vmins', shape=s, chunks=s, dtype='float32')
     xs[:] = vmins
     
-    xs = metadata_root.create_array('vmaxs', shape=s, chunks=s, dtype='float32')
+    xs = metadata_root.create_dataset('vmaxs', shape=s, chunks=s, dtype='float32')
     xs[:] = vmaxs
     
-    xs = metadata_root.create_array('vcenters', shape=s, chunks=s, dtype='float32')
+    xs = metadata_root.create_dataset('vcenters', shape=s, chunks=s, dtype='float32')
     if vcenters is None:
         xs[:] = np.full_like(vmaxs, -99999, dtype=np.float32)
 
         
     object_root = root.create_group("object")
     for zoom, df in zoom_to_df.items():
-        xs = object_root.create_array(zoom, shape=df.shape, chunks=(10_000, df.shape[1]), dtype='float32')    
+        xs = object_root.create_dataset(str(zoom), shape=df.shape, chunks=(10_000, df.shape[1]), dtype='float32')    
         xs[:] = df.values
     
     store.close()
 
 def write_sparse_continuous_ungrouped_layer_metadata(
         layer_id: Annotated[str, 'ID of the parent layer.'],
+        fnames: Annotated[Iterable[str], 'Field names for Fields in variable group. In this case fields correspond to a variable in the variable group.'],
         name: Annotated[str, 'Name of the Layer Metadata.'],
         source: Annotated[pd.DataFrame, 'Result of cosilico_py.preprocessing.core.layer.combine_barcoded_data.'],
         value_col: Annotated[str, 'column to use in dataframe for value.'],
@@ -768,11 +769,10 @@ def write_sparse_continuous_ungrouped_layer_metadata(
 
     store = zarr.storage.ZipStore(parent_zarr_path, mode='r')
     root = zarr.group(store=store)
-    fnames = root['/metadata/fields'][:]
     zoom_to_dfs = get_zoom_to_sparse_dfs(source, root)
     store.close()
 
-    vmaxs = source[[value_col, value_col]].groupby(value_col).max().loc[fnames].values.flatten()
+    vmaxs = source[['feature_name', value_col]].groupby('feature_name', observed=True).max().loc[fnames].values.flatten()
     vmins = np.full_like(vmaxs, 0)
     vcenters = None
 

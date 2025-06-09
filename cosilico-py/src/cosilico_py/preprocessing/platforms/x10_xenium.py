@@ -6,13 +6,15 @@ import json
 import os
 
 from dateutil import parser
+from rich import print
 import numpy as np
 import pandas as pd
+import scanpy as sc
 import zarr
 
 from cosilico_py.config import get_config
 from cosilico_py.models import Experiment, ExperimentUploadBundle
-from cosilico_py.preprocessing.platform_helpers.x10 import read_10x_h5
+# from cosilico_py.preprocessing.platform_helpers.x10 import read_10x_h5
 from cosilico_py.preprocessing.core.image import (
     get_resolutions,
     write_image_zarr_from_ome,
@@ -87,16 +89,19 @@ def experiment_from_x10_xenium_cellranger(
         name: Annotated[str, 'Name of experiment.'] = None,
         bbox: Annotated[Union[Iterable[int], None], 'Bounding box to crop to. Format is [top, bottom, left, right]. Default is None.'] = None,
         to_uint8: Annotated[bool, 'Default is False. If True, will convert the Xenium IHC image to UINT8. This can save space for images that are UINT16.'] = False,
+        verbose: Annotated[bool, 'Whether to display verbose output. Default is True.'] = True,
     ):
     assert os.path.isdir(directory), f'Input directory {directory} is not a directory.'
     directory = Path(directory)
+
+    if verbose: print(f'Loading xenium experiment from [green]{directory}[/green]')
 
     config = get_config()
     output_directory = config['cache_dir']
 
     path = directory / 'experiment.xenium'
     assert path.is_file(), f'Could not find experiment file at: {path}.'
-    xenium_metadata = json.load(path)
+    xenium_metadata = json.load(open(path))
     if name is None:
         name = xenium_metadata['run_name'] + '-' + xenium_metadata['region_name']
     dt = parser.isoparse(xenium_metadata['run_start_time'])
@@ -115,10 +120,11 @@ def experiment_from_x10_xenium_cellranger(
     if not ome_tiff_path.is_file():
         ome_tiff_path = directory / 'morphology_focus' / 'morphology_focus_0002.ome.tif'
     assert ome_tiff_path.is_file(), 'Could not find Xenium morphology image at morphology_focus.ome.tif or morphology_focus/.'
+    if verbose: print(f'Loading xenium morphology image from [green]{ome_tiff_path}[/green]')
     image = write_image_zarr_from_ome(
         experiment.id,
         ome_tiff_path,
-        'Xenium IHC',
+        'Xenium Morphology',
         output_directory,
         tile_size = 512,
         res_magnitude = 4,
@@ -130,16 +136,18 @@ def experiment_from_x10_xenium_cellranger(
     max_dim_size = max(pixels.size_x, pixels.size_y)
     mpp = pixels.physical_size_x
 
-
     # upload the layers
     # transcripts
     tile_size = 4096
+    if tile_size > max_dim_size:
+        tile_size = 1 << (max_dim_size.bit_length() - 1)
     res_magnitude = 4
     initial_group_size = 1024
     bin_size = 64
     transcripts_path = directory / 'transcripts.parquet'
     assert transcripts_path.is_file(), f'Could not find transcripts at {transcripts_path}.'
-    source = load_transcript_df(transcripts_path, mpp=mpp, bbox=None)
+    if verbose: print(f'Loading xenium transcripts from [green]{transcripts_path}[/green]')
+    source = load_transcript_df(transcripts_path, mpp=mpp, bbox=bbox)
 
     zooms = get_resolutions(tile_size, max_dim_size, scaler=res_magnitude)
     group_sizes = [int(initial_group_size / (res_magnitude * 2)**i) for i in range(len(zooms))]
@@ -175,9 +183,10 @@ def experiment_from_x10_xenium_cellranger(
             'vmax': 40
         }
     }
+    if verbose: print(f'Loading xenium transcript metadata for [green]{list(value_params.keys())}[/green]')
 
     transcript_metas = write_grouped_metadata_zarrs_from_df(
-        transcript_layer.layer_id,
+        transcript_layer.id,
         source,
         'transcript_id',
         output_directory,
@@ -195,15 +204,16 @@ def experiment_from_x10_xenium_cellranger(
     ## cell layer
     cell_poly_path = directory / 'cell_boundaries.parquet'
     assert cell_poly_path.is_file(), f'Cell boundaries not found at {cell_poly_path}'
+    if verbose: print(f'Loading xenium cell boundaries from [green]{cell_poly_path}[/green]')
     df = load_cell_df(cell_poly_path, mpp=mpp, bbox=bbox)
 
     tile_size = 4096
     res_magnitude = 2
     zooms = get_resolutions(tile_size, max_dim_size, scaler=res_magnitude)
 
-    max_vert_map = config['preprocessing']['layer']['polygon_max_vert_map']
-    downsample_map = config['preprocessing']['layer']['polygon_downsample_map']
-    object_type_map = config['preprocessing']['layer']['polygon_object_type_map']
+    max_vert_map = {int(k):v for k, v in config['preprocessing']['layer']['cells_max_vert_map'].items()}
+    downsample_map = {int(k):v for k, v in config['preprocessing']['layer']['cells_downsample_map'].items()}
+    object_type_map = {int(k):v for k, v in config['preprocessing']['layer']['cells_object_type_map'].items()}
     # max_vert_map = {
     #     4096: 32,
     #     8192: 4
@@ -235,12 +245,14 @@ def experiment_from_x10_xenium_cellranger(
     # cell metadata
     h5_path = directory / 'cell_feature_matrix.h5'
     assert h5_path.is_file(), f'Cell feature matrix not found at {h5_path}'
-    adata = read_10x_h5(h5_path)
+    if verbose: print(f'Loading xenium cell transcript counts [green]{h5_path}[/green]')
+    adata = sc.read_10x_h5(h5_path)
     source = combine_barcoded_data(None, adata, chunk_size=1_000_000).sort_index()
     fnames = np.asarray(source['feature_name'].cat.categories.to_list(), dtype=object)
 
     cell_transcript_count_meta = write_sparse_continuous_ungrouped_layer_metadata(
         cell_layer.id,
+        fnames,
         'Transcript Counts',
         source,
         'count',

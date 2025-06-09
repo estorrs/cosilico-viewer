@@ -132,8 +132,9 @@ class ExperimentUploadBundle(BaseModel):
     layer_metadata: list[LayerMetadata]
 
 class ExperimentInput(BaseModel):
-    name: Annotated[str, Field(description='Name of the experiment. If not provided will attempt to populate from input files.')]
+    name: Annotated[str, Field(description='Name of the experiment. If not provided will attempt to populate from input files.')] = None
     bbox: Annotated[list[Annotated[int, Field(gt=0)]], Field(min_length=4, max_length=4, description='Bounding box to use to crop the experiment. By default none is applied. Should be [top, bottom, right, left].')] | None = None
+    verbose: Annotated[bool, Field(description='Whether to log verbose output to the console. Default is True.')] = True
 
 class X10XeniumInput(ExperimentInput):
     platform: Annotated[PlatformEnum, Field(description='Experimental platform.')] = PlatformEnum.x10_xenium

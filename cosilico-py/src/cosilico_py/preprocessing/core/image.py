@@ -29,7 +29,12 @@ def get_resolutions(
     while min_res < max_dim_size:
         resolution_sizes.append(min_res)
         min_res *= scaler
-    resolution_sizes.append(resolution_sizes[-1] * scaler)
+    
+    if resolution_sizes:
+        resolution_sizes.append(resolution_sizes[-1] * scaler)
+    else:
+        resolution_sizes.append(min_res)
+
     return resolution_sizes
 
 def pad_to_target_block_shape(
@@ -94,7 +99,7 @@ def write_zoom_level(
 
     dataset_shape = (num_tiles_x, num_tiles_y, T, C, Z, tile_size, tile_size)
     dataset_chunks = (1, 1, 1, 1, 1, tile_size, tile_size)
-    tiles_dataset = res_group.create_array(
+    tiles_dataset = res_group.create_dataset(
         "tiles", shape=dataset_shape, dtype=dt, chunks=dataset_chunks, overwrite=True
     )
 
@@ -120,7 +125,7 @@ def write_image_zarr(
     validate_ome(ome_model)
 
     if bbox is not None:
-        assert len(bbox) == 4 and bbox[0] < bbox[1] and bbox[2] < bbox[4], f'bbox must be [top, bottom, left, right], got {bbox}.'
+        assert len(bbox) == 4 and bbox[0] < bbox[1] and bbox[2] < bbox[3], f'bbox must be [top, bottom, left, right], got {bbox}.'
         r1, r2, c1, c2 = bbox
         image = image[c1:c2, r1:r2]
 
@@ -135,14 +140,12 @@ def write_image_zarr(
     zoom_group = root.create_group("zooms")
 
     for res_size in resolution_sizes:
-        print(res_size)
         res_group = zoom_group.create_group(f"{res_size}")
         write_zoom_level(image, tile_size, res_size, res_group)
 
     if bbox is not None:
         ome_model.images[0].pixels.size_x = c2 - c1
         ome_model.images[0].pixels.size_y = r2 - r1
-
     d_str = json.dumps(to_dict(ome_model), default=ome_serializer, indent=2)
     meta = {
         'ome': json.loads(d_str),
@@ -192,14 +195,14 @@ def write_image_zarr_from_ome(
     if to_uint8:
         image = da_to_uint8(image)
     
-    image = Image(name=name, experiment_id=experiment_id, metadata=ome_model)
-    image.local_path = (Path(output_directory) / f'{image.id}.zarr.zip').absolute()
+    image_model = Image(name=name, experiment_id=experiment_id, metadata=ome_model)
+    image_model.local_path = (Path(output_directory) / f'{image_model.id}.zarr.zip').absolute()
     write_image_zarr(
         image,
         ome_model,
-        image.local_path,
+        image_model.local_path,
         tile_size=tile_size,
         res_magnitude=res_magnitude,
         bbox=bbox
     )
-    return image
+    return image_model

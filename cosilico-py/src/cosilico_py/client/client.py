@@ -2,7 +2,8 @@ from collections.abc import Iterable
 from typing import Annotated
 import time
 
-from rich import print, Console
+from rich import print
+from rich.console import Console
 from supabase import create_client
 import boto3
 
@@ -19,29 +20,32 @@ class CosilicoClient(object):
         self.cache_dir = self.config['cache_dir']
         self.supabase = create_client(self.config['api_url'], self.config['anon_key'])
         self.bundle = None
-        # self.user = None
-        # self.session = None
-
-        self.logged_in = False
         self.boto3 = None
 
     def _check_session(self):
         session = self.supabase.auth.get_session()
         if session is None:
-            STDERR.print(f'User must be signed in. To sign in, use [cyan]cosilico.sign_in_with_password[/cyan].')
-            raise RuntimeError(f'User not signed in.')
+            STDERR.print('User must be signed in. To sign in, use [cyan]cosilico.sign_in_with_password[/cyan].')
+            raise RuntimeError('User not signed in.')
 
         if session.expires_at <= time.time():
             self.supabase.auth.refresh_session()
 
 
-    def sign_in_with_password(
+    def sign_in(
             self,
-            email: Annotated[str, 'User email.'],
-            password: Annotated[str, 'User password.'],
+            email: Annotated[str, 'User email.'] = None,
+            password: Annotated[str, 'User password.'] = None,
         ) -> None:
         """Sign in a user."""
         try:
+            if email is None:
+                assert 'email' in self.config, f'Email not found in config. Either add to config or set email argument.'
+                email = self.config['email']
+            if password is None:
+                assert 'password' in self.config, f'Password not found in config. Either add to config or set password argument.'
+                password = self.config['password']
+
             _ = self.supabase.auth.sign_in_with_password({
                 "email": email,
                 "password": password
@@ -54,8 +58,8 @@ class CosilicoClient(object):
     def create_experiment(
             self,
             experiment_input: Annotated[models.ExperimentInput, 'Input used to generate the experiment.']
-        ):
-        self.bundle: models.ExperimentUploadBundle = create_bundle_from_input(experiment_input)
+        ) -> models.ExperimentUploadBundle:
+        return create_bundle_from_input(experiment_input)
     
     def upload_experiment(
             self,

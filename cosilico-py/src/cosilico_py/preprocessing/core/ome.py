@@ -10,7 +10,7 @@ def validate_ome(model):
     
     for k in ['physical_size_x', 'physical_size_x_unit', 'size_x', 'size_y']:
         try:
-            val = model.images[0].pixels[k]
+            val = getattr( model.images[0].pixels, k)
             assert val is not None, f'Value for {k} must be not be None'
         except KeyError:
             raise RuntimeError(f'OME metadata is missing fields. {k} must be in image.pixels.')

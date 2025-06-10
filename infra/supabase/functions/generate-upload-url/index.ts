@@ -1,129 +1,159 @@
-// // Follow this setup guide to integrate the Deno language server with your editor:
-// // https://deno.land/manual/getting_started/setup_your_environment
-// // This enables autocomplete, go to definition, etc.
 
-// // Setup type definitions for built-in Supabase Runtime APIs
-// import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+// import { PutObjectCommand, S3Client } from 'npm:@aws-sdk/client-s3@3.264.0';
+// import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.264.0';
 
-// console.log("Hello from Functions!")
+// const STORAGE_ACCESS_KEY_ID = Deno.env.get("STORAGE_ACCESS_KEY_ID")!;
+// const STORAGE_SECRET_ACCESS_KEY = Deno.env.get("STORAGE_SECRET_ACCESS_KEY")!;
+// const STORAGE_ENDPOINT_URL = Deno.env.get("STORAGE_ENDPOINT_URL")!;
+// const STORAGE_REGION_NAME = Deno.env.get("STORAGE_REGION_NAME")!;
+// const STORAGE_BUCKET_NAME = Deno.env.get("STORAGE_BUCKET_NAME")!;
+
+// const s3 = new S3Client({
+//   endpoint: STORAGE_ENDPOINT_URL,
+//   forcePathStyle: true,
+//   region: STORAGE_REGION_NAME,
+//   credentials: {
+//     accessKeyId: STORAGE_ACCESS_KEY_ID,
+//     secretAccessKey: STORAGE_SECRET_ACCESS_KEY,
+//   },
+// });
 
 // Deno.serve(async (req) => {
-//   const { name } = await req.json()
-//   const data = {
-//     message: `Hello ${name}!`,
-//   }
+//   const { filename } = await req.json();
+
+//   const command = new PutObjectCommand({
+//     Bucket: STORAGE_BUCKET_NAME,
+//     Key: filename,
+//     ContentType: "application/zip",
+//   });
+
+//   const url = await getSignedUrl(s3, command, {
+//     expiresIn: 60 * 10, // 10 minutes
+//   });
 
 //   return new Response(
-//     JSON.stringify(data),
-//     { headers: { "Content-Type": "application/json" } },
-//   )
-// })
-
-// /* To invoke locally:
-
-//   1. Run `supabase start` (see: https://supabase.com/docs/reference/cli/supabase-start)
-//   2. Make an HTTP request:
-
-//   curl -i --location --request POST 'http://127.0.0.1:54321/functions/v1/generate-upload-url' \
-//     --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-//     --header 'Content-Type: application/json' \
-//     --data '{"name":"Functions"}'
-
-// */
-
-
-// import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-// import { createPresignedPost } from "https://deno.land/x/aws_s3_presigned_post@v0.3.0/mod.ts";
-// import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// const AWS_REGION = Deno.env.get("AWS_REGION")!;
-// const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID")!;
-// const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
-// const BUCKET_NAME = Deno.env.get("AWS_BUCKET_NAME")!;
-// const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-// const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-// serve(async (req) => {
-//   const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-//     global: { headers: { Authorization: req.headers.get("Authorization")! } },
-//   });
-
-//   const { data: { user } } = await supabaseClient.auth.getUser();
-//   if (!user) {
-//     return new Response("Unauthorized", { status: 401 });
-//   }
-
-//   const { fileName } = await req.json();
-//   const key = `${fileName}`;
-
-//   const presigned = await createPresignedPost({
-//     accessKeyId: AWS_ACCESS_KEY_ID,
-//     secretAccessKey: AWS_SECRET_ACCESS_KEY,
-//     bucket: BUCKET_NAME,
-//     key,
-//     region: AWS_REGION,
-//     expiresIn: 60 * 60, // 1 hour
-//     conditions: [
-//       ["starts-with", "$Content-Type", ""],
-//       // ["content-length-range", 0, 10_000_000]
-//     ],
-//     fields: {
-//       "Content-Type": 'application/zip',
-//     }
-//   });
-
-//   return new Response(JSON.stringify({
-//     url: presigned.url,
-//     fields: presigned.fields,
-//     key
-//   }), {
-//     headers: { "Content-Type": "application/json" }
-//   });
+//     JSON.stringify({ url }),
+//     { headers: { "Content-Type": "application/json" } }
+//   );
 // });
 
 
 
+// // index.ts
+// import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+// import { S3Client, PutObjectCommand, GetObjectCommand } from "npm:@aws-sdk/client-s3@3.264.0";
+// import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner@3.264.0";
 
-import { S3Client, PutObjectCommand } from 'https://esm.sh/@aws-sdk/client-s3';
-import { getSignedUrl } from 'https://esm.sh/@aws-sdk/s3-request-presigner';
+// // Constants from env
+// const STORAGE_BUCKET_NAME = Deno.env.get("STORAGE_BUCKET_NAME")!;
+// const STORAGE_ENDPOINT_URL = Deno.env.get("STORAGE_ENDPOINT_URL")!;
+// const STORAGE_REGION_NAME = Deno.env.get("STORAGE_REGION_NAME") ?? "us-east-1";
+// const STORAGE_ACCESS_KEY_ID = Deno.env.get("STORAGE_ACCESS_KEY_ID")!;
+// const STORAGE_SECRET_ACCESS_KEY = Deno.env.get("STORAGE_SECRET_ACCESS_KEY")!;
 
-// const AWS_REGION = Deno.env.get("AWS_REGION")!;
-// const AWS_ACCESS_KEY_ID = Deno.env.get("AWS_ACCESS_KEY_ID")!;
-// const AWS_SECRET_ACCESS_KEY = Deno.env.get("AWS_SECRET_ACCESS_KEY")!;
-// const BUCKET_NAME = Deno.env.get("AWS_BUCKET_NAME")!;
-// const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-// const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+// // S3 client setup
+// const s3 = new S3Client({
+//   endpoint: STORAGE_ENDPOINT_URL,
+//   forcePathStyle: true,
+//   region: STORAGE_REGION_NAME,
+//   credentials: {
+//     accessKeyId: STORAGE_ACCESS_KEY_ID,
+//     secretAccessKey: STORAGE_SECRET_ACCESS_KEY,
+//   },
+// });
 
-const STORAGE_ACCESS_KEY_ID = "DO8019AHP777T2ZNMG6Q"
-const STORAGE_SECRET_ACCESS_KEY = "VUO40UldmKJdWm7SnXtU+Dqwy6ZCTDCc7idMjMLqj/M"
-const STORAGE_ENDPOINT_URL = "https://test-experiments-1.nyc3.digitaloceanspaces.com"
-const STORAGE_REGION_NAME = "nyc3"
-const STORAGE_BUCKET_NAME = "test-experiments-1"
+// // Main request router
+// serve(async (req: Request) => {
+//   const url = new URL(req.url);
+
+//   if (req.method === "POST" && url.pathname === "/generate-upload-url") {
+//     const { filename } = await req.json();
+
+//     if (!filename) {
+//       return new Response(JSON.stringify({ error: "Missing filename" }), {
+//         status: 400,
+//       });
+//     }
+
+//     const command = new PutObjectCommand({
+//       Bucket: STORAGE_BUCKET_NAME,
+//       Key: filename,
+//       ContentType: "application/zip",
+//     });
+
+//     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 10 });
+
+//     return new Response(JSON.stringify({ url: signedUrl }), {
+//       headers: { "Content-Type": "application/json" },
+//     });
+//   }
+
+//   if (req.method === "POST" && url.pathname === "/generate-download-url") {
+//     const { filename } = await req.json();
+
+//     if (!filename) {
+//       return new Response(JSON.stringify({ error: "Missing filename" }), {
+//         status: 400,
+//       });
+//     }
+
+//     const command = new GetObjectCommand({
+//       Bucket: STORAGE_BUCKET_NAME,
+//       Key: filename,
+//     });
+
+//     const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 10 });
+
+//     return new Response(JSON.stringify({ url: signedUrl }), {
+//       headers: { "Content-Type": "application/json" },
+//     });
+//   }
+
+//   return new Response("Not found", { status: 404 });
+// });
+
+// import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { PutObjectCommand, S3Client } from 'npm:@aws-sdk/client-s3@3.264.0';
+import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.264.0';
+
+const STORAGE_BUCKET_NAME = Deno.env.get("STORAGE_BUCKET_NAME")!;
+const STORAGE_ENDPOINT_URL = Deno.env.get("STORAGE_ENDPOINT_URL")!;
+const STORAGE_REGION_NAME = Deno.env.get("STORAGE_REGION_NAME")!;
+const STORAGE_ACCESS_KEY_ID = Deno.env.get("STORAGE_ACCESS_KEY_ID")!;
+const STORAGE_SECRET_ACCESS_KEY = Deno.env.get("STORAGE_SECRET_ACCESS_KEY")!;
 
 const s3 = new S3Client({
-  endpoint: "https://nyc3.digitaloceanspaces.com", // or your region
-  forcePathStyle: true, // important for DO Spaces
+  endpoint: STORAGE_ENDPOINT_URL,
+  forcePathStyle: true,
+  region: STORAGE_REGION_NAME,
   credentials: {
-    accessKeyId: Deno.env.get("DO_SPACES_KEY")!,
-    secretAccessKey: Deno.env.get("DO_SPACES_SECRET")!,
+    accessKeyId: STORAGE_ACCESS_KEY_ID,
+    secretAccessKey: STORAGE_SECRET_ACCESS_KEY,
   },
 });
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
   const { filename } = await req.json();
 
+  if (!filename) {
+    return new Response(JSON.stringify({ error: "Missing filename" }), {
+      status: 400,
+    });
+  }
+
   const command = new PutObjectCommand({
-    Bucket: "your-space-name",
-    Key: `uploads/${filename}`,
+    Bucket: STORAGE_BUCKET_NAME,
+    Key: filename,
     ContentType: "application/zip",
   });
 
-  const url = await getSignedUrl(s3, command, {
-    expiresIn: 60 * 10, // 10 minutes
-  });
+  const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 10 });
 
-  return new Response(
-    JSON.stringify({ url }),
-    { headers: { "Content-Type": "application/json" } }
-  );
+  return new Response(JSON.stringify({ url: signedUrl }), {
+    headers: { "Content-Type": "application/json" },
+  });
 });

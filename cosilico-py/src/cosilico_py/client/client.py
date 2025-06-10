@@ -19,8 +19,15 @@ class CosilicoClient(object):
         self.config = get_config()
         self.cache_dir = self.config['cache_dir']
         self.supabase = create_client(self.config['api_url'], self.config['anon_key'])
-        self.bundle = None
-        self.boto3 = None
+        
+        self.s3 = boto3.client(
+            "s3",
+            aws_access_key_id=os.environ.get('STORAGE_ACCESS_KEY_ID'),
+            aws_secret_access_key=os.environ.get('STORAGE_SECRET_ACCESS_KEY'),
+            endpoint_url=os.environ.get('STORAGE_ENDPOINT_URL'),
+            region_name=os.environ.get('STORAGE_REGION_NAME')
+        )
+        self.bucket_name = os.environ.get('STORAGE_BUCKET_NAME')
 
     def _check_session(self):
         session = self.supabase.auth.get_session()

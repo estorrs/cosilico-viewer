@@ -67,7 +67,7 @@ class DirectoryEntity(BaseModel):
             'permission',
             self.assign_permission(self.permission)
         )
-        
+
 
 class Experiment(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)

@@ -166,7 +166,7 @@ def experiment_from_x10_xenium_cellranger(
         chunk_size = 10_000_000,
         use_disk = True,
     )
-    experiment.layer_ids.append(transcript_layer)
+    experiment.layer_ids.append(transcript_layer.id)
 
     # transcript metadata
     store = zarr.storage.ZipStore(transcript_layer.local_path, mode='r')

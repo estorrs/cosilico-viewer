@@ -5,11 +5,12 @@ import time
 from rich import print
 from rich.console import Console
 from supabase import create_client
-import boto3
 
 from cosilico_py.config import get_config
 from cosilico_py.preprocessing.platform_helpers.experiment import create_bundle_from_input
+from cosilico_py.storage import upload_object, download_object
 import cosilico_py.models as models
+
 
 STDERR = Console(stderr=True)
 
@@ -19,20 +20,11 @@ class CosilicoClient(object):
         self.config = get_config()
         self.cache_dir = self.config['cache_dir']
         self.supabase = create_client(self.config['api_url'], self.config['anon_key'])
-        
-        self.s3 = boto3.client(
-            "s3",
-            aws_access_key_id=os.environ.get('STORAGE_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.environ.get('STORAGE_SECRET_ACCESS_KEY'),
-            endpoint_url=os.environ.get('STORAGE_ENDPOINT_URL'),
-            region_name=os.environ.get('STORAGE_REGION_NAME')
-        )
-        self.bucket_name = os.environ.get('STORAGE_BUCKET_NAME')
 
     def _check_session(self):
         session = self.supabase.auth.get_session()
         if session is None:
-            STDERR.print('User must be signed in. To sign in, use [cyan]cosilico.sign_in_with_password[/cyan].')
+            STDERR.print('User must be signed in. To sign in, use [cyan]client.sign_in()[/cyan].')
             raise RuntimeError('User not signed in.')
 
         if session.expires_at <= time.time():
@@ -47,10 +39,10 @@ class CosilicoClient(object):
         """Sign in a user."""
         try:
             if email is None:
-                assert 'email' in self.config, f'Email not found in config. Either add to config or set email argument.'
+                assert 'email' in self.config, 'Email not found in config. Either add to config or set email argument.'
                 email = self.config['email']
             if password is None:
-                assert 'password' in self.config, f'Password not found in config. Either add to config or set password argument.'
+                assert 'password' in self.config, 'Password not found in config. Either add to config or set password argument.'
                 password = self.config['password']
 
             _ = self.supabase.auth.sign_in_with_password({
@@ -66,14 +58,20 @@ class CosilicoClient(object):
             self,
             experiment_input: Annotated[models.ExperimentInput, 'Input used to generate the experiment.']
         ) -> models.ExperimentUploadBundle:
+        self._check_session()
         return create_bundle_from_input(experiment_input)
     
     def upload_experiment(
             self,
+            bundle: Annotated[models.ExperimentUploadBundle, 'Experiment bundle to upload.'],
             upload_directory: Annotated[models.DirectoryEntity, 'Directory to upload experiment to.']
-        ):
-        pass
+        ) -> None:
+        self._check_session()
 
+        # upload objects to storage
+        objs = bundle.images + bundle.layers + bundle.layer_metadata
+        for obj in objs:
+            upload_object(obj.path, str(obj.local_path.absolute()), self.supabase)
 
 
         

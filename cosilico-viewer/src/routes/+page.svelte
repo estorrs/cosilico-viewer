@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
     import { Button } from "$lib/components/ui/button";
     import ZarrTileViewer from "$lib/ZarrTileViewer.svelte";
     import ViewerSidebar from "$lib/ViewerSidebar.svelte";
@@ -12,7 +12,7 @@
     import DoubleSlider from "$lib/widgets/DoubleSlider.svelte";
     import SingleSlider from "$lib/widgets/SingleSlider.svelte";
 	import ZoomPanel from "$lib/zooming/ZoomPanel.svelte";
-   </script>
+   </script> -->
 
 <!-- <SingleSlider
    value={5}
@@ -47,14 +47,26 @@
 
 <!-- <ContinuousOptions /> -->
  <!-- <ZoomPanel /> -->
-
+<!-- 
 <nav>
 	<a href="/">home</a>
 	<a href="/create-user">create user</a>
    <a href="/get-user">get user</a>
-</nav>
+</nav> -->
 <!-- 
 
  <div class='h-screen'>
     <ZarrTileViewer />
  </div> -->
+
+ <script>
+  let { data } = $props()
+  let { colors } = $derived(data)
+</script>
+
+<h1>Welcome to Supabase!</h1>
+<ul>
+  {#each colors as color}
+    <li>{color.name}</li>
+  {/each}
+</ul>

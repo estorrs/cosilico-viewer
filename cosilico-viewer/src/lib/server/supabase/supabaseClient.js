@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
-import { API_URL, SERVICE_ROLE_KEY } from '$env/static/private';
+import { PUBLIC_A, API_URL } from '$env/static/public';
 
 export const supabase = createClient(
   API_URL,
-  SERVICE_ROLE_KEY
+  ANON_KEY
 )

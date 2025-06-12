@@ -60,6 +60,7 @@ class CosilicoClient(object):
         except Exception as e:
             STDERR.print('[bold red]Sign-in attempt failed.[/bold red]')
             STDERR.print(e)
+            raise RuntimeError('Sign-in attempt failed.')
     
     def create_experiment(
             self,

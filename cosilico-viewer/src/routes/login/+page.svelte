@@ -1,4 +1,4 @@
-<script lang="ts">
+<!-- <script lang="ts">
 	import * as Alert from '$lib/components/ui/alert/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import * as Form from '$lib/components/ui/form/index.js';
@@ -42,7 +42,7 @@
 						<Input {...props} bind:value={$formData.email} />
 					{/snippet}
 				</Form.Control>
-				<!-- <Form.Description>This is your email.</Form.Description> -->
+				<Form.Description>This is your email.</Form.Description>
 				<Form.FieldErrors />
 			</Form.Field>
 			<Form.Field {form} name="password">
@@ -52,7 +52,7 @@
 						<Input {...props} bind:value={$formData.password} type="password" />
 					{/snippet}
 				</Form.Control>
-				<!-- <Form.Description>This is your password.</Form.Description> -->
+				<Form.Description>This is your password.</Form.Description>
 				<Form.FieldErrors />
 			</Form.Field>
 
@@ -74,4 +74,4 @@
 			{/if}
 		</form>
 	</Card.Content>
-</Card.Root>
+</Card.Root> -->

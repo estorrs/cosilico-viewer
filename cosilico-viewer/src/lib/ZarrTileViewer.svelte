@@ -35,6 +35,8 @@
 	import Camera from '@lucide/svelte/icons/camera';
 	import { apply } from 'ol/transform';
 
+	let { experimentObj } = $props();
+
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
 	let metadataChangeKey = $state(true);
@@ -44,79 +46,79 @@
 	let experiment = $state(null);
 	let mirrors = $state(null);
 
-	const experimentObj = {
-		id: 'alsdkfj',
-		name: 'Test Experiment',
-		platform: 'Xenium 5K',
-		platform_version: 'v5.1',
-		metadata: {
-			field_a: 'this is a field'
-		},
-		images: [
-			{
-				id: 'sldkfj',
-				name: 'Multiplex Image',
-				metadata: {}, // this would be ome metadata
-				view_settings: {}, // view settings eventually
-				path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
-			}
-		],
-		layers: [
-			{
-				id: 'sldfkjasa',
-				name: 'Cells',
-				is_grouped: false,
-				metadata: {}, // this would be just whatever metadata
-				view_settings: {},
-				path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
-				layer_metadatas: [
-					{
-						id: 'sadf',
-						name: 'Kmeans N=10',
-						type: 'categorical',
-						view_settings: {},
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip'
-					},
-					{
-						id: 'sdfsdf',
-						name: 'PCAs',
-						type: 'continuous',
-						view_settings: {},
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_pca10.zarr.zip'
-					},
-					{
-						id: 'ggfg',
-						name: 'Transcript Counts',
-						type: 'continuous',
-						view_settings: {},
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_transcriptcounts.zarr.zip'
-					}
-				]
-			},
-			{
-				id: 'sdf',
-				name: 'Transcripts',
-				is_grouped: true,
-				metadata: {}, // this would be just whatever metadata
-				path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
-				view_settings: {},
-				layer_metadatas: [
-					{
-						id: 'sdlfkj',
-						name: 'Counts',
-						type: 'continuous',
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip'
-					},
-					{
-						id: 'sdlsasfkj',
-						name: 'QV',
-						type: 'continuous',
-						path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
-					}
-				]
-			}
-		]
-	};
+	// const experimentObj = {
+	// 	id: 'alsdkfj',
+	// 	name: 'Test Experiment',
+	// 	platform: 'Xenium 5K',
+	// 	platform_version: 'v5.1',
+	// 	metadata: {
+	// 		field_a: 'this is a field'
+	// 	},
+	// 	images: [
+	// 		{
+	// 			id: 'sldkfj',
+	// 			name: 'Multiplex Image',
+	// 			metadata: {}, // this would be ome metadata
+	// 			view_settings: {}, // view settings eventually
+	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
+	// 		}
+	// 	],
+	// 	layers: [
+	// 		{
+	// 			id: 'sldfkjasa',
+	// 			name: 'Cells',
+	// 			is_grouped: false,
+	// 			metadata: {}, // this would be just whatever metadata
+	// 			view_settings: {},
+	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
+	// 			layer_metadatas: [
+	// 				{
+	// 					id: 'sadf',
+	// 					name: 'Kmeans N=10',
+	// 					type: 'categorical',
+	// 					view_settings: {},
+	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip'
+	// 				},
+	// 				{
+	// 					id: 'sdfsdf',
+	// 					name: 'PCAs',
+	// 					type: 'continuous',
+	// 					view_settings: {},
+	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_pca10.zarr.zip'
+	// 				},
+	// 				{
+	// 					id: 'ggfg',
+	// 					name: 'Transcript Counts',
+	// 					type: 'continuous',
+	// 					view_settings: {},
+	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_transcriptcounts.zarr.zip'
+	// 				}
+	// 			]
+	// 		},
+	// 		{
+	// 			id: 'sdf',
+	// 			name: 'Transcripts',
+	// 			is_grouped: true,
+	// 			metadata: {}, // this would be just whatever metadata
+	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
+	// 			view_settings: {},
+	// 			layer_metadatas: [
+	// 				{
+	// 					id: 'sdlfkj',
+	// 					name: 'Counts',
+	// 					type: 'continuous',
+	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip'
+	// 				},
+	// 				{
+	// 					id: 'sdlsasfkj',
+	// 					name: 'QV',
+	// 					type: 'continuous',
+	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
+	// 				}
+	// 			]
+	// 		}
+	// 	]
+	// };
 
 	class Experiment {
 		constructor(experimentObj) {

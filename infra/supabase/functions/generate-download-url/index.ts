@@ -39,7 +39,7 @@ Deno.serve(async (req: Request) => {
     Key: filename,
   });
 
-  const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 10 });
+  const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 60 * 24 });
 
   return new Response(JSON.stringify({ url: signedUrl }), {
     headers: { "Content-Type": "application/json" },

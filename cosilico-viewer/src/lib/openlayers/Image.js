@@ -48,6 +48,8 @@ export class Image {
     this.sizeZ = this.node.attrs.ome.images[0].pixels.size_z;
     this.upp = this.node.attrs.upp;
     this.unit = this.node.attrs.unit;
+    this.dtype = this.node.attrs.ome.images[0].pixels.type.value;
+    // this.dtypeMax = this.dtype == 'uint8' ? 255 : 65025;
     this.dtypeMax = 255;
     this.dtypeMin = 0;
     this.overviewLayer = null;

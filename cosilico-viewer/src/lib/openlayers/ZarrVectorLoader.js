@@ -74,7 +74,7 @@ export class GroupedZarrVectorLoader {
             extent: [0, 0, fullImageWidth, fullImageHeight] // Adjust based on full image size
         });
 
-        this.tileGrid.getResolutions
+        // this.tileGrid.getResolutions
     
         this.vectorTileSource = this.getVectorSource();
     }
@@ -169,7 +169,6 @@ export class GroupedZarrVectorLoader {
                         featureProjection: this.projection,
                         dataProjection: this.projection,
                     });
-
 
                     tile.setFeatures(features); // Manually set features
                 } else {

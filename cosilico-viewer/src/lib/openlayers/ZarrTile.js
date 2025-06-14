@@ -5,6 +5,42 @@ import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
 
 
+function uint16ToUint8(src) {
+  if (!(src instanceof Uint16Array)) {
+    throw new TypeError("Expected Uint16Array as input");
+  }
+
+  // 1. find min & max
+  let min = 0xffff;      // 65 535
+  let max = 0x0000;
+
+  for (let i = 0; i < src.length; i++) {
+    const v = src[i];
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+
+  // 2. allocate destination
+  const dst = new Uint8Array(src.length);
+
+  // 3. degenerate case: constant image ⇒ all zeros (same as Python path)
+  if (max === min) {
+    return dst;                     // already filled with 0 by default
+  }
+
+  // 4. linear scale and write to dst
+  const scale = 255 / (max - min);
+
+  for (let i = 0; i < src.length; i++) {
+    // (Typed-array assignment truncates the float → uint8, matching numpy’s cast)
+    dst[i] = (src[i] - min) * scale;
+  }
+
+  return dst;
+}
+
+
+
 class ZarrTile extends ImageTile {
     constructor(tileCoord, state, source, node, zoomArrs, tIndex, cIndex, zIndex) {
         super(tileCoord, state, null, null, () => { }); // ✅ Ensure all required arguments are passed
@@ -35,14 +71,14 @@ class ZarrTile extends ImageTile {
 
             const tileSlice = [x, y, this.source.tIndex, this.source.cIndex, this.source.zIndex, null, null];
             const tile = await get(arr, tileSlice);
-            console.log('tile is', tile);
-
 
             let tileData;
             if (tile.data instanceof Uint8Array) {
                 tileData = new Uint8ClampedArray(tile.data);
+            } else if (tile.data instanceof Uint16Array) {
+                tileData = uint16ToUint8(tile.data);
             } else {
-                // console.log(tile.data);
+                console.log(tile.data);
                 throw new Error("Unsupported dtype");
             }
 

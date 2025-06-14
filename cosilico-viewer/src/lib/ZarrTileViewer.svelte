@@ -172,7 +172,6 @@
 
 		async loadImages() {
 			for (const img of this.experimentObj.images) {
-				console.log('image', img);
 				const node = await initZarr({ getUrl: img.path, headUrl: img.path_presigned_head});
 				const obj = {
 					image: new Image(node, img.id, false, this.currentInsertionIdx),
@@ -325,7 +324,6 @@
 
 			mouseWheel.handleEvent = function (event) {
 				if (event.type === 'wheel') {
-					console.log('Mouse wheel zoom detected');
 					for (const [_, image] of experiment.images) {
 						image.image.updateResolutionInfo(map);
 					}

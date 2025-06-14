@@ -7,8 +7,6 @@ import { get, slice } from "@zarrita/indexing";
 import { DualURLRangeReader } from "$lib/DualURLRangeReader";
 
 export async function initZarr({ getUrl, headUrl }) {
-  console.log('calling initZarr, getUrl: ', getUrl);
-  console.log('calling initZarr, headUrl: ', headUrl);
   const reader = new DualURLRangeReader(getUrl, headUrl);
   const store  = new ZipFileStore(reader);   // <- no `.fromUrl()` now
   return await open(store);                  // returns the root node

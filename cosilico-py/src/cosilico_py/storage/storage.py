@@ -59,6 +59,6 @@ def download_object(
         },
     )
     body = json.loads(response.decode())
-    download_url = body['url']
+    download_url = body['getUrl']
 
     download_file_streaming(download_url, local_path)

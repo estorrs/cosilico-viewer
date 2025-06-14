@@ -2,7 +2,7 @@
 // import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 // import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-import { GetObjectCommand, S3Client } from 'npm:@aws-sdk/client-s3@3.264.0';
+import { GetObjectCommand, HeadObjectCommand, S3Client } from 'npm:@aws-sdk/client-s3@3.264.0';
 import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner@3.264.0';
 
 const STORAGE_BUCKET_NAME = Deno.env.get("STORAGE_BUCKET_NAME")!;
@@ -41,7 +41,14 @@ Deno.serve(async (req: Request) => {
 
   const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 60 * 24 });
 
-  return new Response(JSON.stringify({ url: signedUrl }), {
+
+  const headUrl = await getSignedUrl(
+    s3,
+    new HeadObjectCommand({ Bucket: STORAGE_BUCKET_NAME, Key: filename }),
+    { expiresIn: 60 * 60 * 24 }
+  );
+
+  return new Response(JSON.stringify({ getUrl: signedUrl, headUrl: headUrl }), {
     headers: { "Content-Type": "application/json" },
   });
 });

@@ -12,8 +12,9 @@ export async function populateExperiment(experiment, supabase) {
         const { data, error } = await supabase.functions.invoke('generate-download-url', {
             body: { filename: image.path }
         })
-        image.path = data.url;
-        console.log(data.url);
+        image.path = data.getUrl;
+        image.path_presigned_head = data.headUrl;
+        console.log(data.getUrl);
     }
 
     let experiment_layers = [];
@@ -27,7 +28,8 @@ export async function populateExperiment(experiment, supabase) {
             const { data, error } = await supabase.functions.invoke('generate-download-url', {
                 body: { filename: layer.path }
             })
-            layer.path = data.url;
+            layer.path = data.getUrl;
+            layer.path_presigned_head = data.headUrl;
         }
 
         experiment_layers = [...layers];
@@ -45,7 +47,8 @@ export async function populateExperiment(experiment, supabase) {
             const { data, error } = await supabase.functions.invoke('generate-download-url', {
                 body: { filename: lm.path }
             })
-            lm.path = data.url;
+            lm.path = data.getUrl;
+            lm.path_presigned_head = data.headUrl;
         }
 
         layer.layer_metadatas = layer_metadatas ?? [];

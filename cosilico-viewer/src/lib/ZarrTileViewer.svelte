@@ -172,7 +172,8 @@
 
 		async loadImages() {
 			for (const img of this.experimentObj.images) {
-				const node = await initZarr(img.path);
+				console.log('image', img);
+				const node = await initZarr({ getUrl: img.path, headUrl: img.path_presigned_head});
 				const obj = {
 					image: new Image(node, img.id, false, this.currentInsertionIdx),
 					viewSettings: img.view_settings
@@ -190,11 +191,13 @@
 		}
 
 		async loadGroupedLayer(gl) {
-			const node = await initZarr(gl.path);
+			// const node = await initZarr(gl.path);
+			const node = await initZarr({ getUrl: gl.path, headUrl: gl.path_presigned_head});
 
 			let featureMetaToNode = new globalThis.Map();
 			for (const mgl of gl.layer_metadatas) {
-				const metadataNode = await initZarr(mgl.path);
+				const metadataNode = await initZarr({ getUrl: mgl.path, headUrl: mgl.path_presigned_head});
+				// const metadataNode = await initZarr(mgl.path);
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
 			}
 
@@ -220,14 +223,16 @@
 		}
 
 		async loadLayer(l) {
-			const node = await initZarr(l.path);
+			// const node = await initZarr(l.path);
+			const node = await initZarr({ getUrl: l.path, headUrl: l.path_presigned_head});
 
 			const fv = await FeatureVector.create(node, l.id, this.baseImage, this.currentInsertionIdx);
 			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			let featureMetaToNode = new globalThis.Map();
 			for (const mgl of l.layer_metadatas) {
-				const metadataNode = await initZarr(mgl.path);
+				// const metadataNode = await initZarr(mgl.path);
+				const metadataNode = await initZarr({ getUrl: mgl.path, headUrl: mgl.path_presigned_head});
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
 			}
 

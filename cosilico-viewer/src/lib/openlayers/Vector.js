@@ -477,8 +477,10 @@ export class FeatureGroupVector {
         this.featureNames = featureNamesChunk.data;
 
         this.resToFeatureInfo = new globalThis.Map();
+        console.log('feature meta to node', this.featureMetaToNode);
 
-        const countNode = this.featureMetaToNode.get('count');
+        const countNode = this.featureMetaToNode.get('Count');
+        console.log('count node is', countNode);
         let arr = await open(countNode.resolve('/metadata/vmins_by_res'), { kind: "array" });
         let chunk = await get(arr, [null, null]);
         const rowToVmins = extractRows(chunk);

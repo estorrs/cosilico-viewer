@@ -35,6 +35,7 @@ class ZarrTile extends ImageTile {
 
             const tileSlice = [x, y, this.source.tIndex, this.source.cIndex, this.source.zIndex, null, null];
             const tile = await get(arr, tileSlice);
+            console.log('tile is', tile);
 
 
             let tileData;

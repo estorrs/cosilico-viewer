@@ -68,7 +68,7 @@
 {/snippet}
 
 <Popover.Root>
-	<Popover.Trigger {title}>
+	<Popover.Trigger {title} class='text-sm'>
 		{#if !includeSymbols}
 			<Button
 				style="background-color: {hex}"
@@ -84,16 +84,16 @@
 		{/if}
 	</Popover.Trigger>
 	<Popover.Content class='flex gap-2 flex-col'>
-		<Card.Root>
-			<Card.Header class='p-1'>
+		<Card.Root class="p-1 w-full gap-0">
+			<Card.Header class='p-1 pb-0'>
 				<Card.Title class='text-md'>Swatches</Card.Title>
 			</Card.Header>
-			<Card.Content class='p-1'>
+			<Card.Content class='p-1 pt-0'>
 				<div class="flex flex-wrap gap-1">
 					{#each swatchHexs as value}
 						<Button
 							style="background-color: {value}"
-							class="border border-gray-400 hover:ring-gray flex h-5 w-5 items-center justify-center rounded-full p-1 ring-offset-2 transition-all hover:ring-2"
+							class="border border-gray-400 hover:ring-gray-400 flex h-6 w-6 items-center justify-center rounded-full p-1 ring-offset-1 transition-all hover:ring-1"
 							onclick={() => onColorSelection(value)}
 						/>
 					{/each}
@@ -102,7 +102,7 @@
 							<Button
 								title="Add a new color swatch"
 								variant="outline"
-								class="border border-gray-400 hover:ring-gray flex h-5 w-5 items-center justify-center rounded-full p-1 ring-offset-2 transition-all hover:ring-2"
+								class="border border-gray-400 hover:ring-gray-400 flex h-6 w-6 items-center justify-center rounded-full p-1 ring-offset-1 transition-all hover:ring-1"
 							>
 								<Plus />
 							</Button>

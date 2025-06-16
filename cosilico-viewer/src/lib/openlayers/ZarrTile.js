@@ -1,6 +1,4 @@
-// @ts-nocheck
-
-import ImageTile from 'ol/ImageTile';
+import ImageTile from 'ol/ImageTile.js';
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
 

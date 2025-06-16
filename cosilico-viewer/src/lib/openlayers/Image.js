@@ -1,18 +1,17 @@
-// @ts-nocheck
 
-import ImageLayer from 'ol/layer/Image';
-import RasterSource from 'ol/source/Raster';
-import { Projection } from 'ol/proj';
+import ImageLayer from 'ol/layer/Image.js';
+import RasterSource from 'ol/source/Raster.js';
+import { Projection } from 'ol/proj.js';
 import OverviewMap from 'ol/control/OverviewMap.js';
 import { defaults as defaultControls } from 'ol/control/defaults.js';
-import View from "ol/View";
+import View from "ol/View.js";
 
 
-import ZarrTileSource from './ZarrTileSource';
-import { getClosestResolution } from './OpenlayersHelpers';
+import ZarrTileSource from './ZarrTileSource.js';
+import { getClosestResolution } from './OpenlayersHelpers.js';
 import { applyPseudocolorToPixel, minMaxRangePixelTransform, hexToInt, intToHex } from './PixelTransforms.js';
-import { generateColorMapping, defaultPalettes } from './ColorHelpers';
-import { getOmeChannelNames } from './OmeHelpers';
+import { generateColorMapping, defaultPalettes } from './ColorHelpers.js';
+import { getOmeChannelNames } from './OmeHelpers.js';
 
 const transformSourcePixels = function (pixels, data) {
   let values = [];

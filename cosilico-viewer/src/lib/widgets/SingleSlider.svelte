@@ -1,7 +1,7 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Slider } from '$lib/components/ui/slider';
+	import * as Card from '$lib/components/ui/card/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Slider } from '$lib/components/ui/slider/index.js';
 
     let {
 		value,
@@ -21,9 +21,9 @@
 </script>
 
 
-<Card.Root class="p-1 w-full">
-    <Card.Header class="p-1">
-        <Card.Title class="text-sm">{title}</Card.Title>
+<Card.Root class="p-1 w-full gap-0">
+    <Card.Header class="p-1 pb-0">
+        <Card.Title class="text-sm mb-0">{title}</Card.Title>
     </Card.Header>
     <Card.Content class="p-1 pt-0">
         <div class="flex w-full items-center gap-3">

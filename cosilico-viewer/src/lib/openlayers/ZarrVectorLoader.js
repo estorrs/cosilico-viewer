@@ -1,11 +1,9 @@
-// @ts-nocheck
-
-import VectorTile from 'ol/VectorTile';
-import VectorTileSource from 'ol/source/VectorTile';
+import VectorTile from 'ol/VectorTile.js';
+import VectorTileSource from 'ol/source/VectorTile.js';
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
 import GeoJSON from 'ol/format/GeoJSON.js';
-import TileGrid from 'ol/tilegrid/TileGrid';
+import TileGrid from 'ol/tilegrid/TileGrid.js';
 
  
 function extractVertices(data, shape, strides) {

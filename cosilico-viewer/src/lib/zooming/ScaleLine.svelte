@@ -1,6 +1,6 @@
 <script lang="ts">
 
-    import { getScaleBar } from '$lib/openlayers/OpenlayersHelpers';
+    import { getScaleBar } from '$lib/openlayers/OpenlayersHelpers.js';
 
     let {
 		zoom,

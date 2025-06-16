@@ -9,7 +9,7 @@
 	import { cn } from '$lib/utils.js';
 
 	import FieldOptions from './FieldOptions.svelte';
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers.js';
 	import PaletteSelector from './PaletteSelector.svelte';
 
 	let {

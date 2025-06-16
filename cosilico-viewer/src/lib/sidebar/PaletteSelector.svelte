@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers.js';
 
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';

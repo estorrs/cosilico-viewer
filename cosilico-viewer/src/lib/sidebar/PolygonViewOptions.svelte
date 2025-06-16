@@ -1,22 +1,14 @@
 <script lang="ts">
 
-	import * as Accordion from '$lib/components/ui/accordion';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card';
-	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Separator } from '$lib/components/ui/separator';
-	import { Slider } from '$lib/components/ui/slider';
+	import * as Card from "$lib/components/ui/card/index.js";
 	import * as Tabs from '$lib/components/ui/tabs/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import SwatchSelector from '$lib/components/ui/swatch-selector/SwatchSelector.svelte';
-	import { Switch } from '$lib/components/ui/switch/index.js';
+	import SingleSlider from '$lib/widgets/SingleSlider.svelte';
 
 	import Waypoints from '@lucide/svelte/icons/waypoints';
 	import * as Sheet from '$lib/components/ui/transparent-sheet/index.js';
-	import { apply } from 'ol/transform';
 
 	let {
 		view,
@@ -32,47 +24,11 @@
 		maxStrokeWidth = 4
 	} = $props();
 
-	// let applyDarken = $state(false);
-
-	// let view = $state({
-	// 	fillOpacity: 1.0,
-	// 	strokeOpacity: 1.0,
-	// 	strokeWidth: 1.0,
-	//  strokeColor: '#aaaaaa'
-	// })
-	// console.log('view is', $state.snapshot(view));
-
 	let swatchHexs = $state([view.strokeColor]);
-
-	function fillOpacitySliderGetValue() {
-		return [view.fillOpacity];
-	}
-
-	function fillOpacitySliderSetValue(v) {
-		v = Number(v[0]);
-		onFillOpacityChange(v);
-	}
-
-	function fillOpacityInputGetValue() {
-		return view.fillOpacity;
-	}
 
 	function fillOpacityInputSetValue(v) {
 		v = Number(v);
 		onFillOpacityChange(v);
-	}
-
-	function strokeOpacitySliderGetValue() {
-		return [view.strokeOpacity];
-	}
-
-	function strokeOpacitySliderSetValue(v) {
-		v = Number(v[0]);
-		onStrokeOpacityChange(v);
-	}
-
-	function strokeOpacityInputGetValue() {
-		return view.strokeOpacity;
 	}
 
 	function strokeOpacityInputSetValue(v) {
@@ -80,31 +36,9 @@
 		onStrokeOpacityChange(v);
 	}
 
-	function strokeWidthSliderGetValue() {
-		return [view.strokeWidth];
-	}
-
-	function strokeWidthSliderSetValue(v) {
-		v = Number(v[0]);
-		onStrokeWidthChange(v);
-	}
-
-	function strokeWidthInputGetValue() {
-		return view.strokeWidth;
-	}
-
 	function strokeWidthInputSetValue(v) {
 		v = Number(v);
 		onStrokeWidthChange(v);
-	}
-
-	function strokeDarknessSliderGetValue() {
-		return [view.strokeDarkness];
-	}
-
-	function strokeDarknessSliderSetValue(v) {
-		v = Number(v[0]);
-		onBorderColoring(v);
 	}
 
 	function strokeDarknessInputSetValue(v) {
@@ -137,34 +71,21 @@
 			<div class="w-full">
 				<div class="flex flex-col items-center gap-0 w-full">
 					<p>Fill</p>
-					<Card.Root class="p-1 w-full">
-						<Card.Header class="p-1">
-							<Card.Title class="text-sm">Fill opacity</Card.Title>
-						</Card.Header>
-						<Card.Content class="p-1 pt-0">
-							<div class="flex w-full items-center gap-3">
-								<Slider
-									bind:value={
-										() => fillOpacitySliderGetValue(), (v) => fillOpacitySliderSetValue(v)
-									}
-									min={0}
-									max={1.0}
-									step={0.01}
-								/>
-								<Input
-									type="number"
-									step=".01"
-									value={view.fillOpacity}
-									onchange={(e) => fillOpacityInputSetValue(e.target.value)}
-									class="w-[70px] py-1 text-left"
-								/>
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<SingleSlider 
+						value={view.fillOpacity}
+						vMin={0}
+						vMax={1.0}
+						title='Fill opacity'
+						onValueChange = {(v) => fillOpacityInputSetValue(v)}
+						step={0.01}
+						location='left'
+						orientation='horizontal'
+					    />
+					
 					<p class="pt-2">Stroke</p>
-					<Card.Root class="p-1 w-full">
+					<Card.Root class="p-1 w-full gap-0">
 						<Card.Header class="p-1">
-							<Card.Title class="text-sm">Border color style</Card.Title>
+							<Card.Title class="text-sm mb-0">Border color style</Card.Title>
 						</Card.Header>
 						<Card.Content class="p-1 pt-0">
 							<Tabs.Root value={view.borderType} class="w-full" onValueChange={(value) => onBorderTypeChange(value)}>
@@ -185,132 +106,41 @@
 									</div>
 								</Tabs.Content>
 								<Tabs.Content value="field">
-									<p>Border brightness</p>
-									<div class="flex w-full items-center gap-3">
-										<Slider
-											bind:value={
-												() => strokeDarknessSliderGetValue(),
-												(v) => strokeDarknessSliderSetValue(v)
-											}
-											min={0}
-											max={1.0}
-											step={0.01}
+									<SingleSlider 
+										value={view.strokeDarkness}
+										vMin={0}
+										vMax={1.0}
+										title='Border brightness'
+										onValueChange = {(v) => strokeDarknessInputSetValue(v)}
+										step={0.01}
+										location='left'
+										orientation='horizontal'
 										/>
-										<Input
-											type="number"
-											step=".01"
-											value={view.strokeDarkness}
-											onchange={(e) => strokeDarknessInputSetValue(e.target.value)}
-											class="w-[70px] py-1 text-left"
-										/>
-									</div>
 								</Tabs.Content>
 							</Tabs.Root>
 							
 						</Card.Content>
 					</Card.Root>
-					<!-- <div class="flex w-full items-center gap-3"></div>
-					<p>Border stroke as color</p>
-					<Switch
-						id="apply-darken"
-						checked={applyDarken}
-						onCheckedChange={(v) => applyDarkenCheck(v)}
-					/>
-				</div>
-				{#key applyDarken}
-					{#if applyDarken}
-						{console.log('html darkness value is', view.strokeDarkness)}
-						<Card.Root class="p-1 w-full">
-							<Card.Header class="p-1">
-								<Card.Title class="text-sm">Color shade</Card.Title>
-							</Card.Header>
-							<Card.Content class="p-1 pt-0">
-								<div class="flex w-full items-center gap-3">
-									<Slider
-										bind:value={
-											() => strokeDarknessSliderGetValue(), (v) => strokeDarknessSliderSetValue(v)
-										}
-										min={0}
-										max={1.0}
-										step={0.01}
-									/>
-									<Input
-										type="number"
-										step=".01"
-										value={view.strokeDarkness}
-										onchange={(e) => strokeDarknessInputSetValue(e.target.value)}
-										class="w-[70px] py-1 text-left"
-									/>
-								</div>
-							</Card.Content>
-						</Card.Root>
-					{/if}
-				{/key} -->
-					<!-- <Card.Root class="p-1 w-full">
-						<Card.Header class="p-1">
-							<Card.Title class="text-sm">Stroke color</Card.Title>
-						</Card.Header>
-						<Card.Content class="p-1 pt-0">
-							<div class="flex items-center gap-2 pt-1">
-								<SwatchSelector
-									title="Select stroke color"
-									hex={view.strokeColor}
-									{swatchHexs}
-									includeSymbols={false}
-									onColorSelection={(value) => onStrokeColorChange(value)}
-								/>
-								<p>Set stroke color</p>
-							</div>
-						</Card.Content>
-					</Card.Root> -->
-					<Card.Root class="p-1 w-full">
-						<Card.Header class="p-1">
-							<Card.Title class="text-sm">Stroke opacity</Card.Title>
-						</Card.Header>
-						<Card.Content class="p-1 pt-0">
-							<div class="flex w-full items-center gap-3">
-								<Slider
-									bind:value={
-										() => strokeOpacitySliderGetValue(), (v) => strokeOpacitySliderSetValue(v)
-									}
-									min={0}
-									max={1.0}
-									step={0.01}
-								/>
-								<Input
-									type="number"
-									step=".01"
-									value={view.strokeOpacity}
-									onchange={(e) => strokeOpacityInputSetValue(e.target.value)}
-									class="w-[70px] py-1 text-left"
-								/>
-							</div>
-						</Card.Content>
-					</Card.Root>
-					<Card.Root class="p-1 w-full">
-						<Card.Header class="p-1">
-							<Card.Title class="text-sm">Stroke width</Card.Title>
-						</Card.Header>
-						<Card.Content class="p-1 pt-0">
-							<div class="flex w-full items-center gap-3">
-								<Slider
-									bind:value={
-										() => strokeWidthSliderGetValue(), (v) => strokeWidthSliderSetValue(v)
-									}
-									min={minStrokeWidth}
-									max={maxStrokeWidth}
-									step={0.01}
-								/>
-								<Input
-									type="number"
-									step=".01"
-									value={view.strokeWidth}
-									onchange={(e) => strokeWidthInputSetValue(e.target.value)}
-									class="w-[70px] py-1 text-left"
-								/>
-							</div>
-						</Card.Content>
-					</Card.Root>
+					<SingleSlider 
+						value={view.strokeOpacity}
+						vMin={0}
+						vMax={1.0}
+						title='Stroke opacity'
+						onValueChange = {(v) => strokeOpacityInputSetValue(v)}
+						step={0.01}
+						location='left'
+						orientation='horizontal'
+					    />
+					<SingleSlider 
+						value={view.strokeWidth}
+						vMin={minStrokeWidth}
+						vMax={maxStrokeWidth}
+						title='Stroke width'
+						onValueChange = {(v) => strokeWidthInputSetValue(v)}
+						step={0.01}
+						location='left'
+						orientation='horizontal'
+					    />
 				</div>
 			</div></Sheet.Content
 		>

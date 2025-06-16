@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types'
+import type { PageServerLoad } from './$types.js'
 
-import { populateExperiment } from '$lib/server/supabase/experiment';
+import { populateExperiment } from '$lib/server/supabase/experiment.js';
 
 export const load: PageServerLoad = async ({ depends, params, locals: { supabase } }) => {
   const { experiment_id, view_settings_id } = params;

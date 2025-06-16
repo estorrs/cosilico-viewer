@@ -14,7 +14,7 @@
 	import { computeCommandScore } from 'bits-ui';
 	import { cn } from '$lib/utils.js';
 
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers.js';
 	import SwatchSelector from '$lib/components/ui/swatch-selector/SwatchSelector.svelte';
 	import ContinuousOptions from './ContinuousOptions.svelte';
 

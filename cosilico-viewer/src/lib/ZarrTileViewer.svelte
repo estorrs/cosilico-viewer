@@ -1,7 +1,7 @@
 <script>
 	import { onMount } from 'svelte';
-	import Map from 'ol/Map';
-	import View from 'ol/View';
+	import Map from 'ol/Map.js';
+	import View from 'ol/View.js';
 	import { SvelteMap } from 'svelte/reactivity';
 	import OverviewMap from 'ol/control/OverviewMap.js';
 	import { defaults as defaultControls } from 'ol/control/defaults.js';
@@ -9,14 +9,12 @@
 	import PinchZoom from 'ol/interaction/PinchZoom.js';
 	import DoubleClickZoom from 'ol/interaction/DoubleClickZoom.js';
 
-	import * as Accordion from '$lib/components/ui/accordion';
+	import * as Accordion from "$lib/components/ui/accordion/index.js";
 	import Button from './components/ui/button/button.svelte';
-	import * as Card from '$lib/components/ui/card';
+	import * as Card from "$lib/components/ui/card/index.js";
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-	import { Label } from '$lib/components/ui/label/index.js';
-	import { Input } from '$lib/components/ui/input';
-	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
-	import { Slider } from '$lib/components/ui/slider';
+	import { Input } from './components/ui/input/index.js';
+	import { Slider } from '$lib/components/ui/slider/index.js';
 	import { Circle2 } from 'svelte-loading-spinners';
 	import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
 	import PointViewOptions from './sidebar/PointViewOptions.svelte';
@@ -24,17 +22,15 @@
 	import FilterOptions from './sidebar/FilterOptions.svelte';
 
 	import LayerOptions from './sidebar/LayerOptions.svelte';
-	import { initZarr } from './openlayers/ZarrHelpers';
-	import { Image } from './openlayers/Image';
-	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
+	import { initZarr } from './openlayers/ZarrHelpers.js';
+	import { Image } from './openlayers/Image.js';
+	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector.js';
 	import ZoomPanel from './zooming/ZoomPanel.svelte';
-	import { captureScreen } from './openlayers/OpenlayersHelpers';
+	import { captureScreen } from './openlayers/OpenlayersHelpers.js';
 	import * as Alert from "$lib/components/ui/alert/index.js";
 
 	import Info from '@lucide/svelte/icons/info';
 	import Camera from '@lucide/svelte/icons/camera';
-	import { apply } from 'ol/transform';
-
 
 
 	let { experimentObj } = $props();

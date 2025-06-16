@@ -1,10 +1,9 @@
-// @ts-nocheck
 
 import { ZipFileStore } from "@zarrita/storage";
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
 
-import { DualURLRangeReader } from "$lib/DualURLRangeReader";
+import { DualURLRangeReader } from "$lib/DualURLRangeReader.js";
 
 export async function initZarr({ getUrl, headUrl }) {
   const reader = new DualURLRangeReader(getUrl, headUrl);

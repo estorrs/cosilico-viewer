@@ -2,7 +2,7 @@
   import { invalidate } from '$app/navigation'
   import type { EventHandler } from 'svelte/elements'
 
-  import type { PageData } from './$types'
+  import type { PageData } from './$types.js'
 
   let { data } = $props()
   let { notes, supabase, user } = $derived(data)

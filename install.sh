@@ -6,5 +6,7 @@ npx shadcn-svelte@latest add button // add button for instance
 npm install ol
 npm install svelte-awesome-color-picker
 npm install @supabase/supabase-js
+npm install @supabase/ssr
+npm install svelte-loading-spinners
 
 npm run build

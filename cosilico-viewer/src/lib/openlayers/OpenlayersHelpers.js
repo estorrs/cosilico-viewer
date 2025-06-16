@@ -1,4 +1,4 @@
-import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers.js';
 
 
 function parseNumber(value, digits=3) {

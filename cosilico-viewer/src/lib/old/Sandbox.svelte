@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Addable from './widgets/SearchAddable.svelte';
+	import Addable from '../widgets/SearchAddable.svelte';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import { Button } from '$lib/components/ui/button/index.js';
 

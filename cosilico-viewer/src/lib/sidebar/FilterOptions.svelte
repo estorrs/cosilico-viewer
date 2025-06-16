@@ -4,8 +4,8 @@
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 	import SlidersHorizontal from '@lucide/svelte/icons/sliders-horizontal';
+	import Cone from '@lucide/svelte/icons/cone';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import Funnel from '@lucide/svelte/icons/funnel';
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
 	import * as Sheet from '$lib/components/ui/transparent-sheet/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
@@ -193,7 +193,7 @@
 		<Tooltip.Provider>
 			<Tooltip.Root>
 				<Tooltip.Trigger class={buttonVariants({ variant: 'outline' })}>
-					<Funnel />
+					<Cone />
 				</Tooltip.Trigger>
 				<Tooltip.Content>
 					<p>Filters</p>

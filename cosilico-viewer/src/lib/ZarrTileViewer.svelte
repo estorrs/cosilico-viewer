@@ -35,6 +35,8 @@
 	import Camera from '@lucide/svelte/icons/camera';
 	import { apply } from 'ol/transform';
 
+
+
 	let { experimentObj } = $props();
 
 	let reloadImageInfoKey = $state(true);
@@ -456,6 +458,7 @@
 	}
 
 	onMount(async () => {
+		
 		experiment = await Experiment.create(experimentObj);
 
 		createMap(
@@ -482,9 +485,12 @@
 
 		initializeMirrors();
 
+		
+
 		reloadImageInfoKey = !reloadImageInfoKey;
 		reloadLayerInfoKey = !reloadLayerInfoKey;
 		mapIsLoading = false;
+
 	});
 
 	async function toggleLayer(vector, value) {

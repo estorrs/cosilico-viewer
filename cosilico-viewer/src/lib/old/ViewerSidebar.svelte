@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
     import * as Popover from "$lib/components/ui/popover/index.js";
     import { Slider } from "$lib/components/ui/slider";
-    import SwatchSelector from './components/ui/swatch-selector/SwatchSelector.svelte';
+    import SwatchSelector from '../components/ui/swatch-selector/SwatchSelector.svelte';
 
 
 	// let { experiment } = $props();

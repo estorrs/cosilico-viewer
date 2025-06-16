@@ -11,9 +11,9 @@
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 
-	import { initZarr } from './openlayers/ZarrHelpers';
-	import { Image } from './openlayers/Image';
-	import { FeatureGroupVector, FeatureVector } from './openlayers/Vector';
+	import { initZarr } from '../openlayers/ZarrHelpers';
+	import { Image } from '../openlayers/Image';
+	import { FeatureGroupVector, FeatureVector } from '../openlayers/Vector';
 	import Check from 'lucide-svelte/icons/check';
 
 	let reloadImageInfoKey = $state(true);

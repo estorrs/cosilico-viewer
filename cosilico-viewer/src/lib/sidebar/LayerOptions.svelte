@@ -1,5 +1,4 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card/index.js';
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import { tick } from 'svelte';
@@ -130,6 +129,7 @@
 				<Button
 					variant="outline"
 					class="w-[200px] justify-between"
+					style="width:200px"
 					{...props}
 					role="combobox"
 					aria-expanded={open}

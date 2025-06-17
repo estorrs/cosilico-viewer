@@ -52,14 +52,12 @@
 			<Button
 				variant="outline"
 				class="w-[200px] justify-between"
+				style="width:200px"
 				{...props}
 				role="combobox"
 				aria-expanded={open}
 			    >
-                {console.log('rendering palette button with', value)}
 				{@render paletteView(value, palettes[value])}
-				<!-- {selectedValue || 'Select a palette...'} -->
-
 				<ChevronsUpDown class="opacity-50" />
 			</Button>
 		{/snippet}

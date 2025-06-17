@@ -125,7 +125,7 @@
 						step={vStepSize}
 						/>
 					<!-- alts here -->
-					<Card.Root class="p-1 w-full">
+					<Card.Root class="p-1 w-full gap-0">
 						<Card.Header class="p-1">
 							<Card.Title class="text-sm">Set scale center</Card.Title>
 						</Card.Header>

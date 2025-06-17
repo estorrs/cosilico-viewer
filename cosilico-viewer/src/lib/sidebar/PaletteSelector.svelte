@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers.js';
 
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
@@ -52,14 +52,12 @@
 			<Button
 				variant="outline"
 				class="w-[200px] justify-between"
+				style="width:200px"
 				{...props}
 				role="combobox"
 				aria-expanded={open}
 			    >
-                {console.log('rendering palette button with', value)}
 				{@render paletteView(value, palettes[value])}
-				<!-- {selectedValue || 'Select a palette...'} -->
-
 				<ChevronsUpDown class="opacity-50" />
 			</Button>
 		{/snippet}

@@ -1,6 +1,5 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
-	import Check from '@lucide/svelte/icons/check';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
@@ -12,9 +11,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { ScrollArea } from '$lib/components/ui/scroll-area/index.js';
 	import { computeCommandScore } from 'bits-ui';
-	import { cn } from '$lib/utils.js';
 
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
 	import SwatchSelector from '$lib/components/ui/swatch-selector/SwatchSelector.svelte';
 	import ContinuousOptions from './ContinuousOptions.svelte';
 
@@ -289,6 +286,7 @@
 			<Button
 				variant="outline"
 				class="w-[200px] justify-between"
+				style="width:200px"
 				{...props}
 				role="combobox"
 				aria-expanded={open}
@@ -321,7 +319,7 @@
 	</Popover.Content>
 </Popover.Root>
 {#key rerenderActive}
-	<Card.Root>
+	<Card.Root class='p-1 w-full gap-0'>
 		<Card.Header class="p-1">
 			<Card.Title class="text-md">Active Fields</Card.Title>
 		</Card.Header>

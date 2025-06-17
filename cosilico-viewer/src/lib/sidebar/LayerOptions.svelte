@@ -1,5 +1,4 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card/index.js';
 	import Check from '@lucide/svelte/icons/check';
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import { tick } from 'svelte';
@@ -9,7 +8,7 @@
 	import { cn } from '$lib/utils.js';
 
 	import FieldOptions from './FieldOptions.svelte';
-	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers';
+	import { continousPalettes, defaultPalettes } from '$lib/openlayers/ColorHelpers.js';
 	import PaletteSelector from './PaletteSelector.svelte';
 
 	let {
@@ -130,6 +129,7 @@
 				<Button
 					variant="outline"
 					class="w-[200px] justify-between"
+					style="width:200px"
 					{...props}
 					role="combobox"
 					aria-expanded={open}

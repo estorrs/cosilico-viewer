@@ -1,6 +1,5 @@
-// @ts-nocheck
 
-import { Circle, RegularShape, Fill, Stroke, Icon } from "ol/style";
+import { Circle, RegularShape, Fill, Stroke, Icon } from "ol/style.js";
 
 /**
  * Generate an OpenLayers shape based on the input parameters.

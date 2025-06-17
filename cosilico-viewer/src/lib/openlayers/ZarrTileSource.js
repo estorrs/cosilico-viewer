@@ -1,14 +1,12 @@
-// @ts-nocheck
-
-import TileImage from 'ol/source/TileImage';
-import DataTileSource from 'ol/source/DataTile';
-import TileGrid from 'ol/tilegrid/TileGrid';
+import TileImage from 'ol/source/TileImage.js';
+import DataTileSource from 'ol/source/DataTile.js';
+import TileGrid from 'ol/tilegrid/TileGrid.js';
 // import * as zarr from 'zarr';
 import { ZipFileStore } from "@zarrita/storage";
 import { open } from "@zarrita/core";
 
 
-import { ZarrTile } from './ZarrTile';
+import { ZarrTile } from './ZarrTile.js';
 
 
 class ZarrTileSource extends TileImage {

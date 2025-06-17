@@ -1,4 +1,3 @@
-// @ts-nocheck
 
 export function getOmeChannelNames(ome) {
     const omeChannels = ome.images[0].pixels.channels;

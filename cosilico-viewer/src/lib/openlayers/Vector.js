@@ -1,20 +1,19 @@
 
 import { open } from "@zarrita/core";
 import { get, slice } from "@zarrita/indexing";
-import { Projection } from 'ol/proj';
-import VectorTileLayer from 'ol/layer/VectorTile';
-import { GeometryCollection } from "ol/geom";
+import { Projection } from 'ol/proj.js';
+import VectorTileLayer from 'ol/layer/VectorTile.js';
+import { GeometryCollection } from "ol/geom.js";
 import { SvelteMap } from "svelte/reactivity";
-import { Style, Fill, Stroke } from "ol/style";
+import { Style, Fill, Stroke } from "ol/style.js";
 
 
-import { GroupedZarrVectorLoader, ZarrVectorLoader } from './ZarrVectorLoader';
-import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba, adjustHexLightness } from './ColorHelpers';
-import { generateShape } from "./ShapeHelpers";
-import { extractRows } from "./ZarrHelpers";
-import { getClosestResolution } from "./OpenlayersHelpers";
-import { scaleFromCenter } from "ol/extent";
-import { render } from "svelte/server";
+import { GroupedZarrVectorLoader, ZarrVectorLoader } from './ZarrVectorLoader.js';
+import { generateColorMapping, defaultPalettes, valueToColor, hexToRgba, adjustHexLightness } from './ColorHelpers.js';
+import { generateShape } from "./ShapeHelpers.js";
+import { extractRows } from "./ZarrHelpers.js";
+import { getClosestResolution } from "./OpenlayersHelpers.js";
+
 
 
 // function getVisibleFeatures(map, vectorTileSource) {

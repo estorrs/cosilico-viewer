@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { Button, buttonVariants } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card';
+	import * as Card from "$lib/components/ui/card/index.js";
 
-	import { Input } from '$lib/components/ui/input';
-	import { Slider } from '$lib/components/ui/slider';
-	import * as Popover from '$lib/components/ui/popover/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Slider } from '$lib/components/ui/slider/index.js';
 	import * as Tooltip from '$lib/components/ui/tooltip/index.js';
 	import { Switch } from '$lib/components/ui/switch/index.js';
 	import * as Sheet from '$lib/components/ui/transparent-sheet/index.js';
+	import DoubleSlider from '$lib/widgets/DoubleSlider.svelte';
 
 	import EllipsisVertical from '@lucide/svelte/icons/ellipsis-vertical';
 
@@ -114,37 +114,18 @@
 			<div>
 				<div class="flex flex-col items-center gap-0">
 					<p>Scale values</p>
-					<Card.Root class="p-1 w-full">
-						<Card.Header class="p-1">
-							<Card.Title class="text-sm">Scale Min/Max</Card.Title>
-						</Card.Header>
-						<Card.Content class="p-1 pt-0">
-							<div class="flex w-full items-center gap-3">
-								<Input
-									type="number"
-									value={vMin}
-									step={vStepSize}
-									onchange={(e) => vMinInputSetValue(e.target.value)}
-									class="w-[70px] py-1 text-left"
-								/>
-								<Slider
-									bind:value={() => vSliderGetValues(), (vs) => vSliderSetValues(vs)}
-									min={absoluteVMin}
-									max={absoluteVMax}
-									step={vStepSize}
-									class="flex-1"
-								/>
-								<Input
-									type="number"
-									value={vMax}
-									step={vStepSize}
-									onchange={(e) => vMaxInputSetValue(e.target.value)}
-									class="w-[70px] py-1 text-left"
-								/>
-							</div></Card.Content
-						>
-					</Card.Root>
-					<Card.Root class="p-1 w-full">
+					<DoubleSlider 
+						minValue={vMin}
+						maxValue={vMax}
+						vMin={absoluteVMin}
+						vMax={absoluteVMax}
+						title='Scale Min/Max'
+						onMinValueChange = {(v) => vMinInputSetValue(v)}
+						onMaxValueChange = {(v) => vMaxInputSetValue(v)}
+						step={vStepSize}
+						/>
+					<!-- alts here -->
+					<Card.Root class="p-1 w-full gap-0">
 						<Card.Header class="p-1">
 							<Card.Title class="text-sm">Set scale center</Card.Title>
 						</Card.Header>

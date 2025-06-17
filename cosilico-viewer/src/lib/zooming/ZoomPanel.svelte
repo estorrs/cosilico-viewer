@@ -1,9 +1,6 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Slider } from '$lib/components/ui/slider';
-    // import { Slider } from 'bits-ui';
-	import { Toggle } from '$lib/components/ui/toggle';
+	import { Input } from '$lib/components/ui/input/index.js';
+	import { Toggle } from '$lib/components/ui/toggle/index.js';
 	import Lock from '@lucide/svelte/icons/lock';
 
 	import ScaleLine from './ScaleLine.svelte';

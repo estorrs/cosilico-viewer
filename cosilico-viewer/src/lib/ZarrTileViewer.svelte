@@ -752,7 +752,9 @@
 										</Accordion.Trigger>
 									</div>
 									<Accordion.Content class="ml-3">
-										<!-- {#if !obj.image.isVisible}
+										{#if !mirrors
+											.get("imageVisabilityInfo")
+											.get(obj.image.imageId)}
 											<Alert.Root>
 												<Info class="size-4" />
 												<Alert.Title>Info!</Alert.Title>
@@ -761,7 +763,7 @@
 													view.</Alert.Description
 												>
 											</Alert.Root>
-										{/if} -->
+										{/if}
 										<Accordion.Root>
 											{#each obj.image.channelNames as channelName}
 												<Accordion.Item
@@ -978,6 +980,16 @@
 										</Accordion.Trigger>
 									</div>
 									<Accordion.Content class="ml-3">
+										{#if !mirrors.get("layerVisabilityInfo").get(obj.vector.vectorId)}
+											<Alert.Root>
+												<Info class="size-4" />
+												<Alert.Title>Info!</Alert.Title>
+												<Alert.Description
+													>Layer is hidden. Unhide to
+													view.</Alert.Description
+												>
+											</Alert.Root>
+										{/if}
 										{#key metadataChangeKey}
 											<div
 												class="flex w-full items-center gap-3"

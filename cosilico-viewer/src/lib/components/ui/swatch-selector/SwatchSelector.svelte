@@ -72,13 +72,13 @@
 		{#if !includeSymbols}
 			<Button
 				style="background-color: {hex}"
-				class="border border-gray-400 hover:ring-gray flex h-5 w-5 items-center justify-center rounded-full p-0 ring-offset-2 transition-all hover:ring-2"
+				class="border border-gray-400 hover:ring-gray-400 flex h-6 w-6 items-center justify-center rounded-full p-1 ring-offset-1 transition-all hover:ring-1"
 			></Button>
 		{/if}
 		{#if includeSymbols}
 		<Button
 				style="background-color: white"
-				class="hover:ring-gray flex h-5 w-5 items-center justify-center p-0 ring-offset-0 transition-all hover:ring-2">
+				class="hover:ring-gray-400 flex h-6 w-6 items-center justify-center p-0 ring-offset-0 transition-all hover:ring-2">
 				{@render icon(currentShape)}
 			</Button>
 		{/if}

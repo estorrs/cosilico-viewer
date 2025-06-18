@@ -9,70 +9,17 @@
   import MapIcon from "@lucide/svelte/icons/map";
   import Settings2Icon from "@lucide/svelte/icons/settings-2";
   import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal";
+  import KeyRound from "@lucide/svelte/icons/key-round";
+  import Folder from "@lucide/svelte/icons/folder";
+  import Microscope from "@lucide/svelte/icons/microscope";
 
   // This is sample data.
   const data = {
-    user: {
-      name: "shadcn",
-      email: "m@example.com",
-      avatar: "/avatars/shadcn.jpg",
-    },
-    teams: [
-      {
-        name: "Acme Inc",
-        logo: GalleryVerticalEndIcon,
-        plan: "Enterprise",
-      },
-      {
-        name: "Acme Corp.",
-        logo: AudioWaveformIcon,
-        plan: "Startup",
-      },
-      {
-        name: "Evil Corp.",
-        logo: CommandIcon,
-        plan: "Free",
-      },
-    ],
     navMain: [
       {
-        title: "Playground",
+        title: "Experiments",
         url: "#",
-        icon: SquareTerminalIcon,
-        isActive: true,
-        items: [
-          {
-            title: "History",
-            url: "#",
-          },
-          {
-            title: "Starred",
-            url: "#",
-          },
-          {
-            title: "Settings",
-            url: "#",
-          },
-        ],
-      },
-      {
-        title: "Models",
-        url: "#",
-        icon: BotIcon,
-        items: [
-          {
-            title: "Genesis",
-            url: "#",
-          },
-          {
-            title: "Explorer",
-            url: "#",
-          },
-          {
-            title: "Quantum",
-            url: "#",
-          },
-        ],
+        icon: Microscope,
       },
       {
         title: "Documentation",
@@ -103,11 +50,22 @@
         icon: Settings2Icon,
         items: [
           {
-            title: "General",
+            title: "User",
+            url: "#",
+          }
+        ],
+      },
+      {
+        title: "Admin",
+        url: "#",
+        icon: KeyRound,
+        items: [
+          {
+            title: "User Management",
             url: "#",
           },
           {
-            title: "Team",
+            title: "Stats",
             url: "#",
           },
           {
@@ -121,21 +79,11 @@
         ],
       },
     ],
-    projects: [
+    directories: [
       {
-        name: "Design Engineering",
+        name: "Example Directory",
         url: "#",
-        icon: FrameIcon,
-      },
-      {
-        name: "Sales & Marketing",
-        url: "#",
-        icon: ChartPieIcon,
-      },
-      {
-        name: "Travel",
-        url: "#",
-        icon: MapIcon,
+        icon: Folder,
       },
     ],
   };
@@ -164,7 +112,7 @@
   </Sidebar.Header>
   <Sidebar.Content>
     <NavMain items={data.navMain} />
-    <NavProjects projects={data.projects} />
+    <NavProjects projects={data.directories} />
   </Sidebar.Content>
   <Sidebar.Rail />
 </Sidebar.Root>

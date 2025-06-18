@@ -8,5 +8,7 @@ npm install svelte-awesome-color-picker
 npm install @supabase/supabase-js
 npm install @supabase/ssr
 npm install svelte-loading-spinners
+npm install @tanstack/table-core
+npm i @dnd-kit-svelte/core
 
 npm run build

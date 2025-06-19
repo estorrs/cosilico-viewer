@@ -5,6 +5,7 @@ import { renderComponent } from "$lib/components/ui/data-table/index.js";
 // import DataTableEmailButton from "./data-table-email-button.svelte";
 import DataTableNameButton from "./data-table-name-button.svelte";
 import DataTableCreatedonButton from "./data-table-createdon-button.svelte";
+import DataTableCreatedbyButton from "./data-table-createdby-button.svelte";
 import DataTableExperimentDateButton from "./data-table-experiment-date-button.svelte";
 
 import DataTableActions from "./data-table-actions.svelte";
@@ -15,14 +16,14 @@ import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 // You can use a Zod schema here if you want.
 export type DirectoryEntityRow = {
   id: string;
-  parent_id: string;
+  // parent_id: string;
   type: string;
   name: string;
   created_by: string;
   created_on: string;
   permission: string;
-  platform: string;
-  experiment_date: string;
+  // platform: string;
+  // experiment_date: string;
 };
  
 export const columns: ColumnDef<DirectoryEntityRow>[] = [
@@ -61,6 +62,10 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
     },
   },
   {
+    accessorKey: "type",
+    header: ''
+  },
+  {
     accessorKey: "name",
     header: ({ column }) =>
       renderComponent(DataTableNameButton, {
@@ -75,9 +80,9 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
       }),
   },
   {
-    accessorKey: "experiment_date",
+    accessorKey: "created_by",
     header: ({ column }) =>
-      renderComponent(DataTableExperimentDateButton, {
+      renderComponent(DataTableCreatedbyButton, {
         onclick: column.getToggleSortingHandler(),
       }),
   },

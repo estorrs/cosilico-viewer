@@ -27,13 +27,22 @@
   renderSnippet
  } from "$lib/components/ui/data-table/index.js";
 
+
+//  import { columns } from "./columns.js";
+
  type DataTableProps<TData, TValue> = {
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
   };
 
  let { columns, data }: DataTableProps<TData, TValue> = $props();
- 
+  
+//  let { columns, data }: DataTableProps<TData, TValue> = $props();
+//  const data = 
+
+
+
+
  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
  let sorting = $state<SortingState>([]);
  let columnFilters = $state<ColumnFiltersState>([]);
@@ -103,6 +112,7 @@
    }
   }
  });
+ console.log('table is', table);
 </script>
  
 <div class="w-full">

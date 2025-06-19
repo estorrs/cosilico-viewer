@@ -27,25 +27,25 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
   for (const entity of directory_entities) {
     const row: DirectoryEntityRow = {
       id: entity.id,
-      parent_id: entity.parent_id,
+      // parent_id: entity.parent_id,
       type: entity.entity_type,
       name: entity.name,
       created_by: entity.created_by,
       created_on: entity.created_at,
       permission: 'Read',
-      platform: '',
-      experiment_date: ''
+      // platform: '',
+      // experiment_date: ''
     }
     idToRowData.set(entity.id, row);
   }
 
   for (const exp of experiments) {
-    let row = idToRowData.get(exp.directory_entity_id);
-    row.platform = exp.platform;
-    row.experiment_date = exp.experiment_date;
+    // let row = idToRowData.get(exp.directory_entity_id);
+    // row.platform = exp.platform;
+    // row.experiment_date = exp.experiment_date;
   }
 
-  const rowData: DirectoryEntityRow[] = [...idToRowData.values()];
+  const rowData = [...idToRowData.values()];
 
   console.log('row data', rowData);
 

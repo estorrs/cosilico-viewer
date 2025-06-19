@@ -4,11 +4,12 @@
   import DirectoryTable from '$lib/directories/directory-table.svelte'
   import { columns } from '$lib/directories/columns.js'
 
+
   // import type {PageData }
   // import type { PageData } from '../$types.js'
 
   let { data } = $props()
-  let { rowData, profile, supabase, user } = $derived(data)
+  let { rowData, profile, supabase, user } = $derived(data);
 
   // const handleSubmit: EventHandler<SubmitEvent, HTMLFormElement> = async (evt) => {
   //   evt.preventDefault()
@@ -31,7 +32,7 @@
 </script>
 
 
-<DirectoryTable  {rowData} {columns}/>
+<DirectoryTable  data={rowData} {columns}/>
 
 <!-- <form onsubmit={handleSubmit}>
   <label>

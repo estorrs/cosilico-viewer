@@ -23,12 +23,16 @@
  <DropdownMenu.Content>
   <DropdownMenu.Group>
    <DropdownMenu.Label>Actions</DropdownMenu.Label>
-   <DropdownMenu.Item onclick={() => navigator.clipboard.writeText(id)}>
-    Copy payment ID
+   <DropdownMenu.Item onclick={() => null}>
+    Open
    </DropdownMenu.Item>
   </DropdownMenu.Group>
   <DropdownMenu.Separator />
-  <DropdownMenu.Item>View customer</DropdownMenu.Item>
-  <DropdownMenu.Item>View payment details</DropdownMenu.Item>
+  <DropdownMenu.Item>Share</DropdownMenu.Item>
+  <DropdownMenu.Item>Set view setting</DropdownMenu.Item>
+  <DropdownMenu.Separator />
+  <DropdownMenu.Item>Delete</DropdownMenu.Item>
  </DropdownMenu.Content>
+
+
 </DropdownMenu.Root>

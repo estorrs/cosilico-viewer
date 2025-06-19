@@ -8,7 +8,7 @@
   // import type { PageData } from '../$types.js'
 
   let { data } = $props()
-  let { directories, experiments, profile, supabase, user } = $derived(data)
+  let { rowData, profile, supabase, user } = $derived(data)
 
   // const handleSubmit: EventHandler<SubmitEvent, HTMLFormElement> = async (evt) => {
   //   evt.preventDefault()
@@ -22,15 +22,16 @@
   //   form.reset()
   // }
 
+  // let x;
+
   $effect(() => {
-    console.log('directories', directories);
-    console.log('experiments', experiments);
+    console.log('rowData', rowData);
   })
 
 </script>
 
 
-<DirectoryTable  />
+<DirectoryTable  {rowData} {columns}/>
 
 <!-- <form onsubmit={handleSubmit}>
   <label>

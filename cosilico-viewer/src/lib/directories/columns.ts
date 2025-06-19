@@ -2,49 +2,57 @@ import type { ColumnDef } from "@tanstack/table-core";
 import { createRawSnippet } from "svelte";
 import { renderSnippet } from "$lib/components/ui/data-table/index.js";
 import { renderComponent } from "$lib/components/ui/data-table/index.js";
-import DataTableEmailButton from "./data-table-email-button.svelte";
+// import DataTableEmailButton from "./data-table-email-button.svelte";
+import DataTableNameButton from "./data-table-name-button.svelte";
+import DataTableCreatedonButton from "./data-table-createdon-button.svelte";
+import DataTableExperimentDateButton from "./data-table-experiment-date-button.svelte";
+
 import DataTableActions from "./data-table-actions.svelte";
 
 import { Checkbox } from "$lib/components/ui/checkbox/index.js";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type Payment = {
+export type DirectoryEntityRow = {
   id: string;
-  amount: number;
-  status: "pending" | "processing" | "success" | "failed";
-  email: string;
+  parent_id: string;
+  type: string;
+  name: string;
+  created_by: string;
+  created_on: string;
+  permission: string;
+  platform: string;
+  experiment_date: string;
 };
-
  
-export const columns: ColumnDef<Payment>[] = [
- {
-  accessorKey: "amount",
-  header: () => {
-   const amountHeaderSnippet = createRawSnippet(() => ({
-    render: () => `<div class="text-right">Amount</div>`,
-   }));
-   return renderSnippet(amountHeaderSnippet, "");
-  },
-  cell: ({ row }) => {
-   const formatter = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-   });
+export const columns: ColumnDef<DirectoryEntityRow>[] = [
+//  {
+//   accessorKey: "amount",
+//   header: () => {
+//    const amountHeaderSnippet = createRawSnippet(() => ({
+//     render: () => `<div class="text-right">Amount</div>`,
+//    }));
+//    return renderSnippet(amountHeaderSnippet, "");
+//   },
+//   cell: ({ row }) => {
+//    const formatter = new Intl.NumberFormat("en-US", {
+//     style: "currency",
+//     currency: "USD",
+//    });
  
-   const amountCellSnippet = createRawSnippet<[string]>((getAmount) => {
-    const amount = getAmount();
-    return {
-     render: () => `<div class="text-right font-medium">${amount}</div>`,
-    };
-   });
+//    const amountCellSnippet = createRawSnippet<[string]>((getAmount) => {
+//     const amount = getAmount();
+//     return {
+//      render: () => `<div class="text-right font-medium">${amount}</div>`,
+//     };
+//    });
  
-   return renderSnippet(
-    amountCellSnippet,
-    formatter.format(parseFloat(row.getValue("amount")))
-   );
-  },
- },
+//    return renderSnippet(
+//     amountCellSnippet,
+//     formatter.format(parseFloat(row.getValue("amount")))
+//    );
+//   },
+//  },
  {
     id: "actions",
     cell: ({ row }) => {
@@ -53,9 +61,23 @@ export const columns: ColumnDef<Payment>[] = [
     },
   },
   {
-    accessorKey: "email",
+    accessorKey: "name",
     header: ({ column }) =>
-      renderComponent(DataTableEmailButton, {
+      renderComponent(DataTableNameButton, {
+        onclick: column.getToggleSortingHandler(),
+      }),
+  },
+  {
+    accessorKey: "created_on",
+    header: ({ column }) =>
+      renderComponent(DataTableCreatedonButton, {
+        onclick: column.getToggleSortingHandler(),
+      }),
+  },
+  {
+    accessorKey: "experiment_date",
+    header: ({ column }) =>
+      renderComponent(DataTableExperimentDateButton, {
         onclick: column.getToggleSortingHandler(),
       }),
   },

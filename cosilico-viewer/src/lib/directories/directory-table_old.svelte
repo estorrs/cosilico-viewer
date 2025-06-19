@@ -1,4 +1,4 @@
-<script lang="ts" generics="TData, TValue">
+<script lang="ts">
  import ChevronDownIcon from "@lucide/svelte/icons/chevron-down";
  import {
   type ColumnDef,
@@ -26,21 +26,140 @@
   renderComponent,
   renderSnippet
  } from "$lib/components/ui/data-table/index.js";
-
- type DataTableProps<TData, TValue> = {
-    columns: ColumnDef<TData, TValue>[];
-    data: TData[];
-  };
-
- let { columns, data }: DataTableProps<TData, TValue> = $props();
+ 
+ type Payment = {
+  id: string;
+  amount: number;
+  status: "Pending" | "Processing" | "Success" | "Failed";
+  email: string;
+ };
+ 
+ const data: Payment[] = [
+  {
+   id: "m5gr84i9",
+   amount: 316,
+   status: "Success",
+   email: "ken99@yahoo.com"
+  },
+  {
+   id: "3u1reuv4",
+   amount: 242,
+   status: "Success",
+   email: "Abe45@gmail.com"
+  },
+  {
+   id: "derv1ws0",
+   amount: 837,
+   status: "Processing",
+   email: "Monserrat44@gmail.com"
+  },
+  {
+   id: "5kma53ae",
+   amount: 874,
+   status: "Success",
+   email: "Silas22@gmail.com"
+  },
+  {
+   id: "bhqecj4p",
+   amount: 721,
+   status: "Failed",
+   email: "carmella@hotmail.com"
+  }
+ ];
+ 
+ const columns: ColumnDef<Payment>[] = [
+  {
+   id: "select",
+   header: ({ table }) =>
+    renderComponent(DataTableCheckbox, {
+     checked: table.getIsAllPageRowsSelected(),
+     indeterminate:
+      table.getIsSomePageRowsSelected() &&
+      !table.getIsAllPageRowsSelected(),
+     onCheckedChange: (value) => table.toggleAllPageRowsSelected(!!value),
+     "aria-label": "Select all"
+    }),
+   cell: ({ row }) =>
+    renderComponent(DataTableCheckbox, {
+     checked: row.getIsSelected(),
+     onCheckedChange: (value) => row.toggleSelected(!!value),
+     "aria-label": "Select row"
+    }),
+   enableSorting: false,
+   enableHiding: false
+  },
+  {
+   accessorKey: "status",
+   header: "Status",
+   cell: ({ row }) => {
+    const statusSnippet = createRawSnippet<[string]>((getStatus) => {
+     const status = getStatus();
+     return {
+      render: () => `<div class="capitalize">${status}</div>`
+     };
+    });
+    return renderSnippet(statusSnippet, row.getValue("status"));
+   }
+  },
+  {
+   accessorKey: "email",
+   header: ({ column }) =>
+    renderComponent(DataTableEmailButton, {
+     onclick: column.getToggleSortingHandler()
+    }),
+   cell: ({ row }) => {
+    const emailSnippet = createRawSnippet<[string]>((getEmail) => {
+     const email = getEmail();
+     return {
+      render: () => `<div class="lowercase">${email}</div>`
+     };
+    });
+ 
+    return renderSnippet(emailSnippet, row.getValue("email"));
+   }
+  },
+  {
+   accessorKey: "amount",
+   header: () => {
+    const amountHeaderSnippet = createRawSnippet(() => {
+     return {
+      render: () => `<div class="text-right">Amount</div>`
+     };
+    });
+    return renderSnippet(amountHeaderSnippet, "");
+   },
+   cell: ({ row }) => {
+    const amountCellSnippet = createRawSnippet<[string]>((getAmount) => {
+     const amount = getAmount();
+     return {
+      render: () => `<div class="text-right font-medium">${amount}</div>`
+     };
+    });
+    const formatter = new Intl.NumberFormat("en-US", {
+     style: "currency",
+     currency: "USD"
+    });
+ 
+    return renderSnippet(
+     amountCellSnippet,
+     formatter.format(Number.parseFloat(row.getValue("amount")))
+    );
+   }
+  },
+  {
+   id: "actions",
+   enableHiding: false,
+   cell: ({ row }) =>
+    renderComponent(DataTableActions, { id: row.original.id })
+  }
+ ];
  
  let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
  let sorting = $state<SortingState>([]);
  let columnFilters = $state<ColumnFiltersState>([]);
  let rowSelection = $state<RowSelectionState>({});
  let columnVisibility = $state<VisibilityState>({});
-
-
+ 
  const table = createSvelteTable({
   get data() {
    return data;
@@ -108,12 +227,12 @@
 <div class="w-full">
  <div class="flex items-center py-4">
   <Input
-   placeholder="Search..."
-   value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
+   placeholder="Filter emails..."
+   value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
    oninput={(e) =>
-    table.getColumn("name")?.setFilterValue(e.currentTarget.value)}
+    table.getColumn("email")?.setFilterValue(e.currentTarget.value)}
    onchange={(e) => {
-    table.getColumn("name")?.setFilterValue(e.currentTarget.value);
+    table.getColumn("email")?.setFilterValue(e.currentTarget.value);
    }}
    class="max-w-sm"
   />

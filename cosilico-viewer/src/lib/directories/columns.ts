@@ -6,6 +6,10 @@ import { renderComponent } from "$lib/components/ui/data-table/index.js";
 import DataTableNameButton from "./data-table-name-button.svelte";
 import DataTableCreatedonButton from "./data-table-createdon-button.svelte";
 import DataTableCreatedbyButton from "./data-table-createdby-button.svelte";
+import DataTableTypeButton from "./data-table-type-button.svelte";
+import DataTableTypeIcon from "./data-table-type-icon.svelte";
+import DataTablePermissionBadge from "./data-table-permission-badge.svelte";
+import DataTableAbbvField from "./data-table-abbv_field.svelte";
 import DataTableExperimentDateButton from "./data-table-experiment-date-button.svelte";
 
 import DataTableActions from "./data-table-actions.svelte";
@@ -27,65 +31,6 @@ export type DirectoryEntityRow = {
 };
  
 export const columns: ColumnDef<DirectoryEntityRow>[] = [
-//  {
-//   accessorKey: "amount",
-//   header: () => {
-//    const amountHeaderSnippet = createRawSnippet(() => ({
-//     render: () => `<div class="text-right">Amount</div>`,
-//    }));
-//    return renderSnippet(amountHeaderSnippet, "");
-//   },
-//   cell: ({ row }) => {
-//    const formatter = new Intl.NumberFormat("en-US", {
-//     style: "currency",
-//     currency: "USD",
-//    });
- 
-//    const amountCellSnippet = createRawSnippet<[string]>((getAmount) => {
-//     const amount = getAmount();
-//     return {
-//      render: () => `<div class="text-right font-medium">${amount}</div>`,
-//     };
-//    });
- 
-//    return renderSnippet(
-//     amountCellSnippet,
-//     formatter.format(parseFloat(row.getValue("amount")))
-//    );
-//   },
-//  },
- {
-    id: "actions",
-    cell: ({ row }) => {
-      // You can pass whatever you need from `row.original` to the component
-      return renderComponent(DataTableActions, { id: row.original.id });
-    },
-  },
-  {
-    accessorKey: "type",
-    header: ''
-  },
-  {
-    accessorKey: "name",
-    header: ({ column }) =>
-      renderComponent(DataTableNameButton, {
-        onclick: column.getToggleSortingHandler(),
-      }),
-  },
-  {
-    accessorKey: "created_on",
-    header: ({ column }) =>
-      renderComponent(DataTableCreatedonButton, {
-        onclick: column.getToggleSortingHandler(),
-      }),
-  },
-  {
-    accessorKey: "created_by",
-    header: ({ column }) =>
-      renderComponent(DataTableCreatedbyButton, {
-        onclick: column.getToggleSortingHandler(),
-      }),
-  },
   {
     id: "select",
     header: ({ table }) =>
@@ -105,5 +50,64 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
       }),
     enableSorting: false,
     enableHiding: false,
+  },
+  {
+    accessorKey: "type",
+    header: ({ column }) =>
+      renderComponent(DataTableTypeButton, {
+        onclick: column.getToggleSortingHandler(),
+      }),
+    cell: ({ row }) =>
+      renderComponent(DataTableTypeIcon, {
+        // need to pass props here
+        value: row.original.type
+      }),
+  },
+  {
+    accessorKey: "name",
+    header: ({ column }) =>
+      renderComponent(DataTableNameButton, {
+        onclick: column.getToggleSortingHandler(),
+      }),
+    cell: ({ row }) =>
+      renderComponent(DataTableAbbvField, {
+        // need to pass props here
+        value: row.original.name
+      }),
+  },
+  {
+    accessorKey: "created_on",
+    header: ({ column }) =>
+      renderComponent(DataTableCreatedonButton, {
+        onclick: column.getToggleSortingHandler(),
+      }),
+    cell: ({ row }) => {
+      const full = row.original.created_on;
+      const date = typeof full === 'string' ? full.split('T')[0] : '';
+      return date;
+    }
+  },
+  {
+    accessorKey: "created_by",
+    header: ({ column }) =>
+      renderComponent(DataTableCreatedbyButton, {
+        onclick: column.getToggleSortingHandler(),
+      }),
+  },
+  {
+    accessorKey: "permission",
+    header: 'Permission',
+    cell: ({ row }) =>
+      renderComponent(DataTablePermissionBadge, {
+        // need to pass props here
+        permission: row.original.permission
+      }),
+  },
+  {
+    id: "actions",
+    cell: ({ row }) => {
+      // You can pass whatever you need from `row.original` to the component
+      return renderComponent(DataTableActions, { id: row.original.id });
+    },
   },
 ];

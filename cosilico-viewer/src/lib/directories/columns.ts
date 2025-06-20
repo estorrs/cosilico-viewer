@@ -26,10 +26,10 @@ export type DirectoryEntityRow = {
   created_by: string;
   created_on: string;
   permission: string;
-  // platform: string;
+  platform: string;
   // experiment_date: string;
 };
- 
+
 export const columns: ColumnDef<DirectoryEntityRow>[] = [
   {
     id: "select",
@@ -60,7 +60,8 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
     cell: ({ row }) =>
       renderComponent(DataTableTypeIcon, {
         // need to pass props here
-        value: row.original.type
+        value: row.original.type,
+        platform: row.original.platform
       }),
   },
   {
@@ -72,7 +73,9 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
     cell: ({ row }) =>
       renderComponent(DataTableAbbvField, {
         // need to pass props here
-        value: row.original.name
+        value: row.original.name,
+        href: "/portal/root",
+        abbv_type: 'basic'
       }),
   },
   {
@@ -92,6 +95,13 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
     header: ({ column }) =>
       renderComponent(DataTableCreatedbyButton, {
         onclick: column.getToggleSortingHandler(),
+      }),
+    cell: ({ row }) =>
+      renderComponent(DataTableAbbvField, {
+        // need to pass props here
+        value: row.original.created_by,
+        href: null,
+        abbv_type: 'name'
       }),
   },
   {

@@ -112,7 +112,6 @@
    }
   }
  });
- console.log('table is', table);
 </script>
  
 <div class="w-full">

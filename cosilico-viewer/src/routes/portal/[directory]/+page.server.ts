@@ -15,6 +15,10 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
     directory_entities = response.data
   }
 
+  const created_bys = [...new Set(directory_entities?.map((v) => v.created_by))];
+  const { data: profiles } = await supabase.from('profiles').select('id,name').in('id', created_bys);
+  const idToName = new Map(profiles.map((item) => [item.id, item.name]));
+
   const directories = directory_entities?.filter((v) => v.entity_type == 'directory');
 
   const exp_entities = directory_entities?.filter((v) => v.entity_type == 'experiment');
@@ -30,18 +34,18 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
       // parent_id: entity.parent_id,
       type: entity.entity_type,
       name: entity.name,
-      created_by: entity.created_by,
+      created_by: idToName.get(entity.created_by),
       created_on: entity.created_at,
       permission: 'Read',
-      // platform: '',
+      platform: '',
       // experiment_date: ''
     }
     idToRowData.set(entity.id, row);
   }
 
   for (const exp of experiments) {
-    // let row = idToRowData.get(exp.directory_entity_id);
-    // row.platform = exp.platform;
+    let row = idToRowData.get(exp.directory_entity_id);
+    row.platform = exp.platform;
     // row.experiment_date = exp.experiment_date;
   }
 

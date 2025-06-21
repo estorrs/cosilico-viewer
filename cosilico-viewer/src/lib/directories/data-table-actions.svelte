@@ -29,7 +29,6 @@
   </DropdownMenu.Group>
   <DropdownMenu.Separator />
   <DropdownMenu.Item>Share</DropdownMenu.Item>
-  <DropdownMenu.Item>Set view setting</DropdownMenu.Item>
   <DropdownMenu.Separator />
   <DropdownMenu.Item>Delete</DropdownMenu.Item>
  </DropdownMenu.Content>

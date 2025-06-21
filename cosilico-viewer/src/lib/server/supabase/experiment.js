@@ -1,7 +1,5 @@
 import { error } from "@sveltejs/kit";
 
-
-
 export async function populateExperiment(experiment, supabase) {
     const { data: images, error: e } = await supabase
         .from('images')

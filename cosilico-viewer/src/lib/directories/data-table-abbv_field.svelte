@@ -44,7 +44,6 @@
     return result;
   }
 
-  console.log('value', value);
   let truncated;
   if (abbv_type == "name") {
     truncated = formatName(value);

@@ -2,6 +2,7 @@
 // import { PageServerLoad } from './$types.js';
 import type { PageServerLoad } from "./$types.js";
 import type { DirectoryEntityRow } from "$lib/directories/columns.js";
+import { getPermissions } from "$lib/server/supabase/permission.js";
 
 export const load: PageServerLoad = async ({ params, depends, locals: { supabase, user } }) => {
   depends('supabase:db:re')
@@ -14,6 +15,8 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
     const response = await supabase.from('directory_entities').select('*').is('parent_id', null).order('name');
     directory_entities = response.data
   }
+
+  const permissionMap = await getPermissions(supabase, directory_entities?.map((v) => v.id));
 
   const created_bys = [...new Set(directory_entities?.map((v) => v.created_by))];
   const { data: profiles } = await supabase.from('profiles').select('id,name').in('id', created_bys);
@@ -36,7 +39,7 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
       name: entity.name,
       created_by: idToName.get(entity.created_by),
       created_on: entity.created_at,
-      permission: 'Read',
+      permission: permissionMap.get(entity.id),
       platform: '',
       // experiment_date: ''
     }

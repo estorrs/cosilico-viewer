@@ -45,7 +45,7 @@
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/typography": "^0.5.15",
 		"@tailwindcss/vite": "^4.0.0",
-		"bits-ui": "^2.8.0",
+		"bits-ui": "^2.8.6",
 		"clsx": "^2.1.1",
 		"eslint": "^9.18.0",
 		"eslint-plugin-svelte": "^3.0.0",

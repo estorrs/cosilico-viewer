@@ -4,12 +4,12 @@
  let { permission } = $props();
 
  let color = $state();
- if (permission == 'Read') {
+ if (permission == 'r') {
     color = 'bg-cyan-500'
- } else if ( permission == 'Write') {
+ } else if ( permission == 'rw') {
     color = 'bg-green-500'
  } else {
-    color = 'bg-red-500'
+    color = 'bg-pink-500'
  }
 </script>
  

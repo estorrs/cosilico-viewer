@@ -86,11 +86,25 @@ create table public.layer_metadata (
 create index layer_metadata_created_by_idx on public.layer_metadata (created_by);
 create index layer_metadata_layer_id_idx on public.layer_metadata (layer_id);
 
+
+create table public.view_settings (
+  id uuid primary key default gen_random_uuid(),
+  version text not null default 'v0.0.1',
+  created_by uuid references auth.users(id) on delete restrict,
+  created_at timestamp with time zone default now(),
+  name text not null,
+  settings jsonb,
+);
+create index view_settings__created_by_idx on public.view_settings (created_by);
+create index view_settings_parent_id_idx on public.view_settings (parent_id);
+
+
 alter table public.experiments enable row level security;
 alter table public.images enable row level security;
 alter table public.layers enable row level security;
 alter table public.layer_metadata enable row level security;
 alter table public.directory_entities enable row level security;
+alter table public.view_settings enable row level security;
 
 create or replace function public.add_creator_to_permissions()
 returns trigger

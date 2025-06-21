@@ -608,7 +608,6 @@ export class FeatureVector {
             useMetadata = false;
         }
 
-
         let metadataToNode = new Map();
         let metadataToFieldIdxs = new Map();
         let metadataToIsSparse = new Map();

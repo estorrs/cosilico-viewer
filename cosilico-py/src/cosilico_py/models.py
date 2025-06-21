@@ -1,7 +1,7 @@
 from uuid import uuid4
 from enum import Enum
 from datetime import datetime, timezone
-from typing import Annotated, Dict, List, Literal
+from typing import Annotated, Dict, List, Literal, Union
 
 from ome_types import OME
 from pydantic import BaseModel, Field, FilePath, DirectoryPath, AwareDatetime
@@ -230,14 +230,6 @@ class ContinuousVectorView(BaseModel):
     # single style template for points (polygons inherit stroke/fill directly)
     feature_style: FeatureStyle
 
-
-
-# ---------------------------------------------------------------------
-#  TOP-LEVEL discriminated union
-# ---------------------------------------------------------------------
-VectorView = Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]
-
-
 class ExperimentViewSetting(BaseModel):
     """
     Experiment-level view setting.
@@ -247,8 +239,8 @@ class ExperimentViewSetting(BaseModel):
     experiment_id: Annotated[str, Field(description='Experiment the view is attached to.')]
     name: Annotated[str, Field(description='Name for view setting.')]
     image_views: Annotated[Dict[str, ImageView], Field(description='Maps image id to image view.')] = {}
-    layer_views: Annotated[Dict[str, LayerView], Field(description='Maps layer id to layer view.')] = {}
-
+    layer_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer id to layer view.')] = {}
+    layer_metadata_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer metadata id to layer view.')] = {}
 
 class ExperimentUploadBundle(BaseModel):
     experiment: Experiment

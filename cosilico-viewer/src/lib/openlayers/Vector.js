@@ -16,65 +16,6 @@ import { getClosestResolution } from "./OpenlayersHelpers.js";
 
 
 
-// function getVisibleFeatures(map, vectorTileSource) {
-// 	const extent = map.getView().calculateExtent(map.getSize());
-// 	const resolution = map.getView().getResolution();
-// 	const projection = map.getView().getProjection();
-
-// 	const tileGrid = vectorTileSource.getTileGrid();
-// 	const z = tileGrid.getZForResolution(resolution);
-// 	const tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
-
-// 	const features = [];
-
-// 	for (let x = tileRange.minX; x <= tileRange.maxX; x++) {
-// 		for (let y = tileRange.minY; y <= tileRange.maxY; y++) {
-// 			const tileCoord = [z, x, y];
-// 			const tile = vectorTileSource.getTile(z, x, y, resolution, projection);
-
-// 			if (tile && tile.getFeatures) {
-// 				const tileFeatures = tile.getFeatures(); // Array<ol/Feature>
-// 				if (tileFeatures) {
-// 					features.push(...tileFeatures);
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	return features;
-// }
-// import { getKey } from 'ol/tilecoord';
-
-// function getVisibleFeatures(map, vectorTileSource) {
-// 	const view = map.getView();
-// 	const resolution = view.getResolution();
-// 	const extent = view.calculateExtent(map.getSize());
-// 	const projection = view.getProjection();
-
-// 	const tileGrid = vectorTileSource.getTileGrid();
-// 	const z = tileGrid.getZForResolution(resolution);
-// 	const tileRange = tileGrid.getTileRangeForExtentAndZ(extent, z);
-
-// 	const features = [];
-
-// 	for (let x = tileRange.minX; x <= tileRange.maxX; x++) {
-// 		for (let y = tileRange.minY; y <= tileRange.maxY; y++) {
-// 			const tileCoord = [z, x, y];
-// 			const key = getKey(tileCoord);
-
-// 			const tile = vectorTileSource.tileCache.get(key);
-// 			if (tile && tile.getState() === 2) { // 2 === TileState.LOADED
-// 				const tileFeatures = tile.getFeatures?.();
-// 				if (tileFeatures) {
-// 					features.push(...tileFeatures);
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	return features;
-// }
-
 
 
 export class FeatureGroupVector {
@@ -321,63 +262,7 @@ export class FeatureGroupVector {
 
         return passesMetadata && passesLayer;
 
-
     }
-
-    // setFeatureToolTip(map, info) {
-    //     const displayFeatureInfo = (pixel, target) => {
-    //         const res = map.getView().getResolution();
-    //         const feature = target.closest('.ol-control')
-    //             ? undefined
-    //             : map.forEachFeatureAtPixel(pixel, function (feature) {
-    //                 return feature;
-    //             });
-    //         if (feature) {
-    //             info.style.left = pixel[0] + 'px';
-    //             info.style.top = pixel[1] + 'px';
-    //             if (feature !== this.currentFeature) {
-    //                 info.style.visibility = 'visible';
-
-    //                 if (res < this.resolutions[this.resolutions.length - 1] / this.tileSize) {
-    //                     const identifier = feature.get('id')
-    //                     let text = `id: ${identifier}\n`;
-    //                     for (const [key, _] of this.featureMetaToNode) {
-    //                         if (key !== 'count') {
-    //                             const value = feature.get(key);
-    //                             text = text + `${key}: ${value}\n`;
-    //                         }
-    //                     }
-
-    //                     info.innerText = text;
-    //                 } else {
-    //                     const count = feature.get('count')
-    //                     info.innerText = `# entities: ${count}`;
-    //                 }
-    //             }
-    //         } else {
-    //             info.style.visibility = 'hidden';
-    //         }
-    //         this.currentFeature = feature;
-    //     };
-
-    //     map.on('pointermove', function (evt) {
-    //         if (evt.dragging) {
-    //             info.style.visibility = 'hidden';
-    //             this.currentFeature = undefined;
-    //             return;
-    //         }
-    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-    //     });
-
-    //     map.on('click', function (evt) {
-    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-    //     });
-
-    //     map.getTargetElement().addEventListener('pointerleave', function () {
-    //         this.currentFeature = undefined;
-    //         info.style.visibility = 'hidden';
-    //     });
-    // }
 
     addFeature(featureName, map) {
         const featureIndex = this.featureNames.indexOf(featureName);
@@ -1102,61 +987,6 @@ export class FeatureVector {
 
     }
 
-    // setFeatureToolTip(map, info) {
-    //     const displayFeatureInfo = (pixel, target) => {
-    //         const res = map.getView().getResolution();
-    //         const feature = target.closest('.ol-control')
-    //             ? undefined
-    //             : map.forEachFeatureAtPixel(pixel, function (feature) {
-    //                 return feature;
-    //             });
-    //         if (feature) {
-    //             info.style.left = pixel[0] + 'px';
-    //             info.style.top = pixel[1] + 'px';
-    //             if (feature !== this.currentFeature) {
-    //                 info.style.visibility = 'visible';
-
-    //                 const identifier = feature.get('id')
-    //                 let text = `id: ${identifier}\n`;
-
-    //                 if (this.metadataType == 'categorical') {
-    //                     const idx = feature.get('category');
-    //                     const field = this.metadataFields[idx];
-    //                     text = text + `${this.metadataName}: ${field}\n`;
-    //                 } else {
-    //                     const visibleIdx = this.vectorView.visibleFieldIndices[0];
-    //                     const field = this.metadataFields[visibleIdx];
-    //                     if (visibleIdx in feature.values_) {
-    //                         const value = feature.get(visibleIdx);
-    //                         text = text + `${field}: ${value}\n`;
-    //                     }
-    //                 }
-    //                 info.innerText = text;
-    //             }
-    //         } else {
-    //             info.style.visibility = 'hidden';
-    //         }
-    //         this.currentFeature = feature;
-    //     };
-
-    //     map.on('pointermove', function (evt) {
-    //         if (evt.dragging) {
-    //             info.style.visibility = 'hidden';
-    //             this.currentFeature = undefined;
-    //             return;
-    //         }
-    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-    //     });
-
-    //     map.on('click', function (evt) {
-    //         displayFeatureInfo(evt.pixel, evt.originalEvent.target);
-    //     });
-
-    //     map.getTargetElement().addEventListener('pointerleave', function () {
-    //         this.currentFeature = undefined;
-    //         info.style.visibility = 'hidden';
-    //     });
-    // }
     getCurrentObjectType(map) {
         const res = getClosestResolution(map, this.resolutions, this.tileSize);
         const idx = this.resolutions.indexOf(res);

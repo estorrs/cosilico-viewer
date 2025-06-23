@@ -18,7 +18,15 @@ create table public.directory_entities (
 create index directories_created_by_idx on public.directory_entities (created_by);
 create index directories_parent_id_idx on public.directory_entities (parent_id);
 
-
+create table public.view_settings (
+  id uuid primary key default gen_random_uuid(),
+  version text not null default 'v0.0.1',
+  created_by uuid references auth.users(id) on delete restrict,
+  created_at timestamp with time zone default now(),
+  name text not null,
+  settings jsonb not null default '{}'::jsonb
+);
+create index view_settings_created_by_idx on public.view_settings (created_by);
 
 create table public.experiments (
   id uuid primary key default gen_random_uuid(),
@@ -88,24 +96,14 @@ create index layer_metadata_created_by_idx on public.layer_metadata (created_by)
 create index layer_metadata_layer_id_idx on public.layer_metadata (layer_id);
 
 
-create table public.view_settings (
-  id uuid primary key default gen_random_uuid(),
-  version text not null default 'v0.0.1',
-  created_by uuid references auth.users(id) on delete restrict,
-  created_at timestamp with time zone default now(),
-  name text not null,
-  settings jsonb,
-);
-create index view_settings__created_by_idx on public.view_settings (created_by);
-create index view_settings_parent_id_idx on public.view_settings (parent_id);
-
-
 alter table public.experiments enable row level security;
+alter table public.experiments add constraint experiments_name_key unique (name);
 alter table public.images enable row level security;
 alter table public.layers enable row level security;
 alter table public.layer_metadata enable row level security;
 alter table public.directory_entities enable row level security;
 alter table public.view_settings enable row level security;
+alter table public.view_settings add constraint view_settings_name_key unique (name);
 
 create or replace function public.add_creator_to_permissions()
 returns trigger
@@ -285,31 +283,6 @@ begin
     from nearest_directory_permission
   )
 
---   select string_agg(format('id = %s authenticated_users_read=%s, authenticated_users_write=%s, authenticated_users_delete=%s, depth=%s', id, authenticated_users_read, authenticated_users_write, authenticated_users_delete, depth), E'\n')
---   into log_output
---   from nearest_user_permission;
-
---   raise log E'nearest_user_permission:\n%s', log_output;
-
---   return true;
-
---   -- Evaluate logic: user-level takes priority
---   select true into result
---   from user_has_permission
---   where uhp = true
---   limit 1;
-
---   raise log 'result 1: %s', result;
-
--- --   if not result then
--- if result is null then
---     select dhp into result
---     from directory_has_permission
---     limit 1;
---   end if;
-
---   raise log 'result 2: %s', result;
-
   select coalesce(
     (select uhp from user_has_permission where uhp = true limit 1),
     (select dhp from directory_has_permission limit 1),
@@ -321,15 +294,7 @@ end;
 $$;
 
 
--- select string_agg(
---       format('user_has_permission=%s, permission=%s, depth=%s', user_has_permission, permission, depth),
---       E'\n'
---   )
---   into log_output
---   from fallback_default_permission;
-
 --   raise log E'fallback_default_permission:\n%s', log_output;
-
 
 create function is_admin_or_service_role()
 returns boolean as $$
@@ -340,6 +305,64 @@ returns boolean as $$
       where p.id = (select auth.uid()) and p.role = 'admin'
     );
 $$ language sql stable;
+
+
+create or replace function public.set_default_view_setting()
+returns trigger
+language plpgsql
+-- security definer              -- so it can bypass RLS if needed
+set search_path = ''
+as $$
+declare
+  default_vs_id uuid;
+begin
+  if new.view_setting_id is null then
+    select id
+      into default_vs_id
+      from public.view_settings
+      where name = 'Default'
+      order by created_at asc
+      limit 1;
+
+    new.view_setting_id := default_vs_id;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger fill_default_view_setting
+before insert on public.experiments
+for each row
+execute procedure public.set_default_view_setting();
+
+
+
+create policy "read_view_settings"
+on public.view_settings for select
+to authenticated, service_role
+using (true);
+
+create policy "insert_view_settings"
+on public.view_settings for insert
+to authenticated, service_role
+with check (true);
+
+create policy "update_view_settings"
+on public.view_settings for update
+to authenticated, service_role
+using (
+  is_admin_or_service_role()
+  or created_by = auth.uid()
+);
+
+create policy "delete_view_settings"
+on public.view_settings for delete
+to authenticated, service_role
+using (
+  is_admin_or_service_role()
+  or created_by = auth.uid()
+);
 
 
 
@@ -568,10 +591,6 @@ using (
 );
 
 
-
-
-
-
 create policy "read_layer_metadata"
 on public.layer_metadata for select
 to authenticated, service_role
@@ -646,3 +665,9 @@ using (
       )
     )
 );
+
+
+
+-- seed default view setting
+insert into public.view_settings (name)
+values ('Default');

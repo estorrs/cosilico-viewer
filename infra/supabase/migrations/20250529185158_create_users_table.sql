@@ -31,21 +31,46 @@ create policy "Unified profile read access"
   );
 
 
-create policy "Unified profile update"
-  on public.profiles for update
-  to authenticated, service_role
-  using (
-    ((select auth.uid()) = id)
-    or (select auth.role()) = 'service_role'
-    or is_admin()
-  )
-  with check (
-    (
-      (select auth.uid()) = id and role = profiles.role
-    )
-    or ((select auth.role()) = 'service_role')
-    or is_admin()
-  );
+create policy "Users can update their own profile (excluding role)"
+on public.profiles for update
+to authenticated
+using (
+  auth.uid() = id
+)
+with check (
+  auth.uid() = id
+  and role = 'user'  -- ✅ enforce that role must remain unchanged
+);
+
+
+create policy "Admins and service_role can update any profile"
+on public.profiles for update
+to authenticated, service_role
+using (
+  is_admin() or (select auth.role()) = 'service_role'
+)
+with check (
+  true  -- allow all changes
+);
+
+
+
+
+-- create policy "Unified profile update"
+--   on public.profiles for update
+--   to authenticated, service_role
+--   using (
+--     ((select auth.uid()) = id)
+--     or (select auth.role()) = 'service_role'
+--     or is_admin()
+--   )
+--   with check (
+--     (
+--       (select auth.uid()) = id and role = profiles.role
+--     )
+--     or ((select auth.role()) = 'service_role')
+--     or is_admin()
+--   );
 
 
 create policy "Admins and service_role can delete any profile"
@@ -79,4 +104,5 @@ $$;
 create trigger on_auth_user_created
 after insert on auth.users
 for each row execute procedure public.handle_new_user();
+
 

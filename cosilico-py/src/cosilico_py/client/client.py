@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from typing import Annotated, Union
+import os
 import json
 import time
 
@@ -19,8 +20,11 @@ STDERR = Console(stderr=True)
 
 class CosilicoClient(object):
     """Cosilico Client."""
-    def __init__(self):
-        self.config = get_config()
+    def __init__(self, config_fp: Annotated[os.PathLike, 'Path to config json.'] = None):
+        if config_fp is None:
+            self.config = get_config()
+        else:
+            self.config = json.load(open(config_fp))
         self.cache_dir = self.config['cache_dir']
         self.supabase = create_client(self.config['api_url'], self.config['anon_key'])
         self.root = None
@@ -61,6 +65,46 @@ class CosilicoClient(object):
             STDERR.print('[bold red]Sign-in attempt failed.[/bold red]')
             STDERR.print(e)
             raise RuntimeError('Sign-in attempt failed.')
+
+
+    def create_user(
+            self,
+            email: Annotated[str, 'Users email'],
+            password: Annotated[str, 'Users password.'],
+            name: Annotated[str, 'Users name.']
+        ) -> None:
+        self._check_session()
+
+        response = (
+            self.supabase.table("profiles")
+            .select("id,role")
+            .eq('id', self.supabase.auth.get_user().user.id)
+            .single()
+            .execute()
+        )
+
+        if response.data['role'] != 'admin': ## soft limit to admin
+            STDERR.print('[bold red]User sign-up attempt failed. User must be ADMIN to create user.[/bold red]')
+            raise RuntimeError('Sign-up attempt failed.')
+        
+        try:
+            response = self.supabase.auth.sign_up(
+                {
+                    "email": email,
+                    "password": password,
+                    'options': {
+                        'data': {
+                            'name': name
+                        }
+                    }
+                }
+            )
+            print(f'[green]User created -- {email}.[/green]')
+        except Exception as e:
+            STDERR.print('[bold red]User sign-up attempt failed.[/bold red]')
+            STDERR.print(e)
+            raise RuntimeError('Sign-up attempt failed.')
+
     
     def create_experiment(
             self,

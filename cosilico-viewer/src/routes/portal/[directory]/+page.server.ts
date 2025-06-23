@@ -34,14 +34,12 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
   for (const entity of directory_entities) {
     const row: DirectoryEntityRow = {
       id: entity.id,
-      // parent_id: entity.parent_id,
       type: entity.entity_type,
       name: entity.name,
       created_by: idToName.get(entity.created_by),
       created_on: entity.created_at,
       permission: permissionMap.get(entity.id),
       platform: '',
-      // experiment_date: ''
     }
     idToRowData.set(entity.id, row);
   }
@@ -49,26 +47,11 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
   for (const exp of experiments) {
     let row = idToRowData.get(exp.directory_entity_id);
     row.platform = exp.platform;
-    // row.experiment_date = exp.experiment_date;
   }
 
   const rowData = [...idToRowData.values()];
 
   console.log('row data', rowData);
-
-
-  // type DirectoryEntityRow = {
-  //   id: string;
-  //   parent_id: string;
-  //   type: string;
-  //   name: string;
-  //   created_by: string;
-  //   created_on: string;
-  //   permission: 'Read | Write | Delete';
-  //   platform: string;
-  //   experiment_date: string;
-  // };
-
 
 
   return { 

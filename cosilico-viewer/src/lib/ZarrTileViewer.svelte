@@ -5,6 +5,7 @@
 	import { SvelteMap } from "svelte/reactivity";
 	import OverviewMap from "ol/control/OverviewMap.js";
 	import { defaults as defaultControls } from "ol/control/defaults.js";
+	import { Projection } from "ol/proj.js";
 	import MouseWheelZoom from "ol/interaction/MouseWheelZoom.js";
 	import PinchZoom from "ol/interaction/PinchZoom.js";
 	import DoubleClickZoom from "ol/interaction/DoubleClickZoom.js";
@@ -43,79 +44,6 @@
 	let experiment = $state(null);
 	let mirrors = $state(null);
 
-	// const experimentObj = {
-	// 	id: 'alsdkfj',
-	// 	name: 'Test Experiment',
-	// 	platform: 'Xenium 5K',
-	// 	platform_version: 'v5.1',
-	// 	metadata: {
-	// 		field_a: 'this is a field'
-	// 	},
-	// 	images: [
-	// 		{
-	// 			id: 'sldkfj',
-	// 			name: 'Multiplex Image',
-	// 			metadata: {}, // this would be ome metadata
-	// 			view_settings: {}, // view settings eventually
-	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
-	// 		}
-	// 	],
-	// 	layers: [
-	// 		{
-	// 			id: 'sldfkjasa',
-	// 			name: 'Cells',
-	// 			is_grouped: false,
-	// 			metadata: {}, // this would be just whatever metadata
-	// 			view_settings: {},
-	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
-	// 			layer_metadatas: [
-	// 				{
-	// 					id: 'sadf',
-	// 					name: 'Kmeans N=10',
-	// 					type: 'categorical',
-	// 					view_settings: {},
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip'
-	// 				},
-	// 				{
-	// 					id: 'sdfsdf',
-	// 					name: 'PCAs',
-	// 					type: 'continuous',
-	// 					view_settings: {},
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_pca10.zarr.zip'
-	// 				},
-	// 				{
-	// 					id: 'ggfg',
-	// 					name: 'Transcript Counts',
-	// 					type: 'continuous',
-	// 					view_settings: {},
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_transcriptcounts.zarr.zip'
-	// 				}
-	// 			]
-	// 		},
-	// 		{
-	// 			id: 'sdf',
-	// 			name: 'Transcripts',
-	// 			is_grouped: true,
-	// 			metadata: {}, // this would be just whatever metadata
-	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
-	// 			view_settings: {},
-	// 			layer_metadatas: [
-	// 				{
-	// 					id: 'sdlfkj',
-	// 					name: 'Counts',
-	// 					type: 'continuous',
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip'
-	// 				},
-	// 				{
-	// 					id: 'sdlsasfkj',
-	// 					name: 'QV',
-	// 					type: 'continuous',
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
-	// 				}
-	// 			]
-	// 		}
-	// 	]
-	// };
 
 	class Experiment {
 		constructor(experimentObj) {
@@ -129,7 +57,6 @@
 			this.images = new globalThis.Map();
 			this.layers = new globalThis.Map();
 			this.currentInsertionIdx = 0;
-			// this.layerToInsertionIdx = new globalThis.Map();
 		}
 
 		async init() {
@@ -167,6 +94,14 @@
 			this.currentInsertionIdx = this.currentInsertionIdx + increment;
 		}
 
+	// 	 id: str = Field(default_factory=lambda: uuid4().hex)
+    // version: str = 'v0.0.1'
+    // experiment_id: Annotated[str, Field(description='Experiment the view is attached to.')]
+    // name: Annotated[str, Field(description='Name for view setting.')]
+    // image_views: Annotated[Dict[str, ImageView], Field(description='Maps image id to image view.')] = {}
+    // layer_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer id to layer view.')] = {}
+    // layer_metadata_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer metadata id to layer view.')] = {}
+
 		async loadImages() {
 			for (const img of this.experimentObj.images) {
 				const node = await initZarr({
@@ -174,13 +109,14 @@
 					headUrl: img.path_presigned_head,
 				});
 				const obj = {
-					image: new Image(
+					image: await Image.create(
 						node,
 						img.id,
 						false,
 						this.currentInsertionIdx,
+						img.view_settings,
+						map
 					),
-					viewSettings: img.view_settings,
 				};
 				this.currentInsertionIdx = this.currentInsertionIdx + 1;
 				this.images.set(img.id, obj);
@@ -291,7 +227,20 @@
 		}
 	}
 
-	function createMap(projection, sizeX, sizeY) {
+	async function createMap(baseImage) {
+		const node = await initZarr({
+			getUrl: baseImage.path,
+			headUrl: baseImage.path_presigned_head,
+		});
+		const sizeX = node.attrs.ome.images[0].pixels.size_x;
+		const sizeY = node.attrs.ome.images[0].pixels.size_y;
+
+		const projection = new Projection({
+			code: 'PIXEL',
+			units: 'pixels',
+			extent: [0, 0, sizeX, sizeY],
+		});
+
 		// Create the new map
 		map = new Map({
 			target: "map",
@@ -490,13 +439,13 @@
 	}
 
 	onMount(async () => {
-		experiment = await Experiment.create(experimentObj);
-
-		createMap(
-			experiment.baseImage.projection,
-			experiment.baseImage.sizeX,
-			experiment.baseImage.sizeY,
+		const baseImage = experimentObj.images[0];
+	
+		await createMap(
+			baseImage
 		);
+
+		experiment = await Experiment.create(experimentObj);
 
 		// first channel of first image visible by default
 		await experiment.baseImage.addChannel(

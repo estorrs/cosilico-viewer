@@ -19,12 +19,18 @@ export const load: PageServerLoad = async ({ depends, params, locals: { supabase
     throw error(404, `Experiment ${experiment_id} not found.`);
   }
 
+  let { data: view_settings, error: e } = await supabase
+    .from('view_settings')
+    .select('*')
+    .eq('id', view_settings_id)
+    .single();
+
+  if (e || !view_settings) {
+    throw error(404, `View setting ${view_settings_id} not found.`);
+  }
+
   // fetch image/layers
-  experiment = await populateExperiment(experiment, supabase);
+  experiment = await populateExperiment(experiment, view_settings, supabase);
 
-  let view_settings = {};
-
-  console.log('experiment', experiment);
-
-  return { experiment: experiment, view_settings: view_settings }
+  return { experiment: experiment }
 }

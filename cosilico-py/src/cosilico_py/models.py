@@ -130,7 +130,7 @@ class ImageChannelView(BaseModel):
     min_value: Annotated[float, Field(ge=0, description="Lower display intensity bound")] = None
     max_value: Annotated[float, Field(ge=0, description="Upper display intensity bound")] = None
     gamma: Annotated[float, Field(gt=0, description="Gamma-correction factor applied in shader")] = 1.
-    color: Annotated[str, Field(regex=r"^#?[0-9A-Fa-f]{6}$", description="24-bit sRGB colour used for pseudocolour composite")] = None
+    color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="24-bit sRGB colour used for pseudocolour composite")] = None
 
 class ImageView(BaseModel):
     opacity: Annotated[float, Field(ge=0.0, le=1.0, description="Image opacity.")] = 1.0
@@ -156,8 +156,8 @@ class BorderTypeEnum(str, Enum):
 class FeatureStyle(BaseModel):
     """Visual style for a single feature (point / polygon)."""
     shape_type: ShapeEnum = "circle"
-    fill_color: Annotated[str, Field(regex=r"^#?[0-9A-Fa-f]{6}$", description="Fill color. Must be hex.")] = None
-    stroke_color: Annotated[str, Field(regex=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
+    fill_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Fill color. Must be hex.")] = None
+    stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
     stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
     scale: Annotated[float, Field(ge=0)] = 1.0
 
@@ -168,7 +168,7 @@ class GroupedVectorView(BaseModel):
     scale: Annotated[float, Field(ge=0)] = 1.0
     fill_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
     stroke_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
-    stroke_color: Annotated[str, Field(regex=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
+    stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
     stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
 
     # visibility
@@ -186,7 +186,7 @@ class CategoricalVectorView(BaseModel):
 
     fill_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
     stroke_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
-    stroke_color: Annotated[str, Field(regex=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
+    stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
     stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
     stroke_darkness: Annotated[float, Field(ge=0.0, le=1.0)] = 0.5
     border_type: BorderTypeEnum = "default"
@@ -213,7 +213,7 @@ class ContinuousVectorView(BaseModel):
 
     fill_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
     stroke_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
-    stroke_color: Annotated[str, Field(regex=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
+    stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
     stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
     stroke_darkness: Annotated[float, Field(ge=0.0, le=1.0)] = 0.5
     border_type: BorderTypeEnum = "default"

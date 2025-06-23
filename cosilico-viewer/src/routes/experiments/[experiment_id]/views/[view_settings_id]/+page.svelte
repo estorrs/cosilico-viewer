@@ -5,7 +5,7 @@
 
 	// let { experiment, view_settings } = $props();
 	let { data } = $props();
-	let { experiment, view_settings } = $derived(data);
+	let { experiment } = $derived(data);
 
 
 

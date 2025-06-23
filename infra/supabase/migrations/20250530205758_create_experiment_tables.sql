@@ -32,6 +32,7 @@ create table public.experiments (
   metadata jsonb,
   parent_id uuid references public.directory_entities(id) on delete cascade,
   directory_entity_id uuid references public.directory_entities(id) on delete cascade,
+  view_setting_id uuid references public.view_settings(id) on delete set null default null,
   image_ids uuid[] default '{}',
   layer_ids uuid[] default '{}',
   tags text[] default '{}'

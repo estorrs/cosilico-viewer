@@ -4,6 +4,7 @@ import os
 import json
 import time
 
+from pydantic import Field
 from rich import print
 from rich.console import Console
 from supabase import create_client
@@ -43,6 +44,7 @@ class CosilicoClient(object):
             self,
             email: Annotated[str, 'User email.'] = None,
             password: Annotated[str, 'User password.'] = None,
+            verbose: bool = True,
         ) -> None:
         """Sign in a user."""
         try:
@@ -52,15 +54,19 @@ class CosilicoClient(object):
             if password is None:
                 assert 'password' in self.config, 'Password not found in config. Either add to config or set password argument.'
                 password = self.config['password']
+            
+            self.email = email
+            self.password = password
 
             response = self.supabase.auth.sign_in_with_password({
-                "email": email,
-                "password": password
+                "email": self.email,
+                "password": self.password
             })
 
             self.generate_directory_structure()
 
-            print('[green]Sign-in successful. :boom:[/green]')
+            if verbose:
+                print('[green]Sign-in successful. :boom:[/green]')
         except Exception as e:
             STDERR.print('[bold red]Sign-in attempt failed.[/bold red]')
             STDERR.print(e)
@@ -99,12 +105,52 @@ class CosilicoClient(object):
                     }
                 }
             )
+            # supabase autologs in to new users account, we need to log back in to initial one.
+            self.sign_in(self.email, self.password)
             print(f'[green]User created -- {email}.[/green]')
         except Exception as e:
             STDERR.print('[bold red]User sign-up attempt failed.[/bold red]')
             STDERR.print(e)
             raise RuntimeError('Sign-up attempt failed.')
 
+
+    def create_directory(
+            self,
+            path: Annotated[str, 'Path of directory to upload experiment to.'],
+            permission: Annotated[models.PermissionEnum, 'Permission of directory. Will default to "-", meaning the permission of the parent directory.'] = models.PermissionEnum.none
+        ):
+        self._check_session()
+
+        if structure.is_valid_path(path, self.root):
+            print(f'Directory already exists at [cyan]{path}[/cyan]')
+            return None
+
+        path = path.strip('/')
+
+        pieces = path.split('/')
+        current = ''
+        old = '/'
+        for i, name in enumerate(pieces):
+            is_last = len(pieces) - 1 == i
+            current += f'/{name}'
+            if not structure.is_valid_path(current, self.root):
+                node = structure.get_node(old, self.root)
+                directory = models.DirectoryEntity(
+                    name=name,
+                    parent_id=node.id if hasattr(node, 'id') else None,
+                    entity_type='directory',
+                    permission=permission if is_last else models.PermissionEnum.none
+                )
+                response = utils.insert_to_table(self.supabase, 'directory_entities', directory)
+                self.generate_directory_structure()
+
+            old = current
+        
+        self.generate_directory_structure()
+        print(f'[green]Directory successfuly created at[/green] [cyan]{path}[/cyan]')
+                            
+
+        
     
     def create_experiment(
             self,
@@ -161,8 +207,9 @@ class CosilicoClient(object):
 
     def display_experiments(
             self,
-            path: Annotated[str, 'Path of node to display. Default will display all directories and experiments the user has access to.'] = None
+            path: Annotated[str, 'Path of node to display. Default will display all directories and experiments the user has access to.'] = None,
         ):
+        self.generate_directory_structure()
         if path is None:
             structure.display_anytree_node(self.root)
         else:

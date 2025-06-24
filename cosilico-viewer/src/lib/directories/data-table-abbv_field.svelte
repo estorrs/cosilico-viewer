@@ -44,10 +44,9 @@
     return result;
   }
 
-  let truncated;
+  let truncated = $state();
   if (abbv_type == "name") {
     truncated = formatName(value);
-    console.log("truncated", truncated);
   } else {
     truncated = basicTruncate(value);
   }

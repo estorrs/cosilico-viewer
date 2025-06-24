@@ -51,7 +51,7 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
 
   const rowData = [...idToRowData.values()];
 
-  console.log('row data', rowData);
+  // console.log('row data', rowData);
 
 
   return { 

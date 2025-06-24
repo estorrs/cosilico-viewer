@@ -80,6 +80,7 @@ class Experiment(BaseModel):
     parent_id: str | None = None
     image_ids: list[str] = []
     layer_ids: list[str] = []
+    view_setting_id: str | None = None
     tags: list[str] = []
 
 class Image(BaseModel):

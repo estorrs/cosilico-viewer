@@ -10,6 +10,7 @@
 
   let { data } = $props()
   let { rowData, profile, supabase, user } = $derived(data);
+  
 
   // const handleSubmit: EventHandler<SubmitEvent, HTMLFormElement> = async (evt) => {
   //   evt.preventDefault()
@@ -26,7 +27,8 @@
   // let x;
 
   $effect(() => {
-    console.log('rowData', rowData);
+    // console.log('rowData', rowData);
+    // console.log('profile', profile);
   })
 
 </script>

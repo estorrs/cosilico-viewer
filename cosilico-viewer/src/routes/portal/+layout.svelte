@@ -28,8 +28,10 @@
   // import 
   // ./[directory]/$types.js
 
-  let { data, children } = $props()
-  let { supabase, user, profile } = $derived(data)
+  let { data, children } = $props();
+  let { supabase, user, profile } = $derived(data);
+  console.log('profile is', profile);
+
 </script>
 
 <Sidebar.Provider>

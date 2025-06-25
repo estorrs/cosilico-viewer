@@ -106,7 +106,7 @@ class CosilicoClient(object):
                 }
             )
             # supabase autologs in to new users account, we need to log back in to initial one.
-            self.sign_in(self.email, self.password)
+            self.sign_in(self.email, self.password, verbose=False)
             print(f'[green]User created -- {email}.[/green]')
         except Exception as e:
             STDERR.print('[bold red]User sign-up attempt failed.[/bold red]')

@@ -13,9 +13,8 @@ export async function populateExperiment(experiment, view_settings, supabase) {
         image.path = data.getUrl;
         image.path_presigned_head = data.headUrl;
 
-        const view = view_settings.image_views.get(image.id);
-        image.view_settings = view ?? {};
-
+        const view = view_settings?.image_views?.get(image.id) ?? {};
+        image.view_settings = view;
     }
 
     let experiment_layers = [];
@@ -32,8 +31,8 @@ export async function populateExperiment(experiment, view_settings, supabase) {
             layer.path = data.getUrl;
             layer.path_presigned_head = data.headUrl;
 
-            const view = view_settings.layer_views.get(layer.id);
-            layer.view_settings = view ?? {};
+            const view = view_settings?.layer_views?.get(layer.id) ?? {};
+            layer.view_settings = view;
         }
 
         experiment_layers = [...layers];
@@ -54,8 +53,8 @@ export async function populateExperiment(experiment, view_settings, supabase) {
             lm.path = data.getUrl;
             lm.path_presigned_head = data.headUrl;
 
-            const view = view_settings.layer_metadata_views.get(lm.id);
-            lm.view_settings = view ?? {};
+            const view = view_settings?.layer_metadata_views?.get(lm.id) ?? {};
+            lm.view_settings = view;
         }
 
         layer.layer_metadatas = layer_metadatas ?? [];

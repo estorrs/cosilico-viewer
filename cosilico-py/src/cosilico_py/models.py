@@ -237,7 +237,6 @@ class ExperimentViewSetting(BaseModel):
     """
     id: str = Field(default_factory=lambda: uuid4().hex)
     version: str = 'v0.0.1'
-    experiment_id: Annotated[str, Field(description='Experiment the view is attached to.')]
     name: Annotated[str, Field(description='Name for view setting.')]
     image_views: Annotated[Dict[str, ImageView], Field(description='Maps image id to image view.')] = {}
     layer_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer id to layer view.')] = {}

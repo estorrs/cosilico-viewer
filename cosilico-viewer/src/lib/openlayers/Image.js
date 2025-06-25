@@ -23,6 +23,7 @@ const transformSourcePixels = function (pixels, data) {
   return [...pseudoPixel];
 };
 
+
 export class Image {
   constructor(
     node,
@@ -111,7 +112,7 @@ export class Image {
     this.overviewControl = new OverviewMap({
       collapsed: false,
       collapsible: false,
-      layers: [this.overviewLayer],
+      layers: this.overviewLayer != null ? [this.overviewLayer] : [],
       view: new View({
         projection: this.projection,
         resolutions: [3 * this.resolutions[0] / this.tileSize],
@@ -152,6 +153,22 @@ export class Image {
     if (sources == null) {
       sources = [...this.imageView.zarrTileSources];
     }
+
+    if (sources.length == 0) {
+      if (inPlace) {
+        this.rasterLayer = new ImageLayer({
+            source: null,
+          });
+
+          const layers = map.getLayers();
+          layers.removeAt(this.insertionIdx);
+          layers.insertAt(this.insertionIdx, this.rasterLayer);
+      }
+      
+
+      return null;
+    }
+  
     const rasterSource = new RasterSource({
       sources: sources,
       operation: transformSourcePixels,
@@ -255,11 +272,12 @@ export class Image {
       zIndex: this.viewSettings.z_index ?? 0,
       visibleChannelNames: this.viewSettings.visible_channels ?? [],
       zarrTileSources: [],
+      interactedChannelNames: [], // tracks channel interactions to be saved later
     };
     this.imageView = imageView;
 
     for (const channelName of this.channelNames) {
-      if (!channelViews.has(channelName)) {
+      if (!(channelName in channelViews)) {
         const channelView = {
           minValue: this.dtypeMin,
           maxValue: this.dtypeMax,

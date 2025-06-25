@@ -94,6 +94,22 @@
 			this.currentInsertionIdx = this.currentInsertionIdx + increment;
 		}
 
+		exportViewSettings() {
+			let viewSettings = {};
+
+			let imgSettings = {};
+			for (const img of this.experimentObj.images) {
+				imgSettings[img.id] = img.view_settings;
+
+				image = this.images.get(img.id);
+				imgSettings[img.id] = {...img.view_settings, image.view}
+
+			}
+
+
+
+		}
+
 		async loadImages() {
 			for (const img of this.experimentObj.images) {
 				const node = await initZarr({

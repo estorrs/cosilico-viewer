@@ -205,6 +205,12 @@ export class Image {
     this.currentZoom = current;
   }
 
+  updateInteractedChannel(channelName) {
+    if (!this.imageView?.interactedChannelNames.includes(channelName)) {
+			this.imageView?.interactedChannelNames.push(channelName);
+		}
+  }
+
   async addChannel(channelName, map) {
     if (this.imageView?.visibleChannelNames.includes(channelName)) {
       return null;
@@ -230,6 +236,8 @@ export class Image {
     if (this.isBaseImage) {
       await this.updateOverviewControl(map);
     }
+
+    this.updateInteractedChannel(channelName);
   }
 
   async removeChannel(channelName, map) {
@@ -245,12 +253,16 @@ export class Image {
       await this.updateOverviewControl(map);
     }
 
+    this.updateInteractedChannel(channelName);
+
   }
 
   setChannelColor(channelName, color) {
     let view = this.imageView.channelNameToView.get(channelName);
     view.color = color;
     this.channelToColor.set(channelName, color);
+
+    this.updateInteractedChannel(channelName);
   }
 
   setVisibility(value) {
@@ -266,7 +278,7 @@ export class Image {
     const channelViews = this.viewSettings.channel_views ?? {};
 
     const imageView = {
-      channelNameToView: new Map(Object.entries(channelViews)),
+      channelNameToView: new Map(),
       opacity: this.viewSettings.opacity ?? 1.0,
       tIndex: this.viewSettings.t_index ?? 0,
       zIndex: this.viewSettings.z_index ?? 0,
@@ -286,11 +298,22 @@ export class Image {
         };
 
         this.imageView.channelNameToView.set(channelName, channelView);
+      } else {
+        const v = channelViews[channelName];
+        const channelView = {
+          minValue: v.min_value,
+          maxValue: v.max_value,
+          gamma: v.gamma,
+          color: v.color
+        };
+        
+        this.channelToColor.set(channelName, v.color);
+        this.imageView.channelNameToView.set(channelName, channelView);
       }
     }
 
     // need to populate zarr tile sources here
-    let zarrSrcs = [];
+    // let zarrSrcs = [];
     for (const channelName of this.imageView.visibleChannelNames) {
       const cIndex = this.channelNames.indexOf(channelName);
       const newSource = await ZarrTileSource.create({
@@ -303,7 +326,7 @@ export class Image {
         cIndex: cIndex,
         zIndex: this.imageView.zIndex
       });
-      zarrSrcs.push(newSource);
+      this.imageView.zarrTileSources.push(newSource);
 
     }
 

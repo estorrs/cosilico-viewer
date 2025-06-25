@@ -5,6 +5,7 @@ export async function populateExperiment(experiment, view_settings, supabase) {
         .from('images')
         .select('*')
         .in('id', experiment.image_ids);
+    
 
     for (const image of images) {
         const { data, error } = await supabase.functions.invoke('generate-download-url', {
@@ -13,7 +14,8 @@ export async function populateExperiment(experiment, view_settings, supabase) {
         image.path = data.getUrl;
         image.path_presigned_head = data.headUrl;
 
-        const view = view_settings?.image_views?.get(image.id) ?? {};
+        const view = view_settings?.settings?.image_views?.[image.id] ?? {};
+
         image.view_settings = view;
     }
 
@@ -31,7 +33,7 @@ export async function populateExperiment(experiment, view_settings, supabase) {
             layer.path = data.getUrl;
             layer.path_presigned_head = data.headUrl;
 
-            const view = view_settings?.layer_views?.get(layer.id) ?? {};
+            const view = view_settings?.settings?.layer_views?.[layer.id] ?? {};
             layer.view_settings = view;
         }
 
@@ -53,7 +55,7 @@ export async function populateExperiment(experiment, view_settings, supabase) {
             lm.path = data.getUrl;
             lm.path_presigned_head = data.headUrl;
 
-            const view = view_settings?.layer_metadata_views?.get(lm.id) ?? {};
+            const view = view_settings?.settings?.layer_metadata_views?.[lm.id] ?? {};
             lm.view_settings = view;
         }
 
@@ -62,6 +64,8 @@ export async function populateExperiment(experiment, view_settings, supabase) {
 
     experiment.images = images;
     experiment.layers = experiment_layers;
+
+    experiment.view_settings = view_settings
     
     return experiment;
 }

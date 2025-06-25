@@ -27,13 +27,14 @@
 	import { Image } from "./openlayers/Image.js";
 	import { FeatureGroupVector, FeatureVector } from "./openlayers/Vector.js";
 	import ZoomPanel from "./zooming/ZoomPanel.svelte";
+	import Topbar from "./topbar/Topbar.svelte";
 	import { captureScreen } from "./openlayers/OpenlayersHelpers.js";
 	import * as Alert from "$lib/components/ui/alert/index.js";
 
 	import Info from "@lucide/svelte/icons/info";
 	import Camera from "@lucide/svelte/icons/camera";
 
-	let { experimentObj } = $props();
+	let { experimentObj, supabase } = $props();
 
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
@@ -43,7 +44,6 @@
 	let map;
 	let experiment = $state(null);
 	let mirrors = $state(null);
-
 
 	class Experiment {
 		constructor(experimentObj) {
@@ -99,19 +99,39 @@
 
 			let imgSettings = {};
 			for (const img of this.experimentObj.images) {
-				imgSettings[img.id] = img.view_settings;
+				let o = { ...img.view_settings };
+				// console.log('id is', img.id);
+				// console.log('images are', this.images);
+				// console.log('image is', this.images.get(img.id));
+				const view = this.images.get(img.id).image.imageView;
+				// console.log('view', view);
+				o.opacity = view.opacity;
+				o.t_index = view.tIndex;
+				o.z_index = view.zIndex;
+				o.visible_channels = view.visibleChannelNames;
+				o.channel_views = {};
 
-				image = this.images.get(img.id);
-				imgSettings[img.id] = {...img.view_settings, image.view}
-
+				for (const name of view.interactedChannelNames) {
+					const channel_view = view.channelNameToView.get(name);
+					o.channel_views[name] = {
+						min_value: channel_view.minValue,
+						max_value: channel_view.maxValue,
+						gamma: channel_view.gamma,
+						color: channel_view.color,
+					};
+				}
+				imgSettings[img.id] = o;
 			}
+			viewSettings.image_views = imgSettings;
 
-
-
+			return viewSettings;
 		}
 
 		async loadImages() {
-			for (const img of this.experimentObj.images) {
+			console.log('exp obj', this.experimentObj);
+			for (let i = 0; i < this.experimentObj.images.length; i++) {
+			// for (const img of this.experimentObj.images) {
+				const img = this.experimentObj.images[i];
 				const node = await initZarr({
 					getUrl: img.path,
 					headUrl: img.path_presigned_head,
@@ -120,10 +140,10 @@
 					image: await Image.create(
 						node,
 						img.id,
-						false,
+						i == 0 ? true : false,
 						this.currentInsertionIdx,
 						img.view_settings,
-						map
+						map,
 					),
 				};
 				this.currentInsertionIdx = this.currentInsertionIdx + 1;
@@ -244,8 +264,8 @@
 		const sizeY = node.attrs.ome.images[0].pixels.size_y;
 
 		const projection = new Projection({
-			code: 'PIXEL',
-			units: 'pixels',
+			code: "PIXEL",
+			units: "pixels",
 			extent: [0, 0, sizeX, sizeY],
 		});
 
@@ -260,6 +280,10 @@
 		});
 
 		map.on("moveend", () => {
+			if (experiment == null) {
+				return null;
+			}
+
 			for (const [_, image] of experiment.images) {
 				image.image.updateResolutionInfo(map);
 			}
@@ -448,10 +472,8 @@
 
 	onMount(async () => {
 		const baseImage = experimentObj.images[0];
-	
-		await createMap(
-			baseImage
-		);
+
+		await createMap(baseImage);
 
 		experiment = await Experiment.create(experimentObj);
 
@@ -589,6 +611,8 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
+
+		image.updateInteractedChannel(channelName);
 	}
 	function setMaxThresholdValue(image, channelName, value) {
 		let view = image.imageView.channelNameToView.get(channelName);
@@ -608,6 +632,8 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
+
+		image.updateInteractedChannel(channelName);
 	}
 
 	function getThresholdValues(image, channelName) {
@@ -636,6 +662,8 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
+
+		image.updateInteractedChannel(channelName);
 	}
 </script>
 
@@ -646,15 +674,13 @@
 	{#key mapIsLoading}
 		{#if mapIsLoading}
 			<div
-				class="absolute inset-0 flex items-center justify-center z-51 pointer-events-none"
-			>
+				class="absolute inset-0 flex items-center justify-center z-51 pointer-events-none">
 				<Circle2
 					size="80"
 					colorInner="#FF0000"
 					colorCenter="#00FF00"
 					colorOuter="#0000FF"
-					unit="px"
-				/>
+					unit="px" />
 			</div>
 		{/if}
 	{/key}
@@ -663,16 +689,40 @@
 	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
 	{#if experiment && mirrors != null}
 		{#key reloadImageInfoKey}
-			<div class="absolute left-4 top-4 right-96 z-50">
+			<!-- <div class="absolute left-4 top-4 right-96 z-50">
 				<div class="w-full">
 					<Button onclick={() => captureScreen(map, experiment)}>
 						<Camera color="#ffffff" />
 					</Button>
 				</div>
-			</div>
+			</div> -->
+			<Topbar 
+				onSaveViewSettings = {async () => {
+					// console.log('view settings', experiment.view_settings);
+					const body = experiment.exportViewSettings();
+					const { error } = await supabase
+						.from('view_settings')
+						.update({ settings: body })
+						.eq('id', experiment.experimentObj.view_settings.id)
+
+					if (error) console.error(error);
+				}}
+				onExportViewSettings = {async (name) => {
+					const body = experiment.exportViewSettings();
+					console.log('exporting', body);
+					const { error } = await supabase
+						.from('view_settings')
+						.insert({ 
+							name: name,
+							settings: body 
+						})
+						
+					if (error) console.error(error);
+				}}
+				onCaptureScreen = {() => captureScreen(map, experiment)}
+			    />
 			<div
-				class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto"
-			>
+				class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto">
 				<Card.Root class="w-full gap-0">
 					<Card.Header>
 						<Card.Title class="text-xl">Images</Card.Title>
@@ -681,11 +731,9 @@
 						<Accordion.Root type="single">
 							{#each Array.from(experiment.images.values()) as obj}
 								<Accordion.Item
-									value="{obj.image.imageId}-item"
-								>
+									value="{obj.image.imageId}-item">
 									<div
-										class="grid w-full grid-cols-[auto_1fr] items-center gap-2"
-									>
+										class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
 										<Checkbox
 											checked={mirrors
 												.get("imageVisabilityInfo")
@@ -697,15 +745,13 @@
 												mirrors
 													.get("imageVisabilityInfo")
 													.set(obj.image.imageId, v);
-											}}
-										/>
+											}} />
 										<Accordion.Trigger>
 											<span
 												id="{obj.image
 													.name}-trigger-text"
 												class="text-left text-md"
-												>{obj.image.name}</span
-											>
+												>{obj.image.name}</span>
 										</Accordion.Trigger>
 									</div>
 									<Accordion.Content class="ml-3">
@@ -717,22 +763,18 @@
 												<Alert.Title>Info!</Alert.Title>
 												<Alert.Description
 													>Layer is hidden. Unhide to
-													view.</Alert.Description
-												>
+													view.</Alert.Description>
 											</Alert.Root>
 										{/if}
 										<Accordion.Root>
 											{#each obj.image.channelNames as channelName}
 												<Accordion.Item
 													value="{obj.image
-														.imageId}-{channelName}-item"
-												>
+														.imageId}-{channelName}-item">
 													<div
-														class="grid w-full grid-cols-[auto_1fr] items-center gap-2"
-													>
+														class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
 														<div
-															class="flex items-center gap-2"
-														>
+															class="flex items-center gap-2">
 															<Checkbox
 																checked={obj.image.imageView.visibleChannelNames.includes(
 																	channelName,
@@ -743,8 +785,7 @@
 																	toggleChannel(
 																		channelName,
 																		obj.image,
-																	)}
-															/>
+																	)} />
 															<SwatchSelector
 																hex={mirrors
 																	.get(
@@ -774,38 +815,31 @@
 																		channelName,
 																		obj.image,
 																		value,
-																	)}
-															/>
+																	)} />
 														</div>
 														<Accordion.Trigger>
 															<span
 																id="{obj.image
 																	.imageId}-{channelName}-text"
 																class="text-left"
-																>{channelName}</span
-															>
+																>{channelName}</span>
 														</Accordion.Trigger>
 													</div>
 													<Accordion.Content
-														class="ml-3"
-													>
+														class="ml-3">
 														<Card.Root class="p-1">
 															<Card.Header
-																class="p-1"
-															>
+																class="p-1">
 																<Card.Title
 																	class="text-sm"
 																	>Intensity
-																	Threshold</Card.Title
-																>
+																	Threshold</Card.Title>
 																<!-- <Card.Description>Intensity Threshold</Card.Description> -->
 															</Card.Header>
 															<Card.Content
-																class="p-1 pt-0"
-															>
+																class="p-1 pt-0">
 																<div
-																	class="flex w-full items-center gap-3"
-																>
+																	class="flex w-full items-center gap-3">
 																	<Input
 																		type="number"
 																		value={mirrors
@@ -831,8 +865,7 @@
 																					.target
 																					.value,
 																			)}
-																		class="w-[70px] px-1 text-left"
-																	/>
+																		class="w-[70px] px-1 text-left" />
 																	<Slider
 																		bind:value={
 																			() =>
@@ -856,8 +889,7 @@
 																			.image
 																			.dtypeMax}
 																		step={1}
-																		class="flex-1"
-																	/>
+																		class="flex-1" />
 																	<Input
 																		type="number"
 																		value={mirrors
@@ -883,8 +915,7 @@
 																					.target
 																					.value,
 																			)}
-																		class="w-[70px] px-1 text-left"
-																	/>
+																		class="w-[70px] px-1 text-left" />
 																</div>
 															</Card.Content>
 														</Card.Root>
@@ -906,11 +937,9 @@
 						<Accordion.Root type="single">
 							{#each Array.from(experiment.layers.values()) as obj}
 								<Accordion.Item
-									value="{obj.vector.vectorId}-item"
-								>
+									value="{obj.vector.vectorId}-item">
 									<div
-										class="grid w-full grid-cols-[auto_1fr] items-center gap-2"
-									>
+										class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
 										<Checkbox
 											checked={mirrors
 												.get("layerVisabilityInfo")
@@ -925,32 +954,30 @@
 														obj.vector.vectorId,
 														v,
 													);
-											}}
-										/>
+											}} />
 										<Accordion.Trigger>
 											<span
 												id="{obj.vector
 													.name}-trigger-text"
 												class="text-left"
-												>{obj.vector.name}</span
-											>
+												>{obj.vector.name}</span>
 										</Accordion.Trigger>
 									</div>
 									<Accordion.Content class="ml-3">
-										{#if !mirrors.get("layerVisabilityInfo").get(obj.vector.vectorId)}
+										{#if !mirrors
+											.get("layerVisabilityInfo")
+											.get(obj.vector.vectorId)}
 											<Alert.Root>
 												<Info class="size-4" />
 												<Alert.Title>Info!</Alert.Title>
 												<Alert.Description
 													>Layer is hidden. Unhide to
-													view.</Alert.Description
-												>
+													view.</Alert.Description>
 											</Alert.Root>
 										{/if}
 										{#key metadataChangeKey}
 											<div
-												class="flex w-full items-center gap-3"
-											>
+												class="flex w-full items-center gap-3">
 												<p>View options</p>
 												{#if obj.vector.objectTypes.includes("point")}
 													<PointViewOptions
@@ -1040,8 +1067,7 @@
 																		.vectorId,
 																).strokeColor =
 																v;
-														}}
-													/>
+														}} />
 												{/if}
 												{#if obj.vector.objectTypes.includes("polygon")}
 													<PolygonViewOptions
@@ -1148,8 +1174,7 @@
 																		.vectorId,
 																);
 															info.borderType = v;
-														}}
-													/>
+														}} />
 												{/if}
 												<FilterOptions
 													layer={obj}
@@ -1297,15 +1322,13 @@
 																	.vectorId,
 															);
 														mapping.delete(key);
-													}}
-												/>
+													}} />
 											</div>
 										{/key}
 										<Card.Root class="p-1 w-full gap-0">
 											<Card.Header class="p-1">
 												<Card.Title class="text-md"
-													>Active Metadata</Card.Title
-												>
+													>Active Metadata</Card.Title>
 											</Card.Header>
 											<Card.Content class="p-1 pt-0">
 												<LayerOptions
@@ -1431,8 +1454,7 @@
 														obj.vector.setVCenter(
 															fieldName,
 															vCenter,
-														)}
-												/>
+														)} />
 											</Card.Content>
 										</Card.Root>
 									</Accordion.Content>
@@ -1483,8 +1505,7 @@
 							});
 						}
 					}}
-					step={0.01}
-				/>
+					step={0.01} />
 			</div>
 		{/key}
 	{/if}

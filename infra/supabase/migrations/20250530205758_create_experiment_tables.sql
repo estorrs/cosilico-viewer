@@ -307,29 +307,53 @@ returns boolean as $$
 $$ language sql stable;
 
 
+-- create or replace function public.set_default_view_setting()
+-- returns trigger
+-- language plpgsql
+-- -- security definer              -- so it can bypass RLS if needed
+-- set search_path = ''
+-- as $$
+-- declare
+--   default_vs_id uuid;
+-- begin
+--   if new.view_setting_id is null then
+--     select id
+--       into default_vs_id
+--       from public.view_settings
+--       where name = 'Default'
+--       order by created_at asc
+--       limit 1;
+
+--     new.view_setting_id := default_vs_id;
+--   end if;
+
+--   return new;
+-- end;
+-- $$;
+
 create or replace function public.set_default_view_setting()
 returns trigger
 language plpgsql
--- security definer              -- so it can bypass RLS if needed
 set search_path = ''
 as $$
 declare
-  default_vs_id uuid;
+  new_vs_id uuid;
 begin
   if new.view_setting_id is null then
-    select id
-      into default_vs_id
-      from public.view_settings
-      where name = 'Default'
-      order by created_at asc
-      limit 1;
+    insert into public.view_settings (name, created_by)
+    values (
+      'Default',
+      auth.uid()
+    )
+    returning id into new_vs_id;
 
-    new.view_setting_id := default_vs_id;
+    new.view_setting_id := new_vs_id;
   end if;
 
   return new;
 end;
 $$;
+
 
 create trigger fill_default_view_setting
 before insert on public.experiments
@@ -669,5 +693,5 @@ using (
 
 
 -- seed default view setting
-insert into public.view_settings (name)
-values ('Default');
+-- insert into public.view_settings (name)
+-- values ('Default');

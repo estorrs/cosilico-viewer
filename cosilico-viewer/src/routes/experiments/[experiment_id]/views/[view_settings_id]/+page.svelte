@@ -5,7 +5,7 @@
 
 	// let { experiment, view_settings } = $props();
 	let { data } = $props();
-	let { experiment } = $derived(data);
+	let { experiment, supabase } = $derived(data);
 
 
 
@@ -16,6 +16,7 @@
   <div class='h-screen'>
   <ZarrTileViewer
     experimentObj={experiment}
+    {supabase}
   />
   </div>
 

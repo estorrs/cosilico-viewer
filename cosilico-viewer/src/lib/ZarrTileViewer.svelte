@@ -128,9 +128,7 @@
 		}
 
 		async loadImages() {
-			console.log('exp obj', this.experimentObj);
 			for (let i = 0; i < this.experimentObj.images.length; i++) {
-			// for (const img of this.experimentObj.images) {
 				const img = this.experimentObj.images[i];
 				const node = await initZarr({
 					getUrl: img.path,
@@ -159,7 +157,6 @@
 		}
 
 		async loadGroupedLayer(gl) {
-			// const node = await initZarr(gl.path);
 			const node = await initZarr({
 				getUrl: gl.path,
 				headUrl: gl.path_presigned_head,
@@ -181,8 +178,9 @@
 				featureMetaToNode,
 				this.baseImage,
 				this.currentInsertionIdx,
+				gl.view_settings,
+				map,
 			);
-			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			const obj = {
 				vector: fgv,

@@ -25,9 +25,11 @@ export class FeatureGroupVector {
         featureMetaToNode,
         baseImage,
         insertionIdx,
+        viewSettings,
     ) {
         this.node = node;
         this.isVisible = false;
+        this.viewSettings = viewSettings;
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
@@ -60,14 +62,14 @@ export class FeatureGroupVector {
 
     }
 
-    async init() {
-        await this.populateInitialFields();
+    async init(map) {
+        await this.populateInitialFields(map);
         return this;
     }
 
-    static async create(node, vectorId, featureMetaToNode, baseImage, insertionIdx) {
+    static async create(node, vectorId, featureMetaToNode, baseImage, insertionIdx, viewSettings, map) {
         const instance = new FeatureGroupVector(node, vectorId, featureMetaToNode, baseImage, insertionIdx);
-        return await instance.init();
+        return await instance.init(map);
     }
 
     createLayer(featureGroup) {
@@ -220,6 +222,12 @@ export class FeatureGroupVector {
         }
     }
 
+    updateInteractedFeature(featureName) {
+        if (!this.vectorView?.interactedFeatureNames.includes(featureName)) {
+            this.vectorView?.interactedFeatureNames.push(featureName);
+        }
+    }
+
     featureIsVisible(feature) {
         let passesMetadata = true;
         let passesLayer = true;
@@ -278,6 +286,8 @@ export class FeatureGroupVector {
         this.vectorView.visibleFeatureIndices.push(featureIndex);
         this.vectorView.visibleFeatureGroups.push(featureGroup);
         this.vectorView.visibleFeatureNames.push(featureName);
+
+        this.updateInteractedFeature(featureName);
     }
 
     removeFeature(featureName, map) {
@@ -294,6 +304,8 @@ export class FeatureGroupVector {
 
         map.removeLayer(layer);
         this.featureNameToLayer.delete(featureName);
+
+        this.updateInteractedFeature(featureName);
     }
 
     setVisibility(value) {
@@ -312,6 +324,8 @@ export class FeatureGroupVector {
 
         const layer = this.featureNameToLayer.get(featureName);
         layer.setStyle(layer.getStyle());
+
+        this.updateInteractedFeature(featureName);
     }
 
     setFeatureShapeType(featureName, shapeName) {
@@ -321,6 +335,8 @@ export class FeatureGroupVector {
 
         const layer = this.featureNameToLayer.get(featureName);
         layer.setStyle(layer.getStyle());
+
+        this.updateInteractedFeature(featureName);
     }
 
     setVectorViewValue(key, value) {
@@ -401,30 +417,56 @@ export class FeatureGroupVector {
 
         this.featureNameToLayer = new SvelteMap();
 
+        const feature_styles = this.viewSettings.feature_styles ?? {};
+        // opacity: this.viewSettings.opacity ?? 1.0,
+
         this.featureToColor = generateColorMapping(defaultPalettes.featurePallete, this.featureNames);
         //create view
         this.vectorView = {
             featureNameToView: new globalThis.Map(),
-            scale: 1.0,
-            fillOpacity: 1.0,
-            strokeOpacity: 1.0,
-            strokeWidth: 1.0,
-            strokeColor: '#dddddd',
+            scale: this.viewSettings.scale ?? 1.0,
+            fillOpacity: this.viewSettings.fillOpacity ?? 1.0,
+            strokeOpacity: this.viewSettings.strokeOpacity ?? 1.0,
+            strokeWidth: this.viewSettings.strokeWidth ?? 1.0,
+            strokeColor: this.viewSettings.strokeColor ?? '#dddddd',
             visibleFeatureNames: [],
             visibleFeatureGroups: [],
             visibleFeatureIndices: [],
             zarrVectorLoaders: [],
+            interactedFeatureNames: []
         };
+
+        // now we just need to create the vector loaders/layers
+
+        for (const fname of this.viewSettings.visible_feature_names ?? []) {
+            const idx = this.featureNames.indexOf(fname);
+            this.vectorView.visibleFeatureNames.push(fname);
+            this.vectorView.visibleFeatureGroups.push(this.featureGroups[idx]);
+            this.vectorView.visibleFeatureIndices.push(idx);
+        }
 
         for (let i = 0; i < this.featureNames.length; i++) {
             const featureName = this.featureNames[i];
-            const catFeatureView = {
-                shapeType: 'circle',
-                fillColor: this.featureToColor.get(featureName)
-            };
-            catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
 
-            this.vectorView.featureNameToView.set(featureName, catFeatureView);
+            if (!feature_styles.has(featureName)) {
+                const catFeatureView = {
+                    shapeType: 'circle',
+                    fillColor: this.featureToColor.get(featureName)
+                };
+                catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, catFeatureView.fillColor, this.vectorView.scale);
+
+                this.vectorView.featureNameToView.set(featureName, catFeatureView);
+            } else {
+                const s = feature_styles.get(featureName);
+                this.featureToColor.set(featureName, s.fill_color);
+                const catFeatureView = {
+                    shapeType: s.shape_type,
+                    fillColor: this.featureToColor.get(featureName),
+                    shape: generateShape(s.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, s.fillColor, this.vectorView.scale)
+                };
+                this.vectorView.featureNameToView.set(featureName, catFeatureView);
+            }
+            
         }
         this.isLoaded = true;
 

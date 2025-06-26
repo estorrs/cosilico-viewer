@@ -158,9 +158,9 @@ class FeatureStyle(BaseModel):
     """Visual style for a single feature (point / polygon)."""
     shape_type: ShapeEnum = "circle"
     fill_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Fill color. Must be hex.")] = None
-    stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
-    stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
-    scale: Annotated[float, Field(ge=0)] = 1.0
+    # stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
+    # stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
+    # scale: Annotated[float, Field(ge=0)] = 1.0
 
 class GroupedVectorView(BaseModel):
     kind: Literal["grouped"] = "grouped"

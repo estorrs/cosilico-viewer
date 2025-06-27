@@ -100,11 +100,8 @@
 			let imgSettings = {};
 			for (const img of this.experimentObj.images) {
 				let o = { ...img.view_settings };
-				// console.log('id is', img.id);
-				// console.log('images are', this.images);
-				// console.log('image is', this.images.get(img.id));
 				const view = this.images.get(img.id).image.imageView;
-				// console.log('view', view);
+				o.is_visible = this.images.get(img.id).image.isVisible;
 				o.opacity = view.opacity;
 				o.t_index = view.tIndex;
 				o.z_index = view.zIndex;
@@ -123,6 +120,36 @@
 				imgSettings[img.id] = o;
 			}
 			viewSettings.image_views = imgSettings;
+
+			let layerSettings = {};
+			for (const layer of this.experimentObj.layers) {
+				let o = { ...layer.view_settings };
+				const vector = this.layers.get(layer.id).vector;
+				const view = vector.vectorView;
+				o.is_visible = vector.isVisible;
+				o.fill_opacity = view.fillOpacity;
+				o.stroke_opacity = view.strokeOpacity;
+				o.stroke_color = view.strokeColor;
+				o.stroke_width = view.strokeWidth;
+				o.scale = view.scale;
+
+				// console.log('layer', layer);
+				if (layer.is_grouped) {
+					o.visible_feature_names = view.visibleFeatureNames;
+					o.feature_styles = {};
+
+					for (const featureName of view.interactedFeatureNames) {
+						const fv = view.featureNameToView.get(featureName);
+						o.feature_styles[featureName] = {
+							shape_type: fv.shapeType,
+							fill_color: fv.fillColor,
+						};
+					}		
+				}
+
+				layerSettings[layer.id] = o;
+			}
+			viewSettings.layer_views = layerSettings;
 
 			return viewSettings;
 		}
@@ -149,9 +176,9 @@
 				this.imageOrder.push(img.id);
 			}
 
-			this.baseImage = this.images.get(this.imageOrder[0]).image;
-			this.baseImage.isBaseImage = true;
-			this.baseImage.isVisible = true;
+			// this.baseImage = this.images.get(this.imageOrder[0]).image;
+			// this.baseImage.isBaseImage = true;
+			// this.baseImage.isVisible = true;
 
 			this.imagesLoaded = true;
 		}
@@ -171,7 +198,7 @@
 				// const metadataNode = await initZarr(mgl.path);
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
 			}
-
+			// console.log('view settings', gl.view_settings);
 			const fgv = await FeatureGroupVector.create(
 				node,
 				gl.id,
@@ -192,6 +219,11 @@
 			this.layers.set(gl.id, obj);
 			this.layerOrder.push(gl.id);
 			this.layerToIsGrouped.set(gl.id, true);
+
+			for (const fname in fgv.vectorView?.visibleFeatureNames) {
+				this.currentInsertionIdx++;
+				fgv.insertionIdx++;
+			}
 		}
 
 		async loadLayer(l) {
@@ -206,22 +238,29 @@
 				l.id,
 				this.baseImage,
 				this.currentInsertionIdx,
+				l.view_settings,
+				map
 			);
-			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			let featureMetaToNode = new globalThis.Map();
+			let featureMetaToViewSettings = new globalThis.Map();
 			for (const mgl of l.layer_metadatas) {
-				// const metadataNode = await initZarr(mgl.path);
 				const metadataNode = await initZarr({
 					getUrl: mgl.path,
 					headUrl: mgl.path_presigned_head,
 				});
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
+				featureMetaToViewSettings.set(metadataNode.attrs.name, mgl.view_settings);
+
+				if (mgl.view_settings.is_visible) {
+					await fv.setMetadata(mgl.name, metadataNode, map, mgl.view_settings)
+				}
 			}
 
 			const obj = {
 				vector: fv,
 				metadataToNode: featureMetaToNode,
+				metadataToViewSettings: featureMetaToViewSettings,
 				viewSettings: l.view_settings,
 				isGrouped: false,
 			};
@@ -229,6 +268,9 @@
 			this.layers.set(l.id, obj);
 			this.layerOrder.push(l.id);
 			this.layerToIsGrouped.set(l.id, false);
+
+			this.currentInsertionIdx++;
+			fv.insertionIdx++;
 		}
 
 		async loadLayers() {
@@ -243,14 +285,14 @@
 			this.layersLoaded = true;
 		}
 
-		async initializeLayerMetadata(map) {
-			for (const [k, v] of this.layers) {
-				if (!v.isGrouped) {
-					await v.vector.setMetadata(null, null, map);
-					this.incrementInsertionIndices(v.vector.vectorId);
-				}
-			}
-		}
+		// async initializeLayerMetadata(map) {
+		// 	for (const [k, v] of this.layers) {
+		// 		if (!v.isGrouped) {
+		// 			await v.vector.setMetadata(null, null, map);
+		// 			this.incrementInsertionIndices(v.vector.vectorId);
+		// 		}
+		// 	}
+		// }
 	}
 
 	async function createMap(baseImage) {
@@ -476,11 +518,14 @@
 		experiment = await Experiment.create(experimentObj);
 
 		// first channel of first image visible by default
-		await experiment.baseImage.addChannel(
-			experiment.baseImage.channelNames[0],
-			map,
-		);
-		await experiment.initializeLayerMetadata(map);
+		if (experiment.baseImage.imageView.visibleChannelNames.length == 0) {
+			await experiment.baseImage.addChannel(
+				experiment.baseImage.channelNames[0],
+				map,
+			);
+		}
+		
+		// await experiment.initializeLayerMetadata(map);
 
 		// //set tooltip info, must fix
 		// for (const [k, layer] of experiment.layers) {
@@ -500,17 +545,6 @@
 		reloadLayerInfoKey = !reloadLayerInfoKey;
 		mapIsLoading = false;
 	});
-
-	async function toggleLayer(vector, value) {
-		if (value) {
-			// show layers logic here
-			///
-		} else {
-			// hide layers logic here
-			///
-		}
-		vector.isVisible = value;
-	}
 
 	function toggleFeature(featureName, vector, isVisible) {
 		let visible;
@@ -1344,6 +1378,7 @@
 																metadataName,
 															),
 															map,
+															obj.metadataToViewSettings.get(metadataName)
 														);
 
 														// we need to resynch view options

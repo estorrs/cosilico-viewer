@@ -28,7 +28,7 @@ export class FeatureGroupVector {
         viewSettings,
     ) {
         this.node = node;
-        this.isVisible = false;
+        this.isVisible = viewSettings.isVisible;
         this.viewSettings = viewSettings;
 
         this.version = node.attrs.version;
@@ -68,7 +68,7 @@ export class FeatureGroupVector {
     }
 
     static async create(node, vectorId, featureMetaToNode, baseImage, insertionIdx, viewSettings, map) {
-        const instance = new FeatureGroupVector(node, vectorId, featureMetaToNode, baseImage, insertionIdx);
+        const instance = new FeatureGroupVector(node, vectorId, featureMetaToNode, baseImage, insertionIdx, viewSettings);
         return await instance.init(map);
     }
 
@@ -369,7 +369,7 @@ export class FeatureGroupVector {
         this.setVectorViewValue('strokeOpacity', strokeOpacity);
     }
 
-    async populateInitialFields() {
+    async populateInitialFields(map) {
         const metaPath = '/metadata/features'
         const featureNamesArr = await open(this.node.resolve(`${metaPath}/feature_names`), { kind: "array" });
         const featureNamesChunk = await get(featureNamesArr, [null]);
@@ -417,18 +417,21 @@ export class FeatureGroupVector {
 
         this.featureNameToLayer = new SvelteMap();
 
-        const feature_styles = this.viewSettings.feature_styles ?? {};
+        console.log('view settings', this.viewSettings);
+
+        const feature_styles = this.viewSettings?.feature_styles ?? {};
+        console.log('feature styles', feature_styles);
         // opacity: this.viewSettings.opacity ?? 1.0,
 
         this.featureToColor = generateColorMapping(defaultPalettes.featurePallete, this.featureNames);
         //create view
         this.vectorView = {
             featureNameToView: new globalThis.Map(),
-            scale: this.viewSettings.scale ?? 1.0,
-            fillOpacity: this.viewSettings.fillOpacity ?? 1.0,
-            strokeOpacity: this.viewSettings.strokeOpacity ?? 1.0,
-            strokeWidth: this.viewSettings.strokeWidth ?? 1.0,
-            strokeColor: this.viewSettings.strokeColor ?? '#dddddd',
+            scale: this.viewSettings?.scale ?? 1.0,
+            fillOpacity: this.viewSettings?.fillOpacity ?? 1.0,
+            strokeOpacity: this.viewSettings?.strokeOpacity ?? 1.0,
+            strokeWidth: this.viewSettings?.strokeWidth ?? 1.0,
+            strokeColor: this.viewSettings?.strokeColor ?? '#dddddd',
             visibleFeatureNames: [],
             visibleFeatureGroups: [],
             visibleFeatureIndices: [],
@@ -436,19 +439,10 @@ export class FeatureGroupVector {
             interactedFeatureNames: []
         };
 
-        // now we just need to create the vector loaders/layers
-
-        for (const fname of this.viewSettings.visible_feature_names ?? []) {
-            const idx = this.featureNames.indexOf(fname);
-            this.vectorView.visibleFeatureNames.push(fname);
-            this.vectorView.visibleFeatureGroups.push(this.featureGroups[idx]);
-            this.vectorView.visibleFeatureIndices.push(idx);
-        }
-
         for (let i = 0; i < this.featureNames.length; i++) {
             const featureName = this.featureNames[i];
 
-            if (!feature_styles.has(featureName)) {
+            if (!(featureName in feature_styles)) {
                 const catFeatureView = {
                     shapeType: 'circle',
                     fillColor: this.featureToColor.get(featureName)
@@ -457,17 +451,28 @@ export class FeatureGroupVector {
 
                 this.vectorView.featureNameToView.set(featureName, catFeatureView);
             } else {
-                const s = feature_styles.get(featureName);
+                const s = feature_styles[featureName];
                 this.featureToColor.set(featureName, s.fill_color);
                 const catFeatureView = {
                     shapeType: s.shape_type,
                     fillColor: this.featureToColor.get(featureName),
-                    shape: generateShape(s.shapeType, this.vectorView.strokeWidth, this.vectorView.strokeColor, s.fillColor, this.vectorView.scale)
+                    shape: generateShape(s.shape_type, this.vectorView.strokeWidth, this.vectorView.strokeColor, s.fill_color, this.vectorView.scale)
                 };
                 this.vectorView.featureNameToView.set(featureName, catFeatureView);
             }
             
         }
+
+        for (const fname of this.viewSettings?.visible_feature_names ?? []) {
+            this.addFeature(fname, map);
+            // const idx = this.featureNames.indexOf(fname);
+            // this.vectorView.visibleFeatureNames.push(fname);
+            // this.vectorView.visibleFeatureGroups.push(this.featureGroups[idx]);
+            // this.vectorView.visibleFeatureIndices.push(idx);
+        }
+
+        console.log('vectorView', this.vectorView);
+
         this.isLoaded = true;
 
     }
@@ -480,9 +485,11 @@ export class FeatureVector {
         vectorId,
         baseImage,
         insertionIdx,
+        viewSettings,
     ) {
         this.node = node;
         this.isVisible = false;
+        this.viewSettings = viewSettings;
 
         this.version = node.attrs.version;
         this.name = node.attrs.name;
@@ -520,14 +527,15 @@ export class FeatureVector {
         this.projection = baseImage.projection
     }
 
-    async init() {
+    async init(map) {
         // await this.xx(), eventually put async here if you need
+        await this.setMetadata(null, null, map);
         return this;
     }
 
-    static async create(node, vectorId, baseImage, insertionIdx) {
-        const instance = new FeatureVector(node, vectorId, baseImage, insertionIdx);
-        return await instance.init();
+    static async create(node, vectorId, baseImage, insertionIdx, viewSettings, map) {
+        const instance = new FeatureVector(node, vectorId, baseImage, insertionIdx, viewSettings, map);
+        return await instance.init(map);
     }
 
     createLayer(useMetadata = true) {
@@ -693,17 +701,18 @@ export class FeatureVector {
         if (!this.vectorView) {
             this.vectorView = {
                 featureView: null,
-                fillOpacity: 1.0,
-                strokeOpacity: 1.0,
-                strokeWidth: 1.,
-                strokeColor: '#dddddd',
-                strokeDarkness: .5,
-                borderType: 'default',
-                scale: 1.0,
-                palette: defaultPalettes.continousPalette,
-                visibleFields: [],
-                visibleFieldIndices: [],
+                fillOpacity: this.viewSettings?.fill_opacity ?? 1.0,
+                strokeOpacity: this.viewSettings?.stroke_opacity ?? 1.0,
+                strokeWidth: this.viewSettings?.storke_width ?? 1.,
+                strokeColor: this.viewSettings?.stroke_color ?? '#dddddd',
+                strokeDarkness: this.viewSettings?.stroke_darkness ?? .5,
+                borderType: this.viewSettings?.border_type ??  'default',
+                scale: this.viewSettings?.scale ?? 1.0,
+                palette: this.viewSettings?.palette ?? defaultPalettes.continousPalette,
+                visibleFields: this.viewSettings?.visible_fields ?? [],
+                // visibleFieldIndices: [],
             }
+            this.vectorView.visibleFieldIndices = this.vectorView.visibleFields.map((v) => this.metadataFields.indexOf(v));
         } else {
             this.vectorView = {
                 ...this.vectorView,
@@ -795,7 +804,11 @@ export class FeatureVector {
     }
 
 
-    async setMetadata(metadataName, metadataNode, map) {
+    async setMetadata(metadataName, metadataNode, map, viewSettings = null) {
+        if (viewSettings != null) {
+            this.viewSettings = viewSettings;
+        }
+
         if (this.metadataName) {
             this.metadataToView.set(this.metadataName, this.vectorView); // saving previous
         }
@@ -833,23 +846,39 @@ export class FeatureVector {
                 chunk = await get(await open(metadataNode.resolve('/metadata/vcenters'), { kind: "array" }), [null]);
                 const vcenters = chunk.data;
 
+                const fieldValueInfo = this.viewSettings?.field_value_info ?? {};
                 this.metadataFieldToVInfo = new Map();
                 for (let i = 0; i < vmins.length; i++) {
+                    let vMin;
+                    let vMax;
                     let vCenter;
-                    if (vcenters[i] == -99999) {
-                        vCenter = null;
+                    let vStepSize;
+                    if (this.metadataFields[i] in fieldValueInfo) {
+                        const info = fieldValueInfo[this.metadataFields[i]];
+                        vMin = info.v_min;
+                        vMax = info.v_max;
+                        vCenter = info.v_center;
+                        vStepSize = info.v_step_size;
                     } else {
-                        vCenter = vcenters[i];
+                        vMin = vmins[i];
+                        vMax = vmaxs[i];
+                        vStepSize = .01;
+                        if (vcenters[i] == -99999) {
+                            vCenter = null;
+                        } else {
+                            vCenter = vcenters[i];
+                        }
                     }
+
                     this.metadataFieldToVInfo.set(
                         this.metadataFieldIdxs[i],
                         {
-                            vMin: vmins[i],
-                            vMax: vmaxs[i],
+                            vMin: vMin,
+                            vMax: vMax,
                             absoluteVMin: vmins[i],
                             absoluteVMax: vmaxs[i],
                             vCenter: vCenter,
-                            vStepSize: .01,
+                            vStepSize: vStepSize,
                         }
                     );
                 }

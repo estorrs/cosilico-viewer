@@ -134,6 +134,7 @@ class ImageChannelView(BaseModel):
     color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="24-bit sRGB colour used for pseudocolour composite")] = None
 
 class ImageView(BaseModel):
+    is_visible: Annotated[bool, Field(description='Whether image is visible.')] = False
     opacity: Annotated[float, Field(ge=0.0, le=1.0, description="Image opacity.")] = 1.0
     t_index: Annotated[int, Field(ge=0, description="Timepoint (T) index to view.")] = 0
     z_index: Annotated[int, Field(ge=0, description="Depth (Z) index to view.")] = 0
@@ -158,12 +159,10 @@ class FeatureStyle(BaseModel):
     """Visual style for a single feature (point / polygon)."""
     shape_type: ShapeEnum = "circle"
     fill_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Fill color. Must be hex.")] = None
-    # stroke_color: Annotated[str, Field(pattern=r"^#?[0-9A-Fa-f]{6}$", description="Stroke color. Must be hex.")] = "#dddddd"
-    # stroke_width: Annotated[float, Field(ge=0.01)] = 1.0
-    # scale: Annotated[float, Field(ge=0)] = 1.0
 
 class GroupedVectorView(BaseModel):
     kind: Literal["grouped"] = "grouped"
+    is_visible: Annotated[bool, Field(description='Whether layer is visible.')] = False
 
     # global toggles
     scale: Annotated[float, Field(ge=0)] = 1.0
@@ -184,6 +183,7 @@ class GroupedVectorView(BaseModel):
 # ---------------------------------------------------------------------
 class CategoricalVectorView(BaseModel):
     kind: Literal["categorical"] = "categorical"
+    is_visible: Annotated[bool, Field(description='Whether layer is visible.')] = False
 
     fill_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
     stroke_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
@@ -211,6 +211,7 @@ class ContinuousFieldValueInfo(BaseModel):
 
 class ContinuousVectorView(BaseModel):
     kind: Literal["continuous"] = "continuous"
+    is_visible: Annotated[bool, Field(description='Whether layer is visible.')] = False
 
     fill_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
     stroke_opacity: Annotated[float, Field(ge=0.0, le=1.0)] = 1.0
@@ -240,7 +241,7 @@ class ExperimentViewSetting(BaseModel):
     name: Annotated[str, Field(description='Name for view setting.')]
     image_views: Annotated[Dict[str, ImageView], Field(description='Maps image id to image view.')] = {}
     layer_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer id to layer view.')] = {}
-    layer_metadata_views: Annotated[Dict[str, Union[GroupedVectorView, CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer metadata id to layer view.')] = {}
+    layer_metadata_views: Annotated[Dict[str, Union[CategoricalVectorView, ContinuousVectorView]], Field(description='Maps layer metadata id to layer view.')] = {}
 
 class ExperimentUploadBundle(BaseModel):
     experiment: Experiment

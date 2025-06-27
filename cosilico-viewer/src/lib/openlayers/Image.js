@@ -35,7 +35,11 @@ export class Image {
     this.node = node;
     this.viewSettings = viewSettings;
     this.isBaseImage = isBaseImage;
-    this.isVisible = true;
+    this.isVisible = this.viewSettings?.is_visible ?? false;
+    if (this.isBaseImage && this.viewSettings == {}) {
+      this.isVisible = true;
+    }
+
 
     this.version = node.attrs.version;
     this.name = node.attrs.name;
@@ -158,6 +162,7 @@ export class Image {
       if (inPlace) {
         this.rasterLayer = new ImageLayer({
             source: null,
+            visible: this.isVisible,
           });
 
           const layers = map.getLayers();
@@ -184,6 +189,7 @@ export class Image {
 
       this.rasterLayer = new ImageLayer({
         source: this.rasterSource,
+        visible: this.isVisible,
       });
 
       const layers = map.getLayers();
@@ -193,6 +199,7 @@ export class Image {
       this.updateBeforeOperations(rasterSource)
       const rasterLayer = new ImageLayer({
         source: rasterSource,
+        visible: this.isVisible,
       });
       return rasterLayer;
     }
@@ -272,6 +279,7 @@ export class Image {
   }
 
   async populateInitialFields(map) {
+
     this.channelToColor = generateColorMapping(defaultPalettes.imagePallete, this.channelNames); // this will eventually be populated by pulled info
 
     // this.viewSettings

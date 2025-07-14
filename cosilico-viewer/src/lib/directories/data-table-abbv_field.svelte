@@ -3,8 +3,6 @@
 
   let { value, href = null, abbv_type = "basic" } = $props();
 
-  // href = "/portal/root";
-
   const basicTruncate = (value: string, n = 24) =>
     value.length > n ? value.slice(0, n - 1) + "…" : value;
 
@@ -59,6 +57,8 @@
         <a
           {href}
           class="text-black hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+          onclick={(event) => event.stopPropagation()}
+          
         >
           {truncated}
         </a></Tooltip.Trigger

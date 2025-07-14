@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
 
   const exp_entities = directory_entities?.filter((v) => v.entity_type == 'experiment');
   const ids = exp_entities?.map((v) => v.id);
-  const { data: experiments } = await supabase.from('experiments').select('id,name,platform,platform_version,experiment_date,directory_entity_id').in('directory_entity_id', ids).order('name');
+  const { data: experiments } = await supabase.from('experiments').select('*').in('directory_entity_id', ids).order('name');
 
 
   let idToRowData = new Map();
@@ -39,19 +39,21 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
       created_by: idToName.get(entity.created_by),
       created_on: entity.created_at,
       permission: permissionMap.get(entity.id),
+      experiment_id: '',
       platform: '',
+      view_setting_id: '',
     }
     idToRowData.set(entity.id, row);
   }
 
   for (const exp of experiments) {
     let row = idToRowData.get(exp.directory_entity_id);
+    row.experiment_id = exp.id;
     row.platform = exp.platform;
+    row.view_setting_id = exp.view_setting_id;
   }
 
   const rowData = [...idToRowData.values()];
-
-  // console.log('row data', rowData);
 
 
   return { 

@@ -1,9 +1,11 @@
 <script lang="ts">
+ import { goto } from '$app/navigation';
  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
  import { Button } from "$lib/components/ui/button/index.js";
  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
  
- let { id }: { id: string } = $props();
+ let { id, href = null }: { id: string, href: string | null } = $props();
+ console.log('href', href);
 </script>
  
 <DropdownMenu.Root>
@@ -23,7 +25,7 @@
  <DropdownMenu.Content>
   <DropdownMenu.Group>
    <DropdownMenu.Label>Actions</DropdownMenu.Label>
-   <DropdownMenu.Item onclick={() => null}>
+   <DropdownMenu.Item onSelect={() => goto(href)}>
     Open
    </DropdownMenu.Item>
   </DropdownMenu.Group>

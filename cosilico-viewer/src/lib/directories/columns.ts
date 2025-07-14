@@ -26,9 +26,19 @@ export type DirectoryEntityRow = {
   created_by: string;
   created_on: string;
   permission: string;
+  experiment_id: string;
   platform: string;
+  view_setting_id: string;
   // experiment_date: string;
 };
+
+function getHref(row) {
+  if (row.original.type == 'directory') {
+    return `/portal/${row.original.id}`
+  } else {
+    return `/experiments/${row.original.experiment_id}/views/${row.original.view_setting_id}`
+  }
+}
 
 export const columns: ColumnDef<DirectoryEntityRow>[] = [
   {
@@ -74,7 +84,7 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
       renderComponent(DataTableAbbvField, {
         // need to pass props here
         value: row.original.name,
-        href: "/portal/root",
+        href: getHref(row),
         abbv_type: 'basic'
       }),
   },
@@ -117,7 +127,7 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
     id: "actions",
     cell: ({ row }) => {
       // You can pass whatever you need from `row.original` to the component
-      return renderComponent(DataTableActions, { id: row.original.id });
+      return renderComponent(DataTableActions, { id: row.original.id, href: getHref(row) });
     },
   },
 ];

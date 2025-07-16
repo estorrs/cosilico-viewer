@@ -57,7 +57,7 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
 
 
   return { 
-    rowData: rowData
+    rowData: rowData,
     // directories: directories ?? [],
     // experiments: experiments ?? []
   };

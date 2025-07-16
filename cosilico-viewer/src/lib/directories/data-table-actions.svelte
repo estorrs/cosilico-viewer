@@ -25,9 +25,11 @@
  <DropdownMenu.Content>
   <DropdownMenu.Group>
    <DropdownMenu.Label>Actions</DropdownMenu.Label>
-   <DropdownMenu.Item onSelect={() => goto(href)}>
-    Open
-   </DropdownMenu.Item>
+   <DropdownMenu.Item>
+    <a href={href} onclick={(event) => event.stopPropagation()}>
+        Open
+    </a>
+  </DropdownMenu.Item>
   </DropdownMenu.Group>
   <DropdownMenu.Separator />
   <DropdownMenu.Item>Share</DropdownMenu.Item>

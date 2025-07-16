@@ -307,29 +307,51 @@ returns boolean as $$
 $$ language sql stable;
 
 
--- create or replace function public.set_default_view_setting()
--- returns trigger
--- language plpgsql
--- -- security definer              -- so it can bypass RLS if needed
--- set search_path = ''
--- as $$
--- declare
---   default_vs_id uuid;
--- begin
---   if new.view_setting_id is null then
---     select id
---       into default_vs_id
---       from public.view_settings
---       where name = 'Default'
---       order by created_at asc
---       limit 1;
+create or replace function public.get_directory_path(dir_uuid uuid)
+returns jsonb
+language plpgsql
+stable
+set search_path = ''
+as $$
+declare
+  result jsonb;
+begin
+  -- walk up the tree until we hit the top-level directory (parent_id IS NULL)
+  with recursive chain as (
+    select
+      d.id,
+      d.name,
+      d.parent_id,
+      0 as depth
+    from public.directory_entities d
+    where d.id = dir_uuid
 
---     new.view_setting_id := default_vs_id;
---   end if;
+    union all
 
---   return new;
--- end;
--- $$;
+    select
+      p.id,
+      p.name,
+      p.parent_id,
+      c.depth + 1
+    from public.directory_entities p
+    join chain c on p.id = c.parent_id
+  ),
+  ordered as (
+    select id, name                   -- root → leaf
+    from chain
+    order by depth desc
+  )
+  select jsonb_build_object(
+           'ids',   jsonb_agg(id),
+           'names', jsonb_agg(name)
+         )
+  into   result
+  from   ordered;
+
+  return coalesce(result, '{}'::jsonb);
+end;
+$$;
+
 
 create or replace function public.set_default_view_setting()
 returns trigger

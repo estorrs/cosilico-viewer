@@ -33,6 +33,7 @@
 
 	import Info from "@lucide/svelte/icons/info";
 	import Camera from "@lucide/svelte/icons/camera";
+    import { List } from "./components/ui/breadcrumb/index.js";
 
 	let { experimentObj, supabase } = $props();
 
@@ -146,12 +147,84 @@
 						};
 					}		
 				} else {
-					
+					o.visible_field = view.visibleFields[0];
+					o.palette = view.palette;
+					o.stroke_darkness = view.strokeDarkness;
+					o.border_type = view.borderType;
 				}
 
 				layerSettings[layer.id] = o;
 			}
 			viewSettings.layer_views = layerSettings;
+
+			let layerMetadataSettings = {};
+			const ls = this.experimentObj.layers.filter((l) => l.is_grouped == false);
+			for (const layer of ls) {
+				const vector = this.layers.get(layer.id).vector;
+				const metadataToNode = this.layers.get(layer.id).metadataToNode;
+
+				const lms = layer.layer_metadatas.filter((lm) => lm.layer_id == layer.id);
+				for (const lm of lms) {
+					const name = lm.name;
+					const node = metadataToNode.get(name);
+
+					let view;
+					if (vector.metadataName == name) {
+						view = vector.vectorView;
+					} else {
+						view = vector.metadataToView.get(name);
+					} 
+
+					let o = { ...lm.view_settings };
+					if (view) {
+						o = {
+							...o,
+							is_visible: name == vector.metadataName,
+							fill_opacity: view.fillOpacity,
+							stroke_opacity: view.strokeOpacity,
+							stroke_color: view.strokeColor,
+							stroke_width: view.strokeWidth,
+							scale: view.scale,
+							stroke_darkness: view.strokeDarkness,
+							border_type: view.border_type,
+							palette: view.palette
+						};
+
+						if (node.attrs.type == 'continuous') {
+							o.visible_field = view.visibleFields[0];
+
+							const fIndices = view.interactedFieldIndices;
+							const fNames = view.interactedFieldNames;
+							let fieldToVInfo = lm.view_settings?.field_value_info ?? {};
+							for (let i = 0; i < fIndices.length; i++) {
+								const fName = fNames[i];
+								const fIndex = fIndices[i];
+								const vinfo = view.fieldToVInfo.get(fIndex);
+
+
+								fieldToVInfo[fName] = {
+									v_min: vinfo.vMin,
+									v_max: vinfo.vMax,
+									v_center: vinfo.vCenter,
+									v_step_size: vinfo.vStepSize
+								};
+							}
+							o.field_value_info = fieldToVInfo;
+
+							const fv = view.featureView;
+							o.feature_style = {
+								shape_type: fv.shapeType,
+								fill_color: null,
+							};
+						} else {
+							let x = null;
+						}
+						
+					}
+					layerMetadataSettings[lm.id] = o;
+				}
+			}
+			viewSettings.layer_metadata_views = layerMetadataSettings;
 
 			return viewSettings;
 		}
@@ -273,6 +346,8 @@
 
 			this.currentInsertionIdx++;
 			fv.insertionIdx++;
+
+			console.log('fv is', fv);
 		}
 
 		async loadLayers() {

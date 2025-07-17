@@ -31,7 +31,9 @@
 	// let value = $state("");
 	let triggerRef = $state<HTMLButtonElement>(null!);
 
-	let selectedValue = $state(layer.isGrouped ? 'Gene' : null);
+	let selectedValue = $state(layer.isGrouped ? 'Gene' : layer.vector.metadataName);
+	// console.log('layer is', layer.vector.name, layer);
+	// console.log('selected value is', selectedValue);
 
 	let renderFields = $state(false);
 
@@ -61,6 +63,7 @@
 				fields.push(field);
 			}
 		} else {
+			console.log('vectorView visiasklfj', layer.vector.vectorView.visibleFields);
 			// for (const fname of layer.vector.metadataFields ?? []) {
 			for (const fidx of layer.vector.metadataFieldIdxs ?? []) {
 				const fname = layer.vector.metadataFields[fidx];

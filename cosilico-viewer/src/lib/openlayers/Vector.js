@@ -525,7 +525,6 @@ export class FeatureVector {
     }
 
     async init(map) {
-        // await this.xx(), eventually put async here if you need
         await this.setMetadata(null, null, map);
         return this;
     }
@@ -695,7 +694,7 @@ export class FeatureVector {
     }
 
     initializeContinuousView() {
-        
+        console.log('view settings used are', this.viewSettings);
         if (!this.vectorView) {
             this.vectorView = {
                 featureView: null,
@@ -707,12 +706,14 @@ export class FeatureVector {
                 borderType: this.viewSettings?.border_type ??  'default',
                 scale: this.viewSettings?.scale ?? 1.0,
                 palette: this.viewSettings?.palette ?? defaultPalettes.continousPalette,
-                visibleFields: this.viewSettings?.visible_fields ?? [],
+                visibleFields: [],
                 visibleFieldIndices: [],
+                interactedFieldNames: [],
+                interactedFieldIndices: [],
+                fieldToVInfo: this.metadataFieldToVInfo,
             }
         } else {
             this.vectorView = {
-                ...this.vectorView,
                 featureView: null,
                 fillOpacity: this.viewSettings?.fill_opacity ?? this.vectorView.fillOpacity,
                 strokeOpacity: this.viewSettings?.stroke_opacity ?? this.vectorView.strokeOpacity,
@@ -722,21 +723,34 @@ export class FeatureVector {
                 borderType: this.viewSettings?.border_type ??  this.vectorView.borderType,
                 scale: this.viewSettings?.scale ?? this.vectorView.borderType,
                 palette: this.viewSettings?.palette ?? defaultPalettes.continousPalette,
-                visibleFields: this.viewSettings?.visible_fields ?? [],
+                visibleFields: [],
                 visibleFieldIndices: [],
+                interactedFieldNames: [],
+                interactedFieldIndices: [],
+                fieldToVInfo: this.metadataFieldToVInfo,
             }
-
         }
-        this.vectorView.visibleFieldIndices = this.vectorView.visibleFields.map((v) => this.metadataFields.indexOf(v));
+        for (const [field, vinfo] of Object.entries(this.viewSettings?.field_value_info ?? {})) {
+            const fIndex = this.metadataFields.indexOf(field);
+            const obj = this.vectorView.fieldToVInfo.get(fIndex);
+            this.vectorView.fieldToVInfo.set(fIndex, {...obj, ...vinfo});
+            this.metadataFieldToVInfo.set(fIndex, {...obj, ...vinfo});
+        }
+
+        const visibleField = this.viewSettings.visible_field
+        if (visibleField) {
+            this.vectorView.visibleFields = [visibleField];
+            this.vectorView.visibleFieldIndices = this.metadataFields ? this.vectorView.visibleFields.map((v) => this.metadataFields.indexOf(v)) : [];
+        } else {
+            this.vectorView.visibleFields = [];
+            this.vectorView.visibleFieldIndices = [];
+        }
 
         const contFeatureView = {
             shapeType: this.viewSettings?.feature_style?.shape_type ?? 'circle',
         };
         contFeatureView.shape = generateShape(contFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba('#aaaaaa', this.vectorView.fillOpacity), this.vectorView.scale);
         this.vectorView.featureView = contFeatureView;
-
-        this.vectorView.visibleFieldIndices = [];
-        this.vectorView.visibleFields = []
 
         if (this.vectorView.borderType == 'field') {
             this.setBorderColoring(this.vectorView.strokeDarkness);
@@ -758,6 +772,7 @@ export class FeatureVector {
                 scale: 1.0,
                 visibleFields: [],
                 visibleFieldIndices: [],
+                type: 'continuous',
             };
         } else {
             this.vectorView = {
@@ -1175,6 +1190,7 @@ export class FeatureVector {
         this.metadataFieldToVInfo.get(idx).vMin = value;
 
         this.restyleLayers();
+        this.updateInteractedField(fieldName);
     }
 
     setVMax(fieldName, value) {
@@ -1182,6 +1198,7 @@ export class FeatureVector {
         this.metadataFieldToVInfo.get(idx).vMax = value;
 
         this.restyleLayers();
+        this.updateInteractedField(fieldName);
     }
 
     setVCenter(fieldName, value) {
@@ -1189,6 +1206,7 @@ export class FeatureVector {
         this.metadataFieldToVInfo.get(idx).vCenter = value;
 
         this.restyleLayers();
+        this.updateInteractedField(fieldName);
     }
 
     setBorderType(value) {
@@ -1210,6 +1228,13 @@ export class FeatureVector {
         }
 
         this.restyleLayers();
+    }
+
+    updateInteractedField(field) {
+        if (!this.vectorView?.interactedFieldNames.includes(field)) {
+            this.vectorView?.interactedFieldNames.push(field);
+            this.vectorView?.interactedFieldIndices.push(this.metadataFields.indexOf(field));
+        }
     }
 
 

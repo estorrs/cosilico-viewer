@@ -1,25 +1,3 @@
-<!-- <script>
-  let { data, children } = $props()
-  let { supabase } = $derived(data)
-
-  const logout = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      console.error(error)
-    }
-  }
-</script>
-
-<header>
-  <nav>
-    <a href="/">Home</a>
-  </nav>
-  <button onclick={logout}>Logout</button>
-</header>
-<main>
-  {@render children()}
-</main> -->
-
 <script lang="ts">
   import AppSidebar from "$lib/components/app-sidebar.svelte";
   import * as Breadcrumb from "$lib/components/ui/breadcrumb/index.js";
@@ -64,21 +42,9 @@
               {/if}
             {/each}
           </Breadcrumb.List>
-          <!-- <Breadcrumb.List>
-            <Breadcrumb.Item class="hidden md:block">
-              <Breadcrumb.Link href="#">Building Your Application</Breadcrumb.Link>
-            </Breadcrumb.Item>
-            <Breadcrumb.Separator class="hidden md:block" />
-            <Breadcrumb.Item>
-              <Breadcrumb.Page>Data Fetching</Breadcrumb.Page>
-            </Breadcrumb.Item>
-          </Breadcrumb.List> -->
         </Breadcrumb.Root>
       </div>
     </header>
     {@render children?.()}
   </Sidebar.Inset>
 </Sidebar.Provider>
-<!-- <main>
-  {@render children?.()}
-</main> -->

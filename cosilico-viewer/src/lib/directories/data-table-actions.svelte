@@ -4,7 +4,7 @@
  import { Button } from "$lib/components/ui/button/index.js";
  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
  
- let { id, href = null }: { id: string, href: string | null } = $props();
+ let { id, href = null, new_tab = false }: { id: string, href: string | null, new_tab: boolean } = $props();
  console.log('href', href);
 </script>
  
@@ -26,9 +26,16 @@
   <DropdownMenu.Group>
    <DropdownMenu.Label>Actions</DropdownMenu.Label>
    <DropdownMenu.Item>
-    <a href={href} onclick={(event) => event.stopPropagation()}>
-        Open
-    </a>
+    {#if new_tab}
+      <a href={href} target="_blank" rel="noopener noreferrer" onclick={(event) => event.stopPropagation()}>
+          Open
+      </a>
+    {/if}
+     {#if !new_tab}
+      <a href={href} onclick={(event) => event.stopPropagation()}>
+          Open
+      </a>
+    {/if}
   </DropdownMenu.Item>
   </DropdownMenu.Group>
   <DropdownMenu.Separator />

@@ -85,6 +85,7 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
         // need to pass props here
         value: row.original.name,
         href: getHref(row),
+        new_tab: row.original.type == 'experiment',
         abbv_type: 'basic'
       }),
   },
@@ -127,7 +128,7 @@ export const columns: ColumnDef<DirectoryEntityRow>[] = [
     id: "actions",
     cell: ({ row }) => {
       // You can pass whatever you need from `row.original` to the component
-      return renderComponent(DataTableActions, { id: row.original.id, href: getHref(row) });
+      return renderComponent(DataTableActions, { id: row.original.id, href: getHref(row), new_tab: row.original.type == 'experiment',});
     },
   },
 ];

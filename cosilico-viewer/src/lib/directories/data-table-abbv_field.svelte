@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Tooltip from "$lib/components/ui/tooltip/index.js";
 
-  let { value, href = null, abbv_type = "basic" } = $props();
+  let { value, href = null, new_tab = false, abbv_type = "basic" } = $props();
 
   const basicTruncate = (value: string, n = 24) =>
     value.length > n ? value.slice(0, n - 1) + "…" : value;
@@ -54,14 +54,27 @@
   <Tooltip.Root>
     {#if href}
       <Tooltip.Trigger>
-        <a
-          {href}
-          class="text-black hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
-          onclick={(event) => event.stopPropagation()}
-          
-        >
-          {truncated}
-        </a></Tooltip.Trigger
+        {#if new_tab}
+          <a
+            {href}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-black hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+            onclick={(event) => event.stopPropagation()}
+          >
+            {truncated}
+          </a>
+        {/if}
+        {#if !new_tab}
+          <a
+            {href}
+            class="text-black hover:underline focus:outline-none focus:ring-2 focus:ring-ring rounded-sm"
+            onclick={(event) => event.stopPropagation()}
+          >
+            {truncated}
+          </a>
+        {/if}
+      </Tooltip.Trigger
       >
     {/if}
     {#if href == null}

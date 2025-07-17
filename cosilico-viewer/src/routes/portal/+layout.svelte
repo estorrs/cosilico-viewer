@@ -29,8 +29,7 @@
   // ./[directory]/$types.js
 
   let { data, children } = $props();
-  let { supabase, user, profile } = $derived(data);
-  console.log('profile is', profile);
+  let { supabase, user, profile, names, ids } = $derived(data);
 
 </script>
 
@@ -44,7 +43,28 @@
         <Sidebar.Trigger class="-ml-1" />
         <Separator orientation="vertical" class="mr-2 data-[orientation=vertical]:h-4" />
         <Breadcrumb.Root>
-          <Breadcrumb.List>
+           <Breadcrumb.List>
+            <Breadcrumb.Item class="hidden md:block">
+               <Breadcrumb.Link href="/portal/root">/</Breadcrumb.Link>
+            </Breadcrumb.Item>
+            {#if names.length > 0}
+              <Breadcrumb.Separator class="hidden md:block" />
+            {/if}
+            {#each names as name, i}
+              {#if i < names.length - 1}
+                <Breadcrumb.Item class="hidden md:block">
+                  <Breadcrumb.Link href={`/portal/${ids[i]}`} onclick={(event) => event.stopPropagation()}>{name}</Breadcrumb.Link>
+                </Breadcrumb.Item>
+                <Breadcrumb.Separator class="hidden md:block" />
+              {/if}
+              {#if i == names.length - 1}
+                <Breadcrumb.Item class="hidden md:block">
+                  {name}
+                </Breadcrumb.Item>
+              {/if}
+            {/each}
+          </Breadcrumb.List>
+          <!-- <Breadcrumb.List>
             <Breadcrumb.Item class="hidden md:block">
               <Breadcrumb.Link href="#">Building Your Application</Breadcrumb.Link>
             </Breadcrumb.Item>
@@ -52,7 +72,7 @@
             <Breadcrumb.Item>
               <Breadcrumb.Page>Data Fetching</Breadcrumb.Page>
             </Breadcrumb.Item>
-          </Breadcrumb.List>
+          </Breadcrumb.List> -->
         </Breadcrumb.Root>
       </div>
     </header>

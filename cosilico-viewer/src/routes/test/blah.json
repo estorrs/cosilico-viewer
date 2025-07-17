@@ -1,0 +1,40 @@
+{
+    "image_views": {
+        "cda6c46a-6f0c-47f4-8ce6-cf880d82f127": {
+            "opacity": 1,
+            "t_index": 0,
+            "z_index": 0,
+            "is_visible": true,
+            "channel_views": {
+                "DAPI": {
+                    "color": "#030bfc",
+                    "gamma": 1,
+                    "max_value": 255,
+                    "min_value": 0
+                }
+            },
+            "visible_channels": [
+                "DAPI"
+            ]
+        }
+    },
+    "layer_views": {
+        "2e99647e-956c-491e-b03d-639a9bde5108": {
+            "scale": 1,
+            "fill_opacity": 1,
+            "stroke_color": "#dddddd",
+            "stroke_width": 1,
+            "feature_styles": {},
+            "stroke_opacity": 1,
+            "visible_feature_names": []
+        },
+        "30a68829-f3ff-467e-9543-a0947cf2725b": {
+            "scale": 1,
+            "is_visible": true,
+            "fill_opacity": 1,
+            "stroke_color": "#dddddd",
+            "stroke_width": 4,
+            "stroke_opacity": 1
+        }
+    }
+}

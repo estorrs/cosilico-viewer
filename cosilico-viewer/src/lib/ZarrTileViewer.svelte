@@ -145,6 +145,8 @@
 							fill_color: fv.fillColor,
 						};
 					}		
+				} else {
+					
 				}
 
 				layerSettings[layer.id] = o;
@@ -176,7 +178,7 @@
 				this.imageOrder.push(img.id);
 			}
 
-			// this.baseImage = this.images.get(this.imageOrder[0]).image;
+			this.baseImage = this.images.get(this.imageOrder[0]).image;
 			// this.baseImage.isBaseImage = true;
 			// this.baseImage.isVisible = true;
 

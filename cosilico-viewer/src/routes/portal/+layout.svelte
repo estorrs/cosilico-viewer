@@ -23,7 +23,7 @@
         <Breadcrumb.Root>
            <Breadcrumb.List>
             <Breadcrumb.Item class="hidden md:block">
-               <Breadcrumb.Link href="/portal/root">/</Breadcrumb.Link>
+               <Breadcrumb.Link href="/portal/root" onclick={(event) => event.stopPropagation()}>/</Breadcrumb.Link>
             </Breadcrumb.Item>
             {#if names.length > 0}
               <Breadcrumb.Separator class="hidden md:block" />

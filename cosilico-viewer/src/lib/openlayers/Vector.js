@@ -15,9 +15,6 @@ import { extractRows } from "./ZarrHelpers.js";
 import { getClosestResolution } from "./OpenlayersHelpers.js";
 
 
-
-
-
 export class FeatureGroupVector {
     constructor(
         node,
@@ -28,7 +25,7 @@ export class FeatureGroupVector {
         viewSettings,
     ) {
         this.node = node;
-        this.isVisible = viewSettings.isVisible;
+        this.isVisible = viewSettings.is_visible;
         this.viewSettings = viewSettings;
 
         this.version = node.attrs.version;
@@ -488,7 +485,7 @@ export class FeatureVector {
         viewSettings,
     ) {
         this.node = node;
-        this.isVisible = false;
+        this.isVisible = viewSettings.is_visible;
         this.viewSettings = viewSettings;
 
         this.version = node.attrs.version;
@@ -698,6 +695,7 @@ export class FeatureVector {
     }
 
     initializeContinuousView() {
+        
         if (!this.vectorView) {
             this.vectorView = {
                 featureView: null,
@@ -710,21 +708,29 @@ export class FeatureVector {
                 scale: this.viewSettings?.scale ?? 1.0,
                 palette: this.viewSettings?.palette ?? defaultPalettes.continousPalette,
                 visibleFields: this.viewSettings?.visible_fields ?? [],
-                // visibleFieldIndices: [],
+                visibleFieldIndices: [],
             }
-            this.vectorView.visibleFieldIndices = this.vectorView.visibleFields.map((v) => this.metadataFields.indexOf(v));
         } else {
             this.vectorView = {
                 ...this.vectorView,
                 featureView: null,
-                palette: defaultPalettes.continousPalette,
-                visibleFields: [],
+                fillOpacity: this.viewSettings?.fill_opacity ?? this.vectorView.fillOpacity,
+                strokeOpacity: this.viewSettings?.stroke_opacity ?? this.vectorView.strokeOpacity,
+                strokeWidth: this.viewSettings?.storke_width ?? this.vectorView.strokeWidth,
+                strokeColor: this.viewSettings?.stroke_color ?? this.vectorView.strokeColor,
+                strokeDarkness: this.viewSettings?.stroke_darkness ?? this.vectorView.strokeDarkness,
+                borderType: this.viewSettings?.border_type ??  this.vectorView.borderType,
+                scale: this.viewSettings?.scale ?? this.vectorView.borderType,
+                palette: this.viewSettings?.palette ?? defaultPalettes.continousPalette,
+                visibleFields: this.viewSettings?.visible_fields ?? [],
                 visibleFieldIndices: [],
             }
+
         }
+        this.vectorView.visibleFieldIndices = this.vectorView.visibleFields.map((v) => this.metadataFields.indexOf(v));
 
         const contFeatureView = {
-            shapeType: 'circle',
+            shapeType: this.viewSettings?.feature_style?.shape_type ?? 'circle',
         };
         contFeatureView.shape = generateShape(contFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(this.vectorView.strokeColor, this.vectorView.strokeOpacity), hexToRgba('#aaaaaa', this.vectorView.fillOpacity), this.vectorView.scale);
         this.vectorView.featureView = contFeatureView;

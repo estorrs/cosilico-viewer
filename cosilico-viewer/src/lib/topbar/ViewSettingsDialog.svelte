@@ -59,18 +59,6 @@
         </div>
     {/if}
   {/key}
-  <!-- <Dialog.Close>
-    <Button onclick={() => {
-     if (!isChecked) {
-        onSaveViewSettings();
-     } else {
-        onExportViewSettings(name);
-     }
-    }}
-    >
-    {buttonText}
-   </Button>
-  </Dialog.Close> -->
   <Dialog.Footer>
    <Dialog.Close>
     <Button onclick={() => {

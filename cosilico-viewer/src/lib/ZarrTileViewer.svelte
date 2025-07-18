@@ -191,6 +191,7 @@
 						};
 
 						if (node.attrs.type == 'continuous') {
+							o.kind = 'continuous';
 							o.visible_field = view.visibleFields[0];
 
 							const fIndices = view.interactedFieldIndices;
@@ -217,9 +218,17 @@
 								fill_color: null,
 							};
 						} else {
-							let x = null;
+							o.kind = 'categorical'
+							o.visible_fields = view.visibleFields;
+							o.field_styles = lm.view_settings?.field_styles ?? {}
+							for (const field of view.interactedFieldNames) {
+								const v = view.fieldToView.get(field);
+								o.field_styles[field] = {
+									fill_color: v.fillColor,
+									shape_type: v.shapeType
+								};
+							}
 						}
-						
 					}
 					layerMetadataSettings[lm.id] = o;
 				}
@@ -347,7 +356,6 @@
 			this.currentInsertionIdx++;
 			fv.insertionIdx++;
 
-			console.log('fv is', fv);
 		}
 
 		async loadLayers() {

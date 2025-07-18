@@ -26,7 +26,7 @@
         </Button> -->
 
 <Dialog.Root>
- <Dialog.Trigger title='Screenshot' class={buttonVariants({ variant: "default", class: 'hover:bg-yellow-500 bg-black' })}>
+ <Dialog.Trigger title='Save view settings' class={buttonVariants({ variant: "default", class: 'hover:bg-yellow-500 bg-black' })}>
     <Save color="#ffffff" />
   </Dialog.Trigger>
  <Dialog.Content class="sm:max-w-[425px]">
@@ -59,8 +59,8 @@
         </div>
     {/if}
   {/key}
-  <Dialog.Footer>
-   <Button onclick={() => {
+  <!-- <Dialog.Close>
+    <Button onclick={() => {
      if (!isChecked) {
         onSaveViewSettings();
      } else {
@@ -70,6 +70,20 @@
     >
     {buttonText}
    </Button>
+  </Dialog.Close> -->
+  <Dialog.Footer>
+   <Dialog.Close>
+    <Button onclick={() => {
+     if (!isChecked) {
+        onSaveViewSettings();
+     } else {
+        onExportViewSettings(name);
+     }
+    }}
+    >
+    {buttonText}
+   </Button>
+  </Dialog.Close>
   </Dialog.Footer>
  </Dialog.Content>
 </Dialog.Root>

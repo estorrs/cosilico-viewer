@@ -28,12 +28,9 @@
 	let names = $state(Array.from(layer.metadataToNode.keys()));
 
 	let open = $state(false);
-	// let value = $state("");
 	let triggerRef = $state<HTMLButtonElement>(null!);
 
 	let selectedValue = $state(layer.isGrouped ? 'Gene' : layer.vector.metadataName);
-	// console.log('layer is', layer.vector.name, layer);
-	// console.log('selected value is', selectedValue);
 
 	let renderFields = $state(false);
 

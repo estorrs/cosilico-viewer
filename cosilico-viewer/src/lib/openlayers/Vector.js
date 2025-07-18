@@ -721,7 +721,7 @@ export class FeatureVector {
                 strokeColor: this.viewSettings?.stroke_color ?? this.vectorView.strokeColor,
                 strokeDarkness: this.viewSettings?.stroke_darkness ?? this.vectorView.strokeDarkness,
                 borderType: this.viewSettings?.border_type ??  this.vectorView.borderType,
-                scale: this.viewSettings?.scale ?? this.vectorView.borderType,
+                scale: this.viewSettings?.scale ?? this.vectorView.scale,
                 palette: this.viewSettings?.palette ?? defaultPalettes.continousPalette,
                 visibleFields: [],
                 visibleFieldIndices: [],
@@ -766,37 +766,63 @@ export class FeatureVector {
                 fillOpacity: 1.0,
                 strokeOpacity: 1.0,
                 strokeWidth: 1.,
-                strokeColor: '#dddddd', // this is only used as the default stroke color
+                strokeColor: '#dddddd',
                 strokeDarkness: .5,
                 borderType: 'default',
                 scale: 1.0,
                 visibleFields: [],
                 visibleFieldIndices: [],
-                type: 'continuous',
+                interactedFieldNames: [],
             };
         } else {
             this.vectorView = {
                 ...this.vectorView,
                 fieldToView: new globalThis.Map(),
+                fillOpacity: this.viewSettings?.fill_opacity ?? this.vectorView.fillOpacity,
+                strokeOpacity: this.viewSettings?.stroke_opacity ?? this.vectorView.strokeOpacity,
+                strokeWidth: this.viewSettings?.storke_width ?? this.vectorView.strokeWidth,
+                strokeColor: this.viewSettings?.stroke_color ?? this.vectorView.strokeColor,
+                strokeDarkness: this.viewSettings?.stroke_darkness ?? this.vectorView.strokeDarkness,
+                borderType: this.viewSettings?.border_type ??  this.vectorView.borderType,
+                scale: this.viewSettings?.scale ?? this.vectorView.scale,
                 visibleFields: [],
                 visibleFieldIndices: [],
+                interactedFieldNames: [],
             }
         }
 
         for (let i = 0; i < this.metadataFields.length; i++) {
             const field = this.metadataFields[i];
-            const catFeatureView = {
-                shapeType: 'circle',
-                strokeColor: this.vectorView.strokeColor,
-                fillColor: this.fieldToColor.get(field)
-            };
+
+            const fStyles = this.viewSettings?.field_styles ?? {};
+            if (field in fStyles) {
+                const catFeatureView = {
+                    shapeType: fStyles[field].shape_type,
+                    strokeColor: this.vectorView.strokeColor,
+                    fillColor: fStyles[field].fill_color
+                };
+                this.fieldToColor.set(field, fStyles[field].fill_color);
+            } else {
+                const catFeatureView = {
+                    shapeType: 'circle',
+                    strokeColor: this.vectorView.strokeColor,
+                    fillColor: this.fieldToColor.get(field)
+                };
+            }
+            
             catFeatureView.shape = generateShape(catFeatureView.shapeType, this.vectorView.strokeWidth, hexToRgba(catFeatureView.strokeColor, this.vectorView.strokeOpacity), hexToRgba(catFeatureView.fillColor, this.vectorView.fillOpacity), this.vectorView.scale);
 
             this.vectorView.fieldToView.set(field, catFeatureView);
         }
 
-        this.vectorView.visibleFieldIndices = [...this.metadataFieldIdxs];
-        this.vectorView.visibleFields = [...this.metadataFields];
+        if (this.viewSettings?.visible_fields) {
+            this.vectorView.visibleFields = this.viewSettings?.visible_fields ?? [];
+            this.vectorView.visibleFieldIndices = this.vectorView.visibleFields.map((field) => this.metadataFields.indexOf(field));
+            
+        } else {
+            this.vectorView.visibleFieldIndices = [...this.metadataFieldIdxs];
+            this.vectorView.visibleFields = [...this.metadataFields];
+        }
 
         if (this.vectorView.borderType == 'field') {
             this.setBorderColoring(this.vectorView.strokeDarkness);

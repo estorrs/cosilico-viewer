@@ -14,6 +14,7 @@ from cosilico_py.preprocessing.platform_helpers.experiment import create_bundle_
 from cosilico_py.storage import upload_object, download_object
 import cosilico_py.client.structure as structure
 import cosilico_py.client.utils as utils
+import cosilico_py.client.cache as cache
 import cosilico_py.models as models
 
 
@@ -150,14 +151,15 @@ class CosilicoClient(object):
         print(f'[green]Directory successfuly created at[/green] [cyan]{path}[/cyan]')
                             
 
-        
-    
     def create_experiment(
             self,
             experiment_input: Annotated[models.ExperimentInput, 'Input used to generate the experiment.']
         ) -> models.ExperimentUploadBundle:
         self._check_session()
-        return create_bundle_from_input(experiment_input)
+        bundle = create_bundle_from_input(experiment_input)
+        cache.write_bundle(bundle)
+
+        return bundle
     
     def upload_experiment(
             self,

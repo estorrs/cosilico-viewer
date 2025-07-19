@@ -59,7 +59,7 @@ def bundle_from_id(experiment_id: str, supabase: Client) -> models.ExperimentUpl
     layers = []
     for layer_id in experiment.layer_ids:
         response = (
-            client.supabase.table("layers")
+            supabase.table("layers")
             .select("*")
             .eq('id', layer_id)
             .single()
@@ -123,6 +123,12 @@ class Experiment(object):
         self.supabase = supabase
 
         self.bundle = bundle_from_id(experiment_id, self.supabase)
+    
+    def __str__(self):
+        return str(self.bundle)
+    
+    def __repr__(self):
+        return str(self.bundle)
 
     def generate_layer_data(self, layer_id: str, return_type: str) -> pd.DataFrame | anndata.AnnData:
         pass

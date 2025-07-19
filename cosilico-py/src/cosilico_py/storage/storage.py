@@ -52,6 +52,7 @@ def download_object(
         local_path: Annotated[os.PathLike, 'Path of where the file will be downloaded'],
         supabase_client: Annotated[supabase.Client, 'Signed in supabase client.']
     ) -> None:
+    print('filename', filename)
     response = supabase_client.functions.invoke(
         "generate-download-url",
         invoke_options={

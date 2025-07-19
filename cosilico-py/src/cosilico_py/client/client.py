@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Annotated, Union
 import os
 import json
@@ -10,6 +11,7 @@ from rich.console import Console
 from supabase import create_client
 
 from cosilico_py.config import get_config
+from cosilico_py.client.experiment import Experiment
 from cosilico_py.preprocessing.platform_helpers.experiment import create_bundle_from_input
 from cosilico_py.storage import upload_object, download_object
 import cosilico_py.client.structure as structure
@@ -27,7 +29,10 @@ class CosilicoClient(object):
             self.config = get_config()
         else:
             self.config = json.load(open(config_fp))
-        self.cache_dir = self.config['cache_dir']
+
+        self.cache_dir = Path(self.config['cache_dir'])
+        assert self.cache_dir.is_dir(), f'Cache directory at {self.cache_dir} is not a directory.'
+
         self.supabase = create_client(self.config['api_url'], self.config['anon_key'])
         self.root = None
 
@@ -206,10 +211,40 @@ class CosilicoClient(object):
             response.data,
             self.supabase.auth.get_user().user.id,
         )
+    
+    def get_experiment(
+            self,
+            path: Annotated[str, 'Path of experiment.'] = None,       
+        ):
+        node = structure.get_node(path, self.root)
+        assert node.entity_type == 'experiment', f'Path {path} does not resolve to an experiemnt. Path must be to an experiment, not a directory.'
+
+        response = (
+            self.supabase.table("experiments")
+            .select("id")
+            .eq('directory_entity_id', node.id)
+            .single()
+            .execute()
+        )
+        
+        experiment_id = response.data['id']
+        experiment = Experiment(self.supabase, experiment_id)
+
+        # check cache
+        objs = experiment.bundle.images + experiment.bundle.layers + experiment.bundle.layer_metadata
+        for obj in objs:
+            local_path = self.cache_dir / obj.path
+            obj.local_path = str(local_path.absolute())
+            if not local_path.is_file():
+                print(f'{experiment.bundle.experiment.name} - {obj.name} not in cache. Downloading... :arrow_down:')
+                download_object(str(obj.path), obj.local_path, self.supabase)
+
+        return experiment
+
 
     def display_experiments(
             self,
-            path: Annotated[str, 'Path of node to display. Default will display all directories and experiments the user has access to.'] = None,
+            path: Annotated[str, 'Path of directory to display. Default will display all directories and experiments the user has access to.'] = None,
         ):
         self.generate_directory_structure()
         if path is None:

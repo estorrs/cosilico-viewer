@@ -94,7 +94,8 @@ class Image(BaseModel):
     path: str = ''
         
     def model_post_init(self, __context):
-        object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
+        if not self.path:
+            object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
 
 class Layer(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
@@ -108,7 +109,8 @@ class Layer(BaseModel):
     path: str = ''
 
     def model_post_init(self, __context):
-        object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
+        if not self.path:
+            object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
 
 class LayerMetadata(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
@@ -124,7 +126,8 @@ class LayerMetadata(BaseModel):
     path: str = ''
 
     def model_post_init(self, __context):
-        object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
+        if not self.path:
+            object.__setattr__(self, 'path', f'{self.id}.zarr.zip')
 
 
 class ImageChannelView(BaseModel):

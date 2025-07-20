@@ -1,11 +1,13 @@
 from typing import Annotated
 
 import anndata
+import dask.array as da
 import numpy as np
 import pandas as pd
 import zarr
 import zarr.types
 from supabase import Client
+from pydantic import Field
 
 import cosilico_py.models as models
 
@@ -129,9 +131,50 @@ class Experiment(object):
     
     def __repr__(self):
         return str(self.bundle)
+    
+    @property
+    def images(self):
+        return self.bundle.images
 
-    def generate_layer_data(self, layer_id: str, return_type: str) -> pd.DataFrame | anndata.AnnData:
-        pass
+    def generate_layer_data(
+            self,
+            layer: Annotated[models.Layer, 'Layer to generate data from. If layer is a grouped layer, than a pandas DataFrame will be returned. Otherwise an AnnData object will be returned.'],
+        ) -> pd.DataFrame | anndata.AnnData:
+        store = zarr.storage.ZipStore(layer.local_path, mode='r')
+        root = zarr.group(store=store)
+        
 
-    def generate_image_data(self, image_id: str, return_type: str) -> np.ndarray:
-        pass
+    def generate_image_data(
+            self,
+            image: Annotated[models.Image, 'Image from which to return rasterized pixel data.'],
+            return_type: Annotated[str, 'Return type of image. Can be dask (dask array) or numpy (numpy ndarray).'] = 'dask'
+        ) -> np.ndarray | da.Array:
+        store = zarr.storage.ZipStore(image.local_path, mode='r')
+        root = zarr.group(store=store)
+        level = min([int(x) for x in list(root['zooms'].group_keys())])
+
+        arr = da.from_zarr(root[f'zooms/{level}/tiles'])
+        store.close()
+
+        a, b, c, d, e, f, g = arr.shape
+        arr = da.einsum('abcdefg->afbgcde', arr)
+        arr = arr.reshape(a * f, b * g, c, d, e)
+
+        if return_type == 'numpy':
+            return arr.compute()
+        
+        return arr
+
+    def get_layer_metadata(self, layer: models.LayerMetadata) -> list[models.LayerMetadata]:
+        lms = [lm for lm in self.bundle.layer_metadata if lm.layer_id == layer.id]
+        return lms
+
+    @property
+    def layers(self):
+        return self.bundle.layers
+    
+    @property
+    def layer_metadata(self):
+        return self.bundle.layer_metadata
+
+

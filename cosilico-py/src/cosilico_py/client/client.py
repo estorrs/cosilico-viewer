@@ -234,9 +234,8 @@ class CosilicoClient(object):
         objs = experiment.bundle.images + experiment.bundle.layers + experiment.bundle.layer_metadata
         for obj in objs:
             local_path = self.cache_dir / obj.path
-            obj.local_path = str(local_path.absolute())
+            obj.local_path = str(local_path)
             if not local_path.is_file():
-                print(f'{experiment.bundle.experiment.name} - {obj.name} not in cache. Downloading... :arrow_down:')
                 download_object(str(obj.path), obj.local_path, self.supabase)
 
         return experiment

@@ -30,7 +30,7 @@ class CosilicoClient(object):
         else:
             self.config = json.load(open(config_fp))
 
-        self.cache_dir = Path(self.config['cache_dir'])
+        self.cache_dir = Path(self.config['cache_dir']).expanduser().absolute()
         assert self.cache_dir.is_dir(), f'Cache directory at {self.cache_dir} is not a directory.'
 
         self.supabase = create_client(self.config['api_url'], self.config['anon_key'])
@@ -197,7 +197,6 @@ class CosilicoClient(object):
         self.generate_directory_structure()
         
         print(f'Experiment [cyan]{bundle.experiment.name}[/cyan] successfuly uploaded :microscope:!')
-                
 
     def generate_directory_structure(self):
         self._check_session()
@@ -214,7 +213,7 @@ class CosilicoClient(object):
     
     def get_experiment(
             self,
-            path: Annotated[str, 'Path of experiment.'] = None,       
+            path: Annotated[str, 'Path of experiment.'] = None,   
         ):
         node = structure.get_node(path, self.root)
         assert node.entity_type == 'experiment', f'Path {path} does not resolve to an experiemnt. Path must be to an experiment, not a directory.'
@@ -228,7 +227,7 @@ class CosilicoClient(object):
         )
         
         experiment_id = response.data['id']
-        experiment = Experiment(self.supabase, experiment_id)
+        experiment = Experiment(self.supabase, self.config, experiment_id)
 
         # check cache
         objs = experiment.bundle.images + experiment.bundle.layers + experiment.bundle.layer_metadata

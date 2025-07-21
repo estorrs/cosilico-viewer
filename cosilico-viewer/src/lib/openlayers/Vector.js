@@ -700,7 +700,7 @@ export class FeatureVector {
                 featureView: null,
                 fillOpacity: this.viewSettings?.fill_opacity ?? 1.0,
                 strokeOpacity: this.viewSettings?.stroke_opacity ?? 1.0,
-                strokeWidth: this.viewSettings?.storke_width ?? 1.,
+                strokeWidth: this.viewSettings?.stroke_width ?? 1.,
                 strokeColor: this.viewSettings?.stroke_color ?? '#dddddd',
                 strokeDarkness: this.viewSettings?.stroke_darkness ?? .5,
                 borderType: this.viewSettings?.border_type ??  'default',
@@ -717,7 +717,7 @@ export class FeatureVector {
                 featureView: null,
                 fillOpacity: this.viewSettings?.fill_opacity ?? this.vectorView.fillOpacity,
                 strokeOpacity: this.viewSettings?.stroke_opacity ?? this.vectorView.strokeOpacity,
-                strokeWidth: this.viewSettings?.storke_width ?? this.vectorView.strokeWidth,
+                strokeWidth: this.viewSettings?.stroke_width ?? this.vectorView.strokeWidth,
                 strokeColor: this.viewSettings?.stroke_color ?? this.vectorView.strokeColor,
                 strokeDarkness: this.viewSettings?.stroke_darkness ?? this.vectorView.strokeDarkness,
                 borderType: this.viewSettings?.border_type ??  this.vectorView.borderType,
@@ -795,15 +795,16 @@ export class FeatureVector {
             const field = this.metadataFields[i];
 
             const fStyles = this.viewSettings?.field_styles ?? {};
+            let catFeatureView;
             if (field in fStyles) {
-                const catFeatureView = {
+                catFeatureView = {
                     shapeType: fStyles[field].shape_type,
                     strokeColor: this.vectorView.strokeColor,
                     fillColor: fStyles[field].fill_color
                 };
                 this.fieldToColor.set(field, fStyles[field].fill_color);
             } else {
-                const catFeatureView = {
+                catFeatureView = {
                     shapeType: 'circle',
                     strokeColor: this.vectorView.strokeColor,
                     fillColor: this.fieldToColor.get(field)

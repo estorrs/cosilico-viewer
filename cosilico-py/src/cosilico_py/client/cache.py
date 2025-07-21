@@ -7,7 +7,7 @@ from cosilico_py.config import get_config
 
 def write_bundle(bundle: models.ExperimentUploadBundle) -> None:
     config = get_config()
-    cache_dir = Path(config['cache_dir'])
+    cache_dir = Path(config['cache_dir']).expanduser().absolute()
     assert cache_dir.is_dir(), f'Cache directory {cache_dir} does not exist.'
 
     objs = bundle.images + bundle.layers + bundle.layer_metadata

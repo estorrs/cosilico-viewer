@@ -91,8 +91,8 @@ def experiment_from_x10_xenium_cellranger(
         to_uint8: Annotated[bool, 'Default is False. If True, will convert the Xenium IHC image to UINT8. This can save space for images that are UINT16.'] = False,
         verbose: Annotated[bool, 'Whether to display verbose output. Default is True.'] = True,
     ):
-    assert os.path.isdir(directory), f'Input directory {directory} is not a directory.'
-    directory = Path(directory)
+    directory = Path(directory).expanduser().absolute()
+    assert directory.is_dir(), f'Input directory {directory} is not a directory.'
 
     if verbose: print(f'Loading xenium experiment from [green]{directory}[/green]')
 

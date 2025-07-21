@@ -2,6 +2,7 @@ from typing import Annotated
 
 import anndata
 import dask.array as da
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
 import zarr
@@ -139,10 +140,61 @@ class Experiment(object):
     def generate_layer_data(
             self,
             layer: Annotated[models.Layer, 'Layer to generate data from. If layer is a grouped layer, than a pandas DataFrame will be returned. Otherwise an AnnData object will be returned.'],
+            return_type: Annotated[str | None, 'Return type for layer data. Can be ["pandas", "dask"]. Only applies to grouped layers, which can be returned as a pandas DataFrame or dask DataFrame. Non-grouped layers will always return as AnnData objects.'] = None,
         ) -> pd.DataFrame | anndata.AnnData:
         store = zarr.storage.ZipStore(layer.local_path, mode='r')
         root = zarr.group(store=store)
+
+        lms = self.get_layer_metadata(layer)
+        lm_to_root = {}
+        lm_to_store = {}
+        name_to_lm = {}
+        for lm in lms:
+            lm_store = zarr.storage.ZipStore(lm.local_path, mode='r')
+            lm_root = zarr.group(store=lm_store)
+            lm_to_root[lm.name] = lm_root
+            lm_to_store[lm.name] = lm_to_store
+            name_to_lm[lm.name] = lm
+
+        return_obj = None
+        if layer.is_grouped:
+            level = min([int(x) for x in list(root['zooms'].group_keys())])
+            feature_names = root['metadata/features/feature_names'][:]
+
+            index_map = {val: i for i, val in enumerate(root[f'metadata/ids/{level}'][:])}
+            ddfs = []
+            for tile_loc, g in root[f'zooms/{level}'].groups():
+                row, col = tile_loc.split('_')
+                for key, fg in g.groups():
+                    fidx_arr = da.from_zarr(fg['feature_index']).compute()
+                    id_arr = da.from_zarr(fg['id']).compute()
+                    location_arr = da.from_zarr(fg['location']).compute()
+                    df = pd.DataFrame(data=location_arr, columns=['x_location', 'y_location'])
+                    df['id'] = id_arr
+                    df['feature_name'] = feature_names[fidx_arr]
+                    
+                    idxs_order = np.array([index_map[val] for val in df['id']])
+                    for name, lm_root in lm_to_root.items():
+                        df[name] = lm_root[f'object/{level}'][idxs_order]
+                    
+                    ddfs.append(dd.from_pandas(df))
+            ddf = dd.concat(ddfs)
+            ddf = ddf.set_index('id')
         
+            if return_type == 'dask':
+                return_obj = ddf
+            else:
+                return_obj = ddf.compute()
+        
+        store.close()
+        for lm_store in lm_to_store.values():
+            lm_store.close()
+
+        return return_obj
+        
+
+
+                    
 
     def generate_image_data(
             self,

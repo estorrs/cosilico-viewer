@@ -610,20 +610,6 @@
 			);
 		}
 		
-		// await experiment.initializeLayerMetadata(map);
-
-		// //set tooltip info, must fix
-		// for (const [k, layer] of experiment.layers) {
-		// 	let info = document.getElementById('info'); // this needs to be fixed
-		// 	layer.vector.setFeatureToolTip(map, info);
-		// }
-
-		// const key = 'Kmeans N=10';
-		// const key = 'PCAs';
-		// const key = 'Transcript Counts';
-		// const l = experiment.layers.get('sldfkjasa');
-		// await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
-
 		initializeMirrors();
 
 		reloadImageInfoKey = !reloadImageInfoKey;
@@ -638,21 +624,6 @@
 		} else {
 			visible = vector.vectorView.visibleFeatureNames;
 		}
-		// console.log('current insertion indices are');
-		// let ids = [...experiment.imageOrder, ...experiment.layerOrder];
-
-		// for (const objId of ids) {
-		// 	let obj;
-		// 	if (experiment.imageOrder.includes(objId)) {
-		// 		obj = experiment.images.get(objId).image;
-		// 	} else {
-		// 		obj = experiment.layers.get(objId).vector;
-		// 	}
-		// 	console.log(obj.name, obj.insertionIdx);
-		// }
-
-		// console.log('current map layers are');
-		// console.log(map.getLayers());
 
 		let doIncrement = vector instanceof FeatureGroupVector;
 
@@ -801,21 +772,11 @@
 			</div>
 		{/if}
 	{/key}
-	<!-- <div class="absolute right-4 top-4 bottom-4 w-96 z-50 overflow-y-auto"> -->
-	<!-- <div class="h-full overflow-y-auto rounded-xl bg-white shadow p-4"> -->
-	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
+
 	{#if experiment && mirrors != null}
 		{#key reloadImageInfoKey}
-			<!-- <div class="absolute left-4 top-4 right-96 z-50">
-				<div class="w-full">
-					<Button onclick={() => captureScreen(map, experiment)}>
-						<Camera color="#ffffff" />
-					</Button>
-				</div>
-			</div> -->
 			<Topbar 
 				onSaveViewSettings = {async () => {
-					// console.log('view settings', experiment.view_settings);
 					const body = experiment.exportViewSettings();
 					const { error } = await supabase
 						.from('view_settings')
@@ -831,6 +792,7 @@
 						.from('view_settings')
 						.insert({ 
 							name: name,
+							is_exported: true,
 							settings: body 
 						})
 						
@@ -1628,57 +1590,9 @@
 		{/key}
 	{/if}
 	<!-- </div> -->
-	<!-- </div> -->
+
 </div>
 
-<!-- on:change={(e) => updateMaxValue(obj.image, channelName, e)} -->
-
-<!-- {#key reloadLayerInfoKey}
-			{#each Array.from(experiment.layers.values()) as obj}
-				{#if !obj.isGrouped}
-					<label>
-						Select Features ({obj.vector.name}):
-						<div>
-							{#if obj.vector.metadataFields && obj.vector.metadataFields.length > 0}
-								{#each obj.vector.metadataFields ?? [] as field}
-									<label>
-										<input
-											type="checkbox"
-											checked={obj.vector.vectorView.visibleFields.includes(field)}
-											onchange={() => toggleFeature(field, obj.vector)}
-										/>
-										{field}
-									</label>
-								{/each}
-							{:else}
-								<p>Loading cell features...</p>
-							{/if}
-						</div>
-					</label>
-				{/if}
-				{#if obj.isGrouped}
-					<label>
-						Select Features ({obj.vector.name}):
-						<div>
-							{#if obj.vector?.featureNames && obj.vector.featureNames.length > 0}
-								{#each obj.vector.featureNames ?? [] as featureName}
-									<label>
-										<input
-											type="checkbox"
-											checked={obj.vector.vectorView.visibleFeatureNames.includes(featureName)}
-											onchange={() => toggleFeature(featureName, obj.vector)}
-										/>
-										{featureName}
-									</label>
-								{/each}
-							{:else}
-								<p>Loading features...</p>
-							{/if}
-						</div>
-					</label>
-				{/if}
-			{/each}
-		{/key}  -->
 
 <style global>
 	#info {

@@ -175,6 +175,7 @@ def ungrouped_dataframe_from_root(lm, lm_root, level):
 
 def extract_ungrouped_layer(layer, root, lm, lm_to_root, name_to_lm, return_type='pandas', include_all=True):
     level = min([int(x) for x in list(root['zooms'].group_keys())])
+    id_order = root[f'metadata/ids/{level}'][:]
     # index_map = {val: i for i, val in enumerate(root[f'metadata/ids/{level}'][:])}
     adata, source = None, None
     if lm.is_sparse:
@@ -209,13 +210,13 @@ def extract_ungrouped_layer(layer, root, lm, lm_to_root, name_to_lm, return_type
         adata = anndata.concat(adatas)
         idxs = first_occurrence_indices(adata.obs.index)
         adata = adata[idxs]
+        adata = adata[id_order]
     else:
+        lm_root = lm_to_root[lm.name]
         source = ungrouped_dataframe_from_root(lm, lm_root, level)
-        source.index = df['id']
-    print(adata)
+        source.index = id_order
     
     if include_all:
-        id_order = adata.obs.index if adata is not None else source.index
         for extra_name, extra_root in lm_to_root.items():
             extra_lm = name_to_lm[extra_name]
             fields = extra_root['metadata/fields'][:]

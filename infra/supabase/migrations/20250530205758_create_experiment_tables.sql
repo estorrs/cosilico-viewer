@@ -24,6 +24,7 @@ create table public.view_settings (
   created_by uuid references auth.users(id) on delete restrict,
   created_at timestamp with time zone default now(),
   name text not null,
+  is_exported boolean default false,
   settings jsonb not null default '{}'::jsonb
 );
 create index view_settings_created_by_idx on public.view_settings (created_by);

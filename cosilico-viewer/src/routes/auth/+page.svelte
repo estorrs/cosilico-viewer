@@ -37,12 +37,6 @@
 	const { form: formData, enhance, submitting, delayed, timeout, errors, message } = form;
 </script>
 
-<div class="flex-1">
-	<a href="/">home</a>
-	<a href="/create-user">create user</a>
-	<a href="/get-user">get user</a>
-	<a href="/login">login</a>
-</div>
 
 <Card.Root class="w-96 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
 	<Card.Header>

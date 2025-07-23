@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { invalidate } from '$app/navigation'
-  import type { EventHandler } from 'svelte/elements'
   import DirectoryTable from '$lib/directories/directory-table.svelte'
   import { columns } from '$lib/directories/columns.js'
 

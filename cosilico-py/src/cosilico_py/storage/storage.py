@@ -1,6 +1,7 @@
 import json
 import os
 from typing import Annotated
+from pathlib import Path
 
 import requests
 import supabase
@@ -31,7 +32,7 @@ def upload_object(
         )
     
     if response.status_code != 200:
-        raise RuntimeError('Upload failed: {response}')
+        raise RuntimeError(f'Upload failed: {response.text}')
     
     return response
 
@@ -52,6 +53,7 @@ def download_object(
         local_path: Annotated[os.PathLike, 'Path of where the file will be downloaded'],
         supabase_client: Annotated[supabase.Client, 'Signed in supabase client.']
     ) -> None:
+    local_path = Path(local_path).expanduser().absolute()
     response = supabase_client.functions.invoke(
         "generate-download-url",
         invoke_options={
@@ -60,5 +62,6 @@ def download_object(
     )
     body = json.loads(response.decode())
     download_url = body['getUrl']
+    print(download_url)
 
     download_file_streaming(download_url, local_path)

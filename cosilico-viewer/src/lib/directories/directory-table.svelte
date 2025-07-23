@@ -30,7 +30,7 @@
     data: TData[];
   };
 
-  let { columns, data, profile, viewSettingsData } = $props();
+  let { columns, data, profile, viewSettingsData, onViewSettingsImport } = $props();
 
   //  let { columns, data }: DataTableProps<TData, TValue> = $props();
   //  const data =
@@ -57,6 +57,10 @@
       return data;
     },
     columns,
+    meta: {
+      viewSettingsData,
+      onViewSettingsImport
+    },
     state: {
       get pagination() {
         return pagination;

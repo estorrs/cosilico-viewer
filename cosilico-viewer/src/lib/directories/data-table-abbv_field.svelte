@@ -7,6 +7,9 @@
     value.length > n ? value.slice(0, n - 1) + "…" : value;
 
   function formatName(name) {
+    if (name == null) {
+      name = '';
+    }
     const words = name.trim().split(/\s+/);
 
     if (words.length === 0) return "";

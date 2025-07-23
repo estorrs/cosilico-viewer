@@ -10,9 +10,12 @@
    import * as Alert from "$lib/components/ui/alert/index.js";
  import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
     import DialogFooter from '$lib/components/ui/dialog/dialog-footer.svelte';
+    import { Footer } from '$lib/components/ui/table/index.js';
  
- let { id, viewSettingsData, href = null, new_tab = false }: { id: string, viewSettingsData: ViewSettingRow[], href: string | null, new_tab: boolean } = $props();
- console.log('href', href);
+ let { row, viewSettingsData, onViewSettingsImport = (experimentId, importId) => null, href = null, new_tab = false }: { viewSettingsData: ViewSettingRow[], href: string | null, new_tab: boolean } = $props();
+ 
+  let dialogOpen = $state(false);
+  console.log('viewSettingsData', $state.snapshot(viewSettingsData));
 </script>
  
 <DropdownMenu.Root>
@@ -46,9 +49,20 @@
   </DropdownMenu.Item>
   </DropdownMenu.Group>
   <DropdownMenu.Separator />
-  <DropdownMenu.Item>
-    <Dialog.Root>
-    <Dialog.Trigger>Import view settings</Dialog.Trigger>
+  <DropdownMenu.Item onSelect={() => {
+    dialogOpen = true
+    console.log('dialog open', dialogOpen);
+    }}
+    >Import view settings</DropdownMenu.Item>
+  <DropdownMenu.Item>Share</DropdownMenu.Item>
+  <DropdownMenu.Separator />
+  <DropdownMenu.Item>Delete</DropdownMenu.Item>
+ </DropdownMenu.Content>
+
+
+</DropdownMenu.Root>
+
+ <Dialog.Root bind:open={dialogOpen}>
     <Dialog.Content>
       <Dialog.Header>
         <Dialog.Title>Import view settings</Dialog.Title>
@@ -61,25 +75,9 @@
         <Alert.Description>Import of view settings will overwrite existing view settings. If you wish to save current view settings, export them first.</Alert.Description>
       </Alert.Root>
       </Dialog.Header>
-      <ViewSettingsTable data={viewSettingsData} {columns}/>
+      <ViewSettingsTable {columns} data={viewSettingsData} onRowClick={(viewSettingsId) => {
+        onViewSettingsImport(row.experiment_id, viewSettingsId);
+        dialogOpen = false;
+      }}/>
     </Dialog.Content>
-    <Dialog.Footer>
-      <Dialog.Close>
-        <Button onclick={() => {
-          
-          }}
-        >
-        Import
-      </Button>
-      </Dialog.Close>
-    </Dialog.Footer>
   </Dialog.Root>
-
-  </DropdownMenu.Item>
-  <DropdownMenu.Item>Share</DropdownMenu.Item>
-  <DropdownMenu.Separator />
-  <DropdownMenu.Item>Delete</DropdownMenu.Item>
- </DropdownMenu.Content>
-
-
-</DropdownMenu.Root>

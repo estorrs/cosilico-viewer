@@ -25,22 +25,20 @@
 
   //  import { columns } from "./columns.js";
 
-  type DataTableProps<TData, TValue> = {
-    columns: ColumnDef<TData, TValue>[];
-    data: TData[];
-  };
+  // type DataTableProps<TData, TValue> = {
+  //   columns: ColumnDef<TData, TValue>[];
+  //   data: TData[];
+  // };
 
-  let { columns, data }: DataTableProps<TData, TValue> = $props();
+  let { columns, data, onRowClick = (id) => null } = $props();
 
-  //  let { columns, data }: DataTableProps<TData, TValue> = $props();
-  //  const data =
+  console.log('data is', data);
   let value = $state("name");
 
   const searchCols = [
     { value: "name", label: "Name" },
     { value: "created_by", label: "Created By" },
   ];
-
 
   const triggerContent = $derived(
     searchCols.find((f) => f.value === value)?.label ?? "Select a column.",
@@ -172,7 +170,7 @@
       </Table.Header>
       <Table.Body>
         {#each table.getRowModel().rows as row (row.id)}
-          <Table.Row data-state={row.getIsSelected() && "selected"}>
+          <Table.Row onclick={() => onRowClick(row.original.id)} data-state={row.getIsSelected() && "selected"}>
             {#each row.getVisibleCells() as cell (cell.id)}
               <Table.Cell class="[&:has([role=checkbox])]:pl-3">
                 <FlexRender
@@ -193,9 +191,12 @@
     </Table.Root>
   </div>
   <div class="flex items-center justify-end space-x-2 pt-4">
-    <div class="text-muted-foreground flex-1 text-sm">
+    <!-- <div class="text-muted-foreground flex-1 text-sm">
       {table.getFilteredSelectedRowModel().rows.length} of
       {table.getFilteredRowModel().rows.length} row(s) selected.
+    </div> -->
+    <div class="text-muted-foreground flex-1 text-sm">
+      Click row to import view settings.
     </div>
     <div class="space-x-2">
       <Button

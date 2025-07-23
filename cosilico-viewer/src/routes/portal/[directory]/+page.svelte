@@ -4,41 +4,25 @@
   import DirectoryTable from '$lib/directories/directory-table.svelte'
   import { columns } from '$lib/directories/columns.js'
 
-
-  // import type {PageData }
-  // import type { PageData } from '../$types.js'
-
   let { data } = $props()
   let { rowData, viewSettingsData, profile, supabase, user } = $derived(data);
   
-
-  // const handleSubmit: EventHandler<SubmitEvent, HTMLFormElement> = async (evt) => {
-  //   evt.preventDefault()
-  //   if (!evt.target) return
-  //   const form = evt.target as HTMLFormElement
-  //   const note = (new FormData(form).get('note') ?? '') as string
-  //   if (!note) return
-  //   const { error } = await supabase.from('notes').insert({ note })
-  //   if (error) console.error(error)
-  //   invalidate('supabase:db:notes')
-  //   form.reset()
-  // }
-
-  // let x;
-
-  $effect(() => {
-    // console.log('rowData', rowData);
-    // console.log('profile', profile);
-  })
-
 </script>
 
 
-<DirectoryTable  data={rowData} {columns} {profile} {viewSettingsData}/>
+<DirectoryTable  data={rowData} {columns} {profile} {viewSettingsData} onViewSettingsImport={async (experimentId, importId) => {
+  let response = await supabase.from('view_settings').select('id,settings').eq('id', importId).single();
+  const settings = response.data.settings;
 
-<!-- <form onsubmit={handleSubmit}>
-  <label>
-    Add a note
-    <input name="note" type="text" />
-  </label>
-</form> -->
+  console.log('experimentID', experimentId);
+  response = await supabase.from('experiments').select('id,view_setting_id').eq('id', experimentId).single();
+  const viewSettingId = response.data.view_setting_id;
+
+  console.log('updating', viewSettingId, 'with', importId);
+
+  const { error } = await supabase
+						.from('view_settings')
+						.update({ settings: settings })
+						.eq('id', viewSettingId)
+
+}}/>

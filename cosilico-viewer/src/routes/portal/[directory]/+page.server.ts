@@ -2,11 +2,11 @@
 // import { PageServerLoad } from './$types.js';
 import type { PageServerLoad } from "./$types.js";
 import type { DirectoryEntityRow } from "$lib/directories/columns.js";
+import type { ViewSettingRow } from "$lib/view-settings/columns.js";
 import { getPermissions } from "$lib/server/supabase/permission.js";
 
 export const load: PageServerLoad = async ({ params, depends, locals: { supabase, user } }) => {
   depends('supabase:db:re')
-  // const { data: notes } = await supabase.from('notes').select('id,note').order('id')
   let directory_entities;
   if (params.directory != 'root') {
     const response = await supabase.from('directory_entities').select('*').eq('parent_id', params.directory).order('name');
@@ -56,8 +56,23 @@ export const load: PageServerLoad = async ({ params, depends, locals: { supabase
   const rowData = [...idToRowData.values()];
 
 
+  const response = await supabase.from('view_settings').select('id,name,created_by,created_at,is_exported').eq('is_exported', true).order('name');
+  const view_settings = response.data;
+  let viewSettingData = [];
+  for (const entity of view_settings) {
+    const row: ViewSettingRow = {
+      id: entity.id,
+      name: entity.name,
+      created_by: idToName.get(entity.created_by),
+      created_on: entity.created_at,
+    }
+    viewSettingData.push(row);
+  }
+
+
   return { 
     rowData: rowData,
+    viewSettingsData: viewSettingData
     // directories: directories ?? [],
     // experiments: experiments ?? []
   };

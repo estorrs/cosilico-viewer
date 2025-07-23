@@ -1,10 +1,17 @@
 <script lang="ts">
  import { goto } from '$app/navigation';
+ import type { ViewSettingRow } from '$lib/view-settings/columns.js';
+ import { columns } from '$lib/view-settings/columns.js';
+ import ViewSettingsTable from '$lib/view-settings/view-settings-table.svelte';
  import EllipsisIcon from "@lucide/svelte/icons/ellipsis";
  import { Button } from "$lib/components/ui/button/index.js";
  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+  import * as Dialog from "$lib/components/ui/dialog/index.js";
+   import * as Alert from "$lib/components/ui/alert/index.js";
+ import AlertCircleIcon from "@lucide/svelte/icons/alert-circle";
+    import DialogFooter from '$lib/components/ui/dialog/dialog-footer.svelte';
  
- let { id, href = null, new_tab = false }: { id: string, href: string | null, new_tab: boolean } = $props();
+ let { id, viewSettingsData, href = null, new_tab = false }: { id: string, viewSettingsData: ViewSettingRow[], href: string | null, new_tab: boolean } = $props();
  console.log('href', href);
 </script>
  
@@ -39,6 +46,36 @@
   </DropdownMenu.Item>
   </DropdownMenu.Group>
   <DropdownMenu.Separator />
+  <DropdownMenu.Item>
+    <Dialog.Root>
+    <Dialog.Trigger>Import view settings</Dialog.Trigger>
+    <Dialog.Content>
+      <Dialog.Header>
+        <Dialog.Title>Import view settings</Dialog.Title>
+        <Dialog.Description>
+          Will attempt to apply view settings to this experiment. Note that if layer names and fields differ between experiments, not all view settings may import properly.
+        </Dialog.Description>
+        <Alert.Root variant="destructive">
+        <AlertCircleIcon />
+        <Alert.Title>Caution!</Alert.Title>
+        <Alert.Description>Import of view settings will overwrite existing view settings. If you wish to save current view settings, export them first.</Alert.Description>
+      </Alert.Root>
+      </Dialog.Header>
+      <ViewSettingsTable data={viewSettingsData} {columns}/>
+    </Dialog.Content>
+    <Dialog.Footer>
+      <Dialog.Close>
+        <Button onclick={() => {
+          
+          }}
+        >
+        Import
+      </Button>
+      </Dialog.Close>
+    </Dialog.Footer>
+  </Dialog.Root>
+
+  </DropdownMenu.Item>
   <DropdownMenu.Item>Share</DropdownMenu.Item>
   <DropdownMenu.Separator />
   <DropdownMenu.Item>Delete</DropdownMenu.Item>

@@ -106,13 +106,19 @@
         columnVisibility = updater;
       }
     },
+    // onRowSelectionChange: (updater) => {
+    //   if (typeof updater === "function") {
+    //     rowSelection = updater(rowSelection);
+    //   } else {
+    //     rowSelection = updater;
+    //   }
+    // },
     onRowSelectionChange: (updater) => {
-      if (typeof updater === "function") {
-        rowSelection = updater(rowSelection);
-      } else {
-        rowSelection = updater;
-      }
-    },
+      const next = typeof updater === 'function' ? updater(rowSelection) : updater;
+
+      const selectedKey = Object.keys(next)[0]; // pick the first selected row
+      rowSelection = selectedKey ? { [selectedKey]: true } : {}; // overwrite selection
+    }
   });
 
 </script>

@@ -8,6 +8,7 @@
         onSaveViewSettings = () => null,
         onExportViewSettings = (name) => null,
         onCaptureScreen = () => null,
+        supabase = null,
     } = $props();
 </script>
 
@@ -16,6 +17,7 @@
         <ViewSettingsDialog 
           {onSaveViewSettings}
           {onExportViewSettings}
+          {supabase}
           />
         <Button title='Screenshot' class='hover:bg-yellow-500' onclick={() => onCaptureScreen()}>
             <Camera color="#ffffff" />

@@ -30,7 +30,7 @@
     data: TData[];
   };
 
-  let { columns, data }: DataTableProps<TData, TValue> = $props();
+  let { columns, data, profile, viewSettingsData } = $props();
 
   //  let { columns, data }: DataTableProps<TData, TValue> = $props();
   //  const data =

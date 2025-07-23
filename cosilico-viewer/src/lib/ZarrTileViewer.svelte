@@ -787,7 +787,6 @@
 				}}
 				onExportViewSettings = {async (name) => {
 					const body = experiment.exportViewSettings();
-					console.log('exporting', body);
 					const { error } = await supabase
 						.from('view_settings')
 						.insert({ 
@@ -799,6 +798,7 @@
 					if (error) console.error(error);
 				}}
 				onCaptureScreen = {() => captureScreen(map, experiment)}
+				supabase = {supabase}
 			    />
 			<div
 				class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto">

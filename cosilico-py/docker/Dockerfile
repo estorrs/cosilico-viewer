@@ -10,6 +10,6 @@ RUN conda install -y -c conda-forge jupyter jupyter_contrib_nbextensions python 
 
 COPY . /src
 
-RUN poetry install --directory /src
+RUN pip install /src/dist/cosilico_py-0.1.0-py3-none-any.whl
 
 CMD /bin/bash

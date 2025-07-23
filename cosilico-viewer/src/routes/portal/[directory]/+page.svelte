@@ -9,20 +9,21 @@
   
 </script>
 
+<div class='p-2'>
+  <DirectoryTable  data={rowData} {columns} {profile} {viewSettingsData} onViewSettingsImport={async (experimentId, importId) => {
+    let response = await supabase.from('view_settings').select('id,settings').eq('id', importId).single();
+    const settings = response.data.settings;
 
-<DirectoryTable  data={rowData} {columns} {profile} {viewSettingsData} onViewSettingsImport={async (experimentId, importId) => {
-  let response = await supabase.from('view_settings').select('id,settings').eq('id', importId).single();
-  const settings = response.data.settings;
+    console.log('experimentID', experimentId);
+    response = await supabase.from('experiments').select('id,view_setting_id').eq('id', experimentId).single();
+    const viewSettingId = response.data.view_setting_id;
 
-  console.log('experimentID', experimentId);
-  response = await supabase.from('experiments').select('id,view_setting_id').eq('id', experimentId).single();
-  const viewSettingId = response.data.view_setting_id;
+    console.log('updating', viewSettingId, 'with', importId);
 
-  console.log('updating', viewSettingId, 'with', importId);
+    const { error } = await supabase
+              .from('view_settings')
+              .update({ settings: settings })
+              .eq('id', viewSettingId)
 
-  const { error } = await supabase
-						.from('view_settings')
-						.update({ settings: settings })
-						.eq('id', viewSettingId)
-
-}}/>
+  }}/>
+</div>

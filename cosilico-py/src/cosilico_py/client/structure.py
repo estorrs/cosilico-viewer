@@ -3,7 +3,7 @@ from typing import List, Dict, Any, Annotated
 from anytree.importer import DictImporter
 from anytree.resolver import Resolver
 from anytree.search import findall
-from anytree import RenderTree, Node
+from anytree import RenderTree, Node, ChildResolverError
 from rich import print
 
 def build_directory_tree(
@@ -156,8 +156,8 @@ def display_anytree_node(
     ):
     colors = {
         '': 'red',
-        'r': 'cyan',
-        'rw': 'green',
+        'r': 'green',
+        'rw': 'blue1',
         'rwd': 'magenta'
     }
     print(f'Permission level :key:: [bold {colors['r']}]read[/bold {colors['r']}] [bold {colors['rw']}]write[/bold {colors['rw']}] [bold {colors['rwd']}]delete[/bold {colors['rwd']}]')
@@ -166,3 +166,13 @@ def display_anytree_node(
             c = colors.get(node.user_permission)
             tail = ':microscope: ' if node.entity_type == 'experiment' else ':file_folder: '
             print(f'{pre}{tail}[bold {c}]{node.name}[/bold {c}]')
+
+def is_valid_path(
+        path: Annotated[str, 'Path of node.'],
+        root: Annotated[Node, 'Node to search.']
+)   :
+    try:
+        get_node(path, root)
+        return True
+    except ChildResolverError:
+        return False

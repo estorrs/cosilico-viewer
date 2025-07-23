@@ -122,10 +122,7 @@ def write_points_zarr_grouped(
     fnames[:] = names
 
     fg_group = feature_meta_group.create_group('feature_groups')
-
-
     ids_group = metadata_root.create_group("ids")
-    
 
     zoom_root = root.create_group("zooms")
     for zoom, sub_dfs in zoom_to_sub_dfs.items():
@@ -179,7 +176,8 @@ def write_grouped_layer_zarr_from_df(
         chunk_size: Annotated[int, 'Chunk size to use when batch processing.'] = 10_000_000,
         use_disk: Annotated[bool, 'Whether to write batch files to disk to decrease memory usage. Default is False'] = True,
     ) -> Annotated[Layer, 'The resulting Layer object.']:
-    assert Path(output_directory).is_dir(), f'{output_directory} is not a directory.'
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
 
     centroids_dfs = compute_grid_centroids_multi(
         source[['feature_index', 'x_location', 'y_location']],
@@ -194,7 +192,7 @@ def write_grouped_layer_zarr_from_df(
         experiment_id=experiment_id,
         is_grouped=True,
     )
-    layer.local_path = (Path(output_directory) / f'{layer.id}.zarr.zip').absolute()
+    layer.local_path = (output_directory / f'{layer.id}.zarr.zip').absolute()
 
     write_points_zarr_grouped(source, zooms, [bin_size_map.get(k) for k in zooms], zoom_to_df, zoom_to_sub_dfs, layer.local_path, size, version=version, name=name)
 
@@ -332,7 +330,8 @@ def write_grouped_metadata_zarrs_from_df(
         use_disk: Annotated[bool, 'Whether to write batch files to disk to decrease memory usage. Default is False'] = True,
         version: Annotated[str, 'Version of Layer we are writing.'] = 'v1',
     ) -> Annotated[dict[str, LayerMetadata], 'The resulting LayerMetadata objects for the written zarrs.']:
-    assert Path(output_directory).is_dir(), f'{output_directory} is not a directory.'
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
     value_cols = list(value_params.keys())
 
     to_metadatas = {}
@@ -358,7 +357,7 @@ def write_grouped_metadata_zarrs_from_df(
         is_sparse=True,
         fields=fnames.tolist(),
     )
-    meta.local_path = (Path(output_directory) / f'{meta.id}.zarr.zip').absolute()
+    meta.local_path = (output_directory / f'{meta.id}.zarr.zip').absolute()
     
     write_grouped_metadata_zarr(zoom_to_df, meta.local_path, 'Count', feat_type, fnames, parent_attrs, 'count', version=version, absolute_vmin=0)
     to_metadatas['Count'] = meta
@@ -374,7 +373,7 @@ def write_grouped_metadata_zarrs_from_df(
             is_sparse=True,
             fields=[name],
         )
-        meta.local_path = (Path(output_directory) / f'{meta.id}.zarr.zip').absolute()
+        meta.local_path = (output_directory / f'{meta.id}.zarr.zip').absolute()
         write_grouped_metadata_zarr(zoom_to_df, meta.local_path, name, feat_type, fnames, parent_attrs, value_col, version=version, absolute_vmin=vmin, absolute_vmax=vmax)
         to_metadatas[value_col] = meta
     
@@ -422,7 +421,6 @@ def extract_polygons_fast(
         if max_verts is not None and count > max_verts:
             idx = np.linspace(0, count - 1, max_verts, dtype=int)
             coords = coords[idx]
-
         polygons[i, :len(coords), :] = coords
 
     return polygons, unique_ids
@@ -435,7 +433,6 @@ def get_zoom_to_subs(
         downsample_map: Annotated[dict[int, int], 'Maps zoom level to n polygons to downsample at that zoom level.'],
     ) -> Annotated[dict[int, pd.DataFrame], 'Gathered polygons for each grid in dataframe form.']:
     zoom_to_subs = {}
-
     for res in zooms:
         max_verts = max_vert_map[res]
         downsample = downsample_map[res]
@@ -458,6 +455,7 @@ def get_zoom_to_subs(
         for i, cell_id in enumerate(ids):
             grids = np.unique(all_grids[i])
             for grid in grids:
+                # print('grid', grid)
                 zoom_grid_map[grid]["X"].append(X[i])
                 zoom_grid_map[grid]["ids"].append(cell_id)
 
@@ -467,6 +465,9 @@ def get_zoom_to_subs(
                 "X": np.stack(data["X"]),
                 "ids": data["ids"]
             }
+        
+         # get rid of negative bins as result of padding
+        grid_to_info = {k:v for k, v in grid_to_info.items() if '-' not in k}
 
         zoom_to_subs[res] = grid_to_info
 
@@ -529,7 +530,8 @@ def write_ungrouped_layer_zarr_from_df(
         downsample_map: Annotated[dict[int, int], 'Maps zoom level to n polygons to downsample at that zoom level.'],
         object_type_map: Annotated[dict[int, str], 'Maps object type (point or polygon), to zoom level.'],
     ) -> Annotated[Layer, 'The resulting Layer object.']:
-    assert Path(output_directory).is_dir(), f'{output_directory} is not a directory.'
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
 
     zoom_to_subs = get_zoom_to_subs(source, id_col, zooms, max_vert_map, downsample_map)
 
@@ -538,7 +540,7 @@ def write_ungrouped_layer_zarr_from_df(
         experiment_id=experiment_id,
         is_grouped=False,
     )
-    layer.local_path = (Path(output_directory) / f'{layer.id}.zarr.zip').absolute()
+    layer.local_path = (output_directory / f'{layer.id}.zarr.zip').absolute()
 
     write_ungrouped_layer_zarr(zoom_to_subs, layer.local_path, name, object_type_map)
 
@@ -765,7 +767,8 @@ def write_sparse_continuous_ungrouped_layer_metadata(
         parent_zarr_path: Annotated[str, 'Filepath to parent layer zarr.'],
         output_directory: Annotated[os.PathLike, 'Directory in which to write the .zarr.zip file.'],
     ) -> Annotated[Layer, 'The resulting Layer Metadata object.']:
-    assert Path(output_directory).is_dir(), f'{output_directory} is not a directory.'
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
 
     store = zarr.storage.ZipStore(parent_zarr_path, mode='r')
     root = zarr.group(store=store)
@@ -783,7 +786,7 @@ def write_sparse_continuous_ungrouped_layer_metadata(
         is_sparse=True,
         fields=fnames.tolist(),
     )
-    meta.local_path = (Path(output_directory) / f'{meta.id}.zarr.zip').absolute()
+    meta.local_path = (output_directory / f'{meta.id}.zarr.zip').absolute()
 
     write_sparse_continuous_metadata_zarr(
         zoom_to_dfs, fnames, value_col, meta.local_path, name, vmins, vmaxs, vcenters=vcenters
@@ -792,13 +795,14 @@ def write_sparse_continuous_ungrouped_layer_metadata(
     return meta
 
 def write_categorical_ungrouped_layer_metadata(
-        layer_id: Annotated[str, 'ID of the parent layer.'],
+        layer_id: Annotated[str, 'ID of the parent layer.'], 
         name: Annotated[str, 'Name of the Layer Metadata.'],
         values: Annotated[pd.Series, 'Values we are writing. IDs must match the IDs on the parent layer.'],
         parent_zarr_path: Annotated[str, 'Filepath to parent layer zarr.'],
         output_directory: Annotated[os.PathLike, 'Directory in which to write the .zarr.zip file.'],
     ) -> Annotated[Layer, 'The resulting Layer Metadata object.']:
-    assert Path(output_directory).is_dir(), f'{output_directory} is not a directory.'
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
 
     store = zarr.storage.ZipStore(parent_zarr_path, mode='r')
     root = zarr.group(store=store)
@@ -821,7 +825,7 @@ def write_categorical_ungrouped_layer_metadata(
         is_sparse=False,
         fields=fnames,
     )
-    meta.local_path = (Path(output_directory) / f'{meta.id}.zarr.zip').absolute()
+    meta.local_path = (output_directory / f'{meta.id}.zarr.zip').absolute()
 
     write_categorical_metadata_zarr(
         zoom_to_values, fnames, meta.local_path, name
@@ -836,7 +840,8 @@ def write_continuous_ungrouped_layer_metadata(
         parent_zarr_path: Annotated[str, 'Filepath to parent layer zarr.'],
         output_directory: Annotated[os.PathLike, 'Directory in which to write the .zarr.zip file.'],
     ) -> Annotated[Layer, 'The resulting Layer Metadata object.']:
-    assert Path(output_directory).is_dir(), f'{output_directory} is not a directory.'
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
 
     store = zarr.storage.ZipStore(parent_zarr_path, mode='r')
     root = zarr.group(store=store)
@@ -864,7 +869,7 @@ def write_continuous_ungrouped_layer_metadata(
         is_sparse=False,
         fields=fnames,
     )
-    meta.local_path = (Path(output_directory) / f'{meta.id}.zarr.zip').absolute()
+    meta.local_path = (output_directory / f'{meta.id}.zarr.zip').absolute()
 
     write_continuous_metadata_zarr(
         zoom_to_values_df, fnames, meta.local_path, name, vmins, vmaxs

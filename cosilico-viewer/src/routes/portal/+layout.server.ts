@@ -1,5 +1,20 @@
-/**
- * This file is necessary to ensure protection of all routes in the `portal`
- * directory. It makes the routes in this directory _dynamic_ routes, which
- * send a server request, and thus trigger `hooks.server.ts`.
- **/
+import type { LayoutServerLoad } from "../$types.js";
+import { getDirectoryPath } from "$lib/server/supabase/structure.js";
+
+export const load: LayoutServerLoad = async ({ params, depends, locals: { supabase, user } }) => {
+    let names;
+    let ids;
+    if (params.directory != 'root') {
+        const data = await getDirectoryPath(supabase, params.directory);
+        names = data.names;
+        ids = data.ids;
+    } else {
+        names = [];
+        ids = [];
+    }
+
+	return {
+		'names': names,
+        'ids': ids
+	};
+};

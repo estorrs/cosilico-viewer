@@ -5,6 +5,7 @@
 	import { SvelteMap } from "svelte/reactivity";
 	import OverviewMap from "ol/control/OverviewMap.js";
 	import { defaults as defaultControls } from "ol/control/defaults.js";
+	import { Projection } from "ol/proj.js";
 	import MouseWheelZoom from "ol/interaction/MouseWheelZoom.js";
 	import PinchZoom from "ol/interaction/PinchZoom.js";
 	import DoubleClickZoom from "ol/interaction/DoubleClickZoom.js";
@@ -26,13 +27,15 @@
 	import { Image } from "./openlayers/Image.js";
 	import { FeatureGroupVector, FeatureVector } from "./openlayers/Vector.js";
 	import ZoomPanel from "./zooming/ZoomPanel.svelte";
+	import Topbar from "./topbar/Topbar.svelte";
 	import { captureScreen } from "./openlayers/OpenlayersHelpers.js";
 	import * as Alert from "$lib/components/ui/alert/index.js";
 
 	import Info from "@lucide/svelte/icons/info";
 	import Camera from "@lucide/svelte/icons/camera";
+    import { List } from "./components/ui/breadcrumb/index.js";
 
-	let { experimentObj } = $props();
+	let { experimentObj, supabase } = $props();
 
 	let reloadImageInfoKey = $state(true);
 	let reloadLayerInfoKey = $state(true);
@@ -42,80 +45,6 @@
 	let map;
 	let experiment = $state(null);
 	let mirrors = $state(null);
-
-	// const experimentObj = {
-	// 	id: 'alsdkfj',
-	// 	name: 'Test Experiment',
-	// 	platform: 'Xenium 5K',
-	// 	platform_version: 'v5.1',
-	// 	metadata: {
-	// 		field_a: 'this is a field'
-	// 	},
-	// 	images: [
-	// 		{
-	// 			id: 'sldkfj',
-	// 			name: 'Multiplex Image',
-	// 			metadata: {}, // this would be ome metadata
-	// 			view_settings: {}, // view settings eventually
-	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/image_small.zarr.zip'
-	// 		}
-	// 	],
-	// 	layers: [
-	// 		{
-	// 			id: 'sldfkjasa',
-	// 			name: 'Cells',
-	// 			is_grouped: false,
-	// 			metadata: {}, // this would be just whatever metadata
-	// 			view_settings: {},
-	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small.zarr.zip',
-	// 			layer_metadatas: [
-	// 				{
-	// 					id: 'sadf',
-	// 					name: 'Kmeans N=10',
-	// 					type: 'categorical',
-	// 					view_settings: {},
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_kmeansn10.zarr.zip'
-	// 				},
-	// 				{
-	// 					id: 'sdfsdf',
-	// 					name: 'PCAs',
-	// 					type: 'continuous',
-	// 					view_settings: {},
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_pca10.zarr.zip'
-	// 				},
-	// 				{
-	// 					id: 'ggfg',
-	// 					name: 'Transcript Counts',
-	// 					type: 'continuous',
-	// 					view_settings: {},
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/cells_small_transcriptcounts.zarr.zip'
-	// 				}
-	// 			]
-	// 		},
-	// 		{
-	// 			id: 'sdf',
-	// 			name: 'Transcripts',
-	// 			is_grouped: true,
-	// 			metadata: {}, // this would be just whatever metadata
-	// 			path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small.zarr.zip',
-	// 			view_settings: {},
-	// 			layer_metadatas: [
-	// 				{
-	// 					id: 'sdlfkj',
-	// 					name: 'Counts',
-	// 					type: 'continuous',
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_count.zarr.zip'
-	// 				},
-	// 				{
-	// 					id: 'sdlsasfkj',
-	// 					name: 'QV',
-	// 					type: 'continuous',
-	// 					path: 'https://ceukgaimyworytcbpvfu.supabase.co/storage/v1/object/public/testing/points_small_qv.zarr.zip'
-	// 				}
-	// 			]
-	// 		}
-	// 	]
-	// };
 
 	class Experiment {
 		constructor(experimentObj) {
@@ -129,7 +58,6 @@
 			this.images = new globalThis.Map();
 			this.layers = new globalThis.Map();
 			this.currentInsertionIdx = 0;
-			// this.layerToInsertionIdx = new globalThis.Map();
 		}
 
 		async init() {
@@ -167,20 +95,165 @@
 			this.currentInsertionIdx = this.currentInsertionIdx + increment;
 		}
 
-		async loadImages() {
+		exportViewSettings() {
+			let viewSettings = {};
+
+			let imgSettings = {};
 			for (const img of this.experimentObj.images) {
+				let o = { ...img.view_settings };
+				const view = this.images.get(img.id).image.imageView;
+				o.is_visible = this.images.get(img.id).image.isVisible;
+				o.opacity = view.opacity;
+				o.t_index = view.tIndex;
+				o.z_index = view.zIndex;
+				o.visible_channels = view.visibleChannelNames;
+				o.channel_views = {};
+
+				for (const name of view.interactedChannelNames) {
+					const channel_view = view.channelNameToView.get(name);
+					o.channel_views[name] = {
+						min_value: channel_view.minValue,
+						max_value: channel_view.maxValue,
+						gamma: channel_view.gamma,
+						color: channel_view.color,
+					};
+				}
+				imgSettings[img.id] = o;
+			}
+			viewSettings.image_views = imgSettings;
+
+			let layerSettings = {};
+			for (const layer of this.experimentObj.layers) {
+				let o = { ...layer.view_settings };
+				const vector = this.layers.get(layer.id).vector;
+				const view = vector.vectorView;
+				o.is_visible = vector.isVisible;
+				o.fill_opacity = view.fillOpacity;
+				o.stroke_opacity = view.strokeOpacity;
+				o.stroke_color = view.strokeColor;
+				o.stroke_width = view.strokeWidth;
+				o.scale = view.scale;
+
+				// console.log('layer', layer);
+				if (layer.is_grouped) {
+					o.visible_feature_names = view.visibleFeatureNames;
+					o.feature_styles = {};
+
+					for (const featureName of view.interactedFeatureNames) {
+						const fv = view.featureNameToView.get(featureName);
+						o.feature_styles[featureName] = {
+							shape_type: fv.shapeType,
+							fill_color: fv.fillColor,
+						};
+					}		
+				} else {
+					o.visible_field = view.visibleFields[0];
+					o.palette = view.palette;
+					o.stroke_darkness = view.strokeDarkness;
+					o.border_type = view.borderType;
+				}
+
+				layerSettings[layer.id] = o;
+			}
+			viewSettings.layer_views = layerSettings;
+
+			let layerMetadataSettings = {};
+			const ls = this.experimentObj.layers.filter((l) => l.is_grouped == false);
+			for (const layer of ls) {
+				const vector = this.layers.get(layer.id).vector;
+				const metadataToNode = this.layers.get(layer.id).metadataToNode;
+
+				const lms = layer.layer_metadatas.filter((lm) => lm.layer_id == layer.id);
+				for (const lm of lms) {
+					const name = lm.name;
+					const node = metadataToNode.get(name);
+
+					let view;
+					if (vector.metadataName == name) {
+						view = vector.vectorView;
+					} else {
+						view = vector.metadataToView.get(name);
+					} 
+
+					let o = { ...lm.view_settings };
+					if (view) {
+						o = {
+							...o,
+							is_visible: name == vector.metadataName,
+							fill_opacity: view.fillOpacity,
+							stroke_opacity: view.strokeOpacity,
+							stroke_color: view.strokeColor,
+							stroke_width: view.strokeWidth,
+							scale: view.scale,
+							stroke_darkness: view.strokeDarkness,
+							border_type: view.border_type,
+							palette: view.palette
+						};
+
+						if (node.attrs.type == 'continuous') {
+							o.kind = 'continuous';
+							o.visible_field = view.visibleFields[0];
+
+							const fIndices = view.interactedFieldIndices;
+							const fNames = view.interactedFieldNames;
+							let fieldToVInfo = lm.view_settings?.field_value_info ?? {};
+							for (let i = 0; i < fIndices.length; i++) {
+								const fName = fNames[i];
+								const fIndex = fIndices[i];
+								const vinfo = view.fieldToVInfo.get(fIndex);
+
+
+								fieldToVInfo[fName] = {
+									v_min: vinfo.vMin,
+									v_max: vinfo.vMax,
+									v_center: vinfo.vCenter,
+									v_step_size: vinfo.vStepSize
+								};
+							}
+							o.field_value_info = fieldToVInfo;
+
+							const fv = view.featureView;
+							o.feature_style = {
+								shape_type: fv.shapeType,
+								fill_color: null,
+							};
+						} else {
+							o.kind = 'categorical'
+							o.visible_fields = view.visibleFields;
+							o.field_styles = lm.view_settings?.field_styles ?? {}
+							for (const field of view.interactedFieldNames) {
+								const v = view.fieldToView.get(field);
+								o.field_styles[field] = {
+									fill_color: v.fillColor,
+									shape_type: v.shapeType
+								};
+							}
+						}
+					}
+					layerMetadataSettings[lm.id] = o;
+				}
+			}
+			viewSettings.layer_metadata_views = layerMetadataSettings;
+
+			return viewSettings;
+		}
+
+		async loadImages() {
+			for (let i = 0; i < this.experimentObj.images.length; i++) {
+				const img = this.experimentObj.images[i];
 				const node = await initZarr({
 					getUrl: img.path,
 					headUrl: img.path_presigned_head,
 				});
 				const obj = {
-					image: new Image(
+					image: await Image.create(
 						node,
 						img.id,
-						false,
+						i == 0 ? true : false,
 						this.currentInsertionIdx,
+						img.view_settings,
+						map,
 					),
-					viewSettings: img.view_settings,
 				};
 				this.currentInsertionIdx = this.currentInsertionIdx + 1;
 				this.images.set(img.id, obj);
@@ -188,14 +261,13 @@
 			}
 
 			this.baseImage = this.images.get(this.imageOrder[0]).image;
-			this.baseImage.isBaseImage = true;
-			this.baseImage.isVisible = true;
+			// this.baseImage.isBaseImage = true;
+			// this.baseImage.isVisible = true;
 
 			this.imagesLoaded = true;
 		}
 
 		async loadGroupedLayer(gl) {
-			// const node = await initZarr(gl.path);
 			const node = await initZarr({
 				getUrl: gl.path,
 				headUrl: gl.path_presigned_head,
@@ -210,15 +282,16 @@
 				// const metadataNode = await initZarr(mgl.path);
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
 			}
-
+			// console.log('view settings', gl.view_settings);
 			const fgv = await FeatureGroupVector.create(
 				node,
 				gl.id,
 				featureMetaToNode,
 				this.baseImage,
 				this.currentInsertionIdx,
+				gl.view_settings,
+				map,
 			);
-			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			const obj = {
 				vector: fgv,
@@ -230,6 +303,11 @@
 			this.layers.set(gl.id, obj);
 			this.layerOrder.push(gl.id);
 			this.layerToIsGrouped.set(gl.id, true);
+
+			for (const fname in fgv.vectorView?.visibleFeatureNames) {
+				this.currentInsertionIdx++;
+				fgv.insertionIdx++;
+			}
 		}
 
 		async loadLayer(l) {
@@ -244,22 +322,29 @@
 				l.id,
 				this.baseImage,
 				this.currentInsertionIdx,
+				l.view_settings,
+				map
 			);
-			// this.currentInsertionIdx = this.currentInsertionIdx + 1;
 
 			let featureMetaToNode = new globalThis.Map();
+			let featureMetaToViewSettings = new globalThis.Map();
 			for (const mgl of l.layer_metadatas) {
-				// const metadataNode = await initZarr(mgl.path);
 				const metadataNode = await initZarr({
 					getUrl: mgl.path,
 					headUrl: mgl.path_presigned_head,
 				});
 				featureMetaToNode.set(metadataNode.attrs.name, metadataNode);
+				featureMetaToViewSettings.set(metadataNode.attrs.name, mgl.view_settings);
+
+				if (mgl.view_settings.is_visible) {
+					await fv.setMetadata(mgl.name, metadataNode, map, mgl.view_settings)
+				}
 			}
 
 			const obj = {
 				vector: fv,
 				metadataToNode: featureMetaToNode,
+				metadataToViewSettings: featureMetaToViewSettings,
 				viewSettings: l.view_settings,
 				isGrouped: false,
 			};
@@ -267,6 +352,10 @@
 			this.layers.set(l.id, obj);
 			this.layerOrder.push(l.id);
 			this.layerToIsGrouped.set(l.id, false);
+
+			this.currentInsertionIdx++;
+			fv.insertionIdx++;
+
 		}
 
 		async loadLayers() {
@@ -281,17 +370,30 @@
 			this.layersLoaded = true;
 		}
 
-		async initializeLayerMetadata(map) {
-			for (const [k, v] of this.layers) {
-				if (!v.isGrouped) {
-					await v.vector.setMetadata(null, null, map);
-					this.incrementInsertionIndices(v.vector.vectorId);
-				}
-			}
-		}
+		// async initializeLayerMetadata(map) {
+		// 	for (const [k, v] of this.layers) {
+		// 		if (!v.isGrouped) {
+		// 			await v.vector.setMetadata(null, null, map);
+		// 			this.incrementInsertionIndices(v.vector.vectorId);
+		// 		}
+		// 	}
+		// }
 	}
 
-	function createMap(projection, sizeX, sizeY) {
+	async function createMap(baseImage) {
+		const node = await initZarr({
+			getUrl: baseImage.path,
+			headUrl: baseImage.path_presigned_head,
+		});
+		const sizeX = node.attrs.ome.images[0].pixels.size_x;
+		const sizeY = node.attrs.ome.images[0].pixels.size_y;
+
+		const projection = new Projection({
+			code: "PIXEL",
+			units: "pixels",
+			extent: [0, 0, sizeX, sizeY],
+		});
+
 		// Create the new map
 		map = new Map({
 			target: "map",
@@ -303,6 +405,10 @@
 		});
 
 		map.on("moveend", () => {
+			if (experiment == null) {
+				return null;
+			}
+
 			for (const [_, image] of experiment.images) {
 				image.image.updateResolutionInfo(map);
 			}
@@ -490,50 +596,26 @@
 	}
 
 	onMount(async () => {
+		const baseImage = experimentObj.images[0];
+
+		await createMap(baseImage);
+
 		experiment = await Experiment.create(experimentObj);
 
-		createMap(
-			experiment.baseImage.projection,
-			experiment.baseImage.sizeX,
-			experiment.baseImage.sizeY,
-		);
-
 		// first channel of first image visible by default
-		await experiment.baseImage.addChannel(
-			experiment.baseImage.channelNames[0],
-			map,
-		);
-		await experiment.initializeLayerMetadata(map);
-
-		// //set tooltip info, must fix
-		// for (const [k, layer] of experiment.layers) {
-		// 	let info = document.getElementById('info'); // this needs to be fixed
-		// 	layer.vector.setFeatureToolTip(map, info);
-		// }
-
-		// const key = 'Kmeans N=10';
-		// const key = 'PCAs';
-		// const key = 'Transcript Counts';
-		// const l = experiment.layers.get('sldfkjasa');
-		// await l.vector.setMetadata(key, l.metadataToNode.get(key), map);
-
+		if (experiment.baseImage.imageView.visibleChannelNames.length == 0) {
+			await experiment.baseImage.addChannel(
+				experiment.baseImage.channelNames[0],
+				map,
+			);
+		}
+		
 		initializeMirrors();
 
 		reloadImageInfoKey = !reloadImageInfoKey;
 		reloadLayerInfoKey = !reloadLayerInfoKey;
 		mapIsLoading = false;
 	});
-
-	async function toggleLayer(vector, value) {
-		if (value) {
-			// show layers logic here
-			///
-		} else {
-			// hide layers logic here
-			///
-		}
-		vector.isVisible = value;
-	}
 
 	function toggleFeature(featureName, vector, isVisible) {
 		let visible;
@@ -542,21 +624,6 @@
 		} else {
 			visible = vector.vectorView.visibleFeatureNames;
 		}
-		// console.log('current insertion indices are');
-		// let ids = [...experiment.imageOrder, ...experiment.layerOrder];
-
-		// for (const objId of ids) {
-		// 	let obj;
-		// 	if (experiment.imageOrder.includes(objId)) {
-		// 		obj = experiment.images.get(objId).image;
-		// 	} else {
-		// 		obj = experiment.layers.get(objId).vector;
-		// 	}
-		// 	console.log(obj.name, obj.insertionIdx);
-		// }
-
-		// console.log('current map layers are');
-		// console.log(map.getLayers());
 
 		let doIncrement = vector instanceof FeatureGroupVector;
 
@@ -632,6 +699,8 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
+
+		image.updateInteractedChannel(channelName);
 	}
 	function setMaxThresholdValue(image, channelName, value) {
 		let view = image.imageView.channelNameToView.get(channelName);
@@ -651,6 +720,8 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
+
+		image.updateInteractedChannel(channelName);
 	}
 
 	function getThresholdValues(image, channelName) {
@@ -679,6 +750,8 @@
 		if (image.isBaseImage) {
 			image.updateOverviewMapLayerOperations();
 		}
+
+		image.updateInteractedChannel(channelName);
 	}
 </script>
 
@@ -689,33 +762,46 @@
 	{#key mapIsLoading}
 		{#if mapIsLoading}
 			<div
-				class="absolute inset-0 flex items-center justify-center z-51 pointer-events-none"
-			>
+				class="absolute inset-0 flex items-center justify-center z-51 pointer-events-none">
 				<Circle2
 					size="80"
 					colorInner="#FF0000"
 					colorCenter="#00FF00"
 					colorOuter="#0000FF"
-					unit="px"
-				/>
+					unit="px" />
 			</div>
 		{/if}
 	{/key}
-	<!-- <div class="absolute right-4 top-4 bottom-4 w-96 z-50 overflow-y-auto"> -->
-	<!-- <div class="h-full overflow-y-auto rounded-xl bg-white shadow p-4"> -->
-	<!-- <div class="absolute right-4 top-4 bottom-4 z-50 w-96"> -->
+
 	{#if experiment && mirrors != null}
 		{#key reloadImageInfoKey}
-			<div class="absolute left-4 top-4 right-96 z-50">
-				<div class="w-full">
-					<Button onclick={() => captureScreen(map, experiment)}>
-						<Camera color="#ffffff" />
-					</Button>
-				</div>
-			</div>
+			<Topbar 
+				onSaveViewSettings = {async () => {
+					const body = experiment.exportViewSettings();
+					const { error } = await supabase
+						.from('view_settings')
+						.update({ settings: body })
+						.eq('id', experiment.experimentObj.view_settings.id)
+
+					if (error) console.error(error);
+				}}
+				onExportViewSettings = {async (name) => {
+					const body = experiment.exportViewSettings();
+					const { error } = await supabase
+						.from('view_settings')
+						.insert({ 
+							name: name,
+							is_exported: true,
+							settings: body 
+						})
+						
+					if (error) console.error(error);
+				}}
+				onCaptureScreen = {() => captureScreen(map, experiment)}
+				supabase = {supabase}
+			    />
 			<div
-				class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto"
-			>
+				class="absolute right-4 top-4 bottom-16 w-96 z-50 overflow-y-auto">
 				<Card.Root class="w-full gap-0">
 					<Card.Header>
 						<Card.Title class="text-xl">Images</Card.Title>
@@ -724,11 +810,9 @@
 						<Accordion.Root type="single">
 							{#each Array.from(experiment.images.values()) as obj}
 								<Accordion.Item
-									value="{obj.image.imageId}-item"
-								>
+									value="{obj.image.imageId}-item">
 									<div
-										class="grid w-full grid-cols-[auto_1fr] items-center gap-2"
-									>
+										class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
 										<Checkbox
 											checked={mirrors
 												.get("imageVisabilityInfo")
@@ -740,15 +824,13 @@
 												mirrors
 													.get("imageVisabilityInfo")
 													.set(obj.image.imageId, v);
-											}}
-										/>
+											}} />
 										<Accordion.Trigger>
 											<span
 												id="{obj.image
 													.name}-trigger-text"
 												class="text-left text-md"
-												>{obj.image.name}</span
-											>
+												>{obj.image.name}</span>
 										</Accordion.Trigger>
 									</div>
 									<Accordion.Content class="ml-3">
@@ -760,22 +842,18 @@
 												<Alert.Title>Info!</Alert.Title>
 												<Alert.Description
 													>Layer is hidden. Unhide to
-													view.</Alert.Description
-												>
+													view.</Alert.Description>
 											</Alert.Root>
 										{/if}
 										<Accordion.Root>
 											{#each obj.image.channelNames as channelName}
 												<Accordion.Item
 													value="{obj.image
-														.imageId}-{channelName}-item"
-												>
+														.imageId}-{channelName}-item">
 													<div
-														class="grid w-full grid-cols-[auto_1fr] items-center gap-2"
-													>
+														class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
 														<div
-															class="flex items-center gap-2"
-														>
+															class="flex items-center gap-2">
 															<Checkbox
 																checked={obj.image.imageView.visibleChannelNames.includes(
 																	channelName,
@@ -786,8 +864,7 @@
 																	toggleChannel(
 																		channelName,
 																		obj.image,
-																	)}
-															/>
+																	)} />
 															<SwatchSelector
 																hex={mirrors
 																	.get(
@@ -817,38 +894,31 @@
 																		channelName,
 																		obj.image,
 																		value,
-																	)}
-															/>
+																	)} />
 														</div>
 														<Accordion.Trigger>
 															<span
 																id="{obj.image
 																	.imageId}-{channelName}-text"
 																class="text-left"
-																>{channelName}</span
-															>
+																>{channelName}</span>
 														</Accordion.Trigger>
 													</div>
 													<Accordion.Content
-														class="ml-3"
-													>
+														class="ml-3">
 														<Card.Root class="p-1">
 															<Card.Header
-																class="p-1"
-															>
+																class="p-1">
 																<Card.Title
 																	class="text-sm"
 																	>Intensity
-																	Threshold</Card.Title
-																>
+																	Threshold</Card.Title>
 																<!-- <Card.Description>Intensity Threshold</Card.Description> -->
 															</Card.Header>
 															<Card.Content
-																class="p-1 pt-0"
-															>
+																class="p-1 pt-0">
 																<div
-																	class="flex w-full items-center gap-3"
-																>
+																	class="flex w-full items-center gap-3">
 																	<Input
 																		type="number"
 																		value={mirrors
@@ -874,8 +944,7 @@
 																					.target
 																					.value,
 																			)}
-																		class="w-[70px] px-1 text-left"
-																	/>
+																		class="w-[70px] px-1 text-left" />
 																	<Slider
 																		bind:value={
 																			() =>
@@ -899,8 +968,7 @@
 																			.image
 																			.dtypeMax}
 																		step={1}
-																		class="flex-1"
-																	/>
+																		class="flex-1" />
 																	<Input
 																		type="number"
 																		value={mirrors
@@ -926,8 +994,7 @@
 																					.target
 																					.value,
 																			)}
-																		class="w-[70px] px-1 text-left"
-																	/>
+																		class="w-[70px] px-1 text-left" />
 																</div>
 															</Card.Content>
 														</Card.Root>
@@ -949,11 +1016,9 @@
 						<Accordion.Root type="single">
 							{#each Array.from(experiment.layers.values()) as obj}
 								<Accordion.Item
-									value="{obj.vector.vectorId}-item"
-								>
+									value="{obj.vector.vectorId}-item">
 									<div
-										class="grid w-full grid-cols-[auto_1fr] items-center gap-2"
-									>
+										class="grid w-full grid-cols-[auto_1fr] items-center gap-2">
 										<Checkbox
 											checked={mirrors
 												.get("layerVisabilityInfo")
@@ -968,32 +1033,30 @@
 														obj.vector.vectorId,
 														v,
 													);
-											}}
-										/>
+											}} />
 										<Accordion.Trigger>
 											<span
 												id="{obj.vector
 													.name}-trigger-text"
 												class="text-left"
-												>{obj.vector.name}</span
-											>
+												>{obj.vector.name}</span>
 										</Accordion.Trigger>
 									</div>
 									<Accordion.Content class="ml-3">
-										{#if !mirrors.get("layerVisabilityInfo").get(obj.vector.vectorId)}
+										{#if !mirrors
+											.get("layerVisabilityInfo")
+											.get(obj.vector.vectorId)}
 											<Alert.Root>
 												<Info class="size-4" />
 												<Alert.Title>Info!</Alert.Title>
 												<Alert.Description
 													>Layer is hidden. Unhide to
-													view.</Alert.Description
-												>
+													view.</Alert.Description>
 											</Alert.Root>
 										{/if}
 										{#key metadataChangeKey}
 											<div
-												class="flex w-full items-center gap-3"
-											>
+												class="flex w-full items-center gap-3">
 												<p>View options</p>
 												{#if obj.vector.objectTypes.includes("point")}
 													<PointViewOptions
@@ -1083,8 +1146,7 @@
 																		.vectorId,
 																).strokeColor =
 																v;
-														}}
-													/>
+														}} />
 												{/if}
 												{#if obj.vector.objectTypes.includes("polygon")}
 													<PolygonViewOptions
@@ -1191,8 +1253,7 @@
 																		.vectorId,
 																);
 															info.borderType = v;
-														}}
-													/>
+														}} />
 												{/if}
 												<FilterOptions
 													layer={obj}
@@ -1340,15 +1401,13 @@
 																	.vectorId,
 															);
 														mapping.delete(key);
-													}}
-												/>
+													}} />
 											</div>
 										{/key}
 										<Card.Root class="p-1 w-full gap-0">
 											<Card.Header class="p-1">
 												<Card.Title class="text-md"
-													>Active Metadata</Card.Title
-												>
+													>Active Metadata</Card.Title>
 											</Card.Header>
 											<Card.Content class="p-1 pt-0">
 												<LayerOptions
@@ -1366,6 +1425,7 @@
 																metadataName,
 															),
 															map,
+															obj.metadataToViewSettings.get(metadataName)
 														);
 
 														// we need to resynch view options
@@ -1474,8 +1534,7 @@
 														obj.vector.setVCenter(
 															fieldName,
 															vCenter,
-														)}
-												/>
+														)} />
 											</Card.Content>
 										</Card.Root>
 									</Accordion.Content>
@@ -1526,63 +1585,14 @@
 							});
 						}
 					}}
-					step={0.01}
-				/>
+					step={0.01} />
 			</div>
 		{/key}
 	{/if}
 	<!-- </div> -->
-	<!-- </div> -->
+
 </div>
 
-<!-- on:change={(e) => updateMaxValue(obj.image, channelName, e)} -->
-
-<!-- {#key reloadLayerInfoKey}
-			{#each Array.from(experiment.layers.values()) as obj}
-				{#if !obj.isGrouped}
-					<label>
-						Select Features ({obj.vector.name}):
-						<div>
-							{#if obj.vector.metadataFields && obj.vector.metadataFields.length > 0}
-								{#each obj.vector.metadataFields ?? [] as field}
-									<label>
-										<input
-											type="checkbox"
-											checked={obj.vector.vectorView.visibleFields.includes(field)}
-											onchange={() => toggleFeature(field, obj.vector)}
-										/>
-										{field}
-									</label>
-								{/each}
-							{:else}
-								<p>Loading cell features...</p>
-							{/if}
-						</div>
-					</label>
-				{/if}
-				{#if obj.isGrouped}
-					<label>
-						Select Features ({obj.vector.name}):
-						<div>
-							{#if obj.vector?.featureNames && obj.vector.featureNames.length > 0}
-								{#each obj.vector.featureNames ?? [] as featureName}
-									<label>
-										<input
-											type="checkbox"
-											checked={obj.vector.vectorView.visibleFeatureNames.includes(featureName)}
-											onchange={() => toggleFeature(featureName, obj.vector)}
-										/>
-										{featureName}
-									</label>
-								{/each}
-							{:else}
-								<p>Loading features...</p>
-							{/if}
-						</div>
-					</label>
-				{/if}
-			{/each}
-		{/key}  -->
 
 <style global>
 	#info {

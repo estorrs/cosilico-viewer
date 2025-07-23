@@ -31,7 +31,7 @@ export const actions: Actions = {
         return message(form, error.message);
     }
 
-    throw redirect(303, '/portal');
+    throw redirect(303, '/portal/root');
     
     return {
       form,

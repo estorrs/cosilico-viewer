@@ -1,12 +1,11 @@
 import { error } from "@sveltejs/kit";
 
-
-
-export async function populateExperiment(experiment, supabase) {
+export async function populateExperiment(experiment, view_settings, supabase) {
     const { data: images, error: e } = await supabase
         .from('images')
         .select('*')
         .in('id', experiment.image_ids);
+    
 
     for (const image of images) {
         const { data, error } = await supabase.functions.invoke('generate-download-url', {
@@ -14,7 +13,10 @@ export async function populateExperiment(experiment, supabase) {
         })
         image.path = data.getUrl;
         image.path_presigned_head = data.headUrl;
-        console.log(data.getUrl);
+
+        const view = view_settings?.settings?.image_views?.[image.id] ?? {};
+
+        image.view_settings = view;
     }
 
     let experiment_layers = [];
@@ -30,6 +32,9 @@ export async function populateExperiment(experiment, supabase) {
             })
             layer.path = data.getUrl;
             layer.path_presigned_head = data.headUrl;
+
+            const view = view_settings?.settings?.layer_views?.[layer.id] ?? {};
+            layer.view_settings = view;
         }
 
         experiment_layers = [...layers];
@@ -49,6 +54,9 @@ export async function populateExperiment(experiment, supabase) {
             })
             lm.path = data.getUrl;
             lm.path_presigned_head = data.headUrl;
+
+            const view = view_settings?.settings?.layer_metadata_views?.[lm.id] ?? {};
+            lm.view_settings = view;
         }
 
         layer.layer_metadatas = layer_metadatas ?? [];
@@ -56,6 +64,8 @@ export async function populateExperiment(experiment, supabase) {
 
     experiment.images = images;
     experiment.layers = experiment_layers;
+
+    experiment.view_settings = view_settings
     
     return experiment;
 }

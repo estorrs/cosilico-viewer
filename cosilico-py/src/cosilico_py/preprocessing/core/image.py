@@ -171,7 +171,9 @@ def write_image_zarr_from_ome(
         to_uint8: Annotated[bool, 'Default is False. If True, will convert the saved image to UINT8. This can save space for images that are UINT16.'] = False,
     ) -> None:
     assert os.path.exists(ome_tiff_path), f'ome_tiff_path {ome_tiff_path} does not exist.'
-    assert os.path.exists(output_directory), f'output_directory {output_directory} does not exist.'
+
+    output_directory = Path(output_directory).expanduser().absolute()
+    assert output_directory.is_dir(), f'{output_directory} is not a directory.'
 
     ome_metadata = tifffile.TiffFile(ome_tiff_path).ome_metadata
     ome_model = from_xml(ome_metadata)
@@ -196,7 +198,7 @@ def write_image_zarr_from_ome(
         image = da_to_uint8(image)
     
     image_model = Image(name=name, experiment_id=experiment_id, metadata=ome_model)
-    image_model.local_path = (Path(output_directory) / f'{image_model.id}.zarr.zip').absolute()
+    image_model.local_path = (output_directory / f'{image_model.id}.zarr.zip').absolute()
     write_image_zarr(
         image,
         ome_model,

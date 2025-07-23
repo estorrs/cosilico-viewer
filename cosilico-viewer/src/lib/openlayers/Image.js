@@ -23,16 +23,23 @@ const transformSourcePixels = function (pixels, data) {
   return [...pseudoPixel];
 };
 
+
 export class Image {
   constructor(
     node,
     imageId,
     isBaseImage,
     insertionIdx,
+    viewSettings,
   ) {
     this.node = node;
+    this.viewSettings = viewSettings;
     this.isBaseImage = isBaseImage;
-    this.isVisible = true;
+    this.isVisible = this.viewSettings?.is_visible ?? false;
+    if (this.isBaseImage && this.viewSettings == {}) {
+      this.isVisible = true;
+    }
+
 
     this.version = node.attrs.version;
     this.name = node.attrs.name;
@@ -70,7 +77,16 @@ export class Image {
     });
 
     this.channelNames = getOmeChannelNames(this.ome);
-    this.populateInitialFields();
+  }
+
+  async init(map) {
+    await this.populateInitialFields(map);
+    return this;
+  }
+
+  static async create( node, imageId, isBaseImage, insertionIdx, viewSettings, map) {
+    const instance = new Image(node, imageId, isBaseImage, insertionIdx, viewSettings);
+    return await instance.init(map);
   }
 
   async updateOverviewControl(map) {
@@ -100,7 +116,7 @@ export class Image {
     this.overviewControl = new OverviewMap({
       collapsed: false,
       collapsible: false,
-      layers: [this.overviewLayer],
+      layers: this.overviewLayer != null ? [this.overviewLayer] : [],
       view: new View({
         projection: this.projection,
         resolutions: [3 * this.resolutions[0] / this.tileSize],
@@ -141,6 +157,23 @@ export class Image {
     if (sources == null) {
       sources = [...this.imageView.zarrTileSources];
     }
+
+    if (sources.length == 0) {
+      if (inPlace) {
+        this.rasterLayer = new ImageLayer({
+            source: null,
+            visible: this.isVisible,
+          });
+
+          const layers = map.getLayers();
+          layers.removeAt(this.insertionIdx);
+          layers.insertAt(this.insertionIdx, this.rasterLayer);
+      }
+      
+
+      return null;
+    }
+  
     const rasterSource = new RasterSource({
       sources: sources,
       operation: transformSourcePixels,
@@ -156,6 +189,7 @@ export class Image {
 
       this.rasterLayer = new ImageLayer({
         source: this.rasterSource,
+        visible: this.isVisible,
       });
 
       const layers = map.getLayers();
@@ -165,19 +199,30 @@ export class Image {
       this.updateBeforeOperations(rasterSource)
       const rasterLayer = new ImageLayer({
         source: rasterSource,
+        visible: this.isVisible,
       });
       return rasterLayer;
     }
   }
 
   updateResolutionInfo(map) {
-      const current = map.getView().getResolution();
-      this.currentRes = current * this.tileSize;
-      this.closestRes = getClosestResolution(map, this.resolutions, this.tileSize);
-      this.currentZoom = current;
+    const current = map.getView().getResolution();
+    this.currentRes = current * this.tileSize;
+    this.closestRes = getClosestResolution(map, this.resolutions, this.tileSize);
+    this.currentZoom = current;
+  }
+
+  updateInteractedChannel(channelName) {
+    if (!this.imageView?.interactedChannelNames.includes(channelName)) {
+			this.imageView?.interactedChannelNames.push(channelName);
+		}
   }
 
   async addChannel(channelName, map) {
+    if (this.imageView?.visibleChannelNames.includes(channelName)) {
+      return null;
+    }
+    
     const cIndex = this.channelNames.indexOf(channelName);
     const newSource = await ZarrTileSource.create({
       node: this.node,
@@ -198,6 +243,8 @@ export class Image {
     if (this.isBaseImage) {
       await this.updateOverviewControl(map);
     }
+
+    this.updateInteractedChannel(channelName);
   }
 
   async removeChannel(channelName, map) {
@@ -213,43 +260,88 @@ export class Image {
       await this.updateOverviewControl(map);
     }
 
+    this.updateInteractedChannel(channelName);
+
   }
 
   setChannelColor(channelName, color) {
     let view = this.imageView.channelNameToView.get(channelName);
     view.color = color;
     this.channelToColor.set(channelName, color);
+
+    this.updateInteractedChannel(channelName);
   }
 
   setVisibility(value) {
     this.rasterLayer.setVisible(value);
     this.overviewLayer.setVisible(value);
-		this.isVisible = value;
+    this.isVisible = value;
   }
 
-  populateInitialFields() {
+  async populateInitialFields(map) {
+
     this.channelToColor = generateColorMapping(defaultPalettes.imagePallete, this.channelNames); // this will eventually be populated by pulled info
 
+    // this.viewSettings
+    const channelViews = this.viewSettings.channel_views ?? {};
+
     const imageView = {
-      channelNameToView: new globalThis.Map(),
-      opacity: 1.0,
-      tIndex: 0,
-      zIndex: 0,
-      visibleChannelNames: [],
+      channelNameToView: new Map(),
+      opacity: this.viewSettings.opacity ?? 1.0,
+      tIndex: this.viewSettings.t_index ?? 0,
+      zIndex: this.viewSettings.z_index ?? 0,
+      visibleChannelNames: this.viewSettings.visible_channels ?? [],
       zarrTileSources: [],
+      interactedChannelNames: [], // tracks channel interactions to be saved later
     };
     this.imageView = imageView;
 
-    for (let i = 0; i < this.channelNames.length; i++) {
-      const channelName = this.channelNames[i];
-      const channelView = {
-        minValue: this.dtypeMin,
-        maxValue: this.dtypeMax,
-        gamma: 1.,
-        color: this.channelToColor.get(channelName)
-      };
+    for (const channelName of this.channelNames) {
+      if (!(channelName in channelViews)) {
+        const channelView = {
+          minValue: this.dtypeMin,
+          maxValue: this.dtypeMax,
+          gamma: 1.,
+          color: this.channelToColor.get(channelName)
+        };
 
-      this.imageView.channelNameToView.set(channelName, channelView);
+        this.imageView.channelNameToView.set(channelName, channelView);
+      } else {
+        const v = channelViews[channelName];
+        const channelView = {
+          minValue: v.min_value,
+          maxValue: v.max_value,
+          gamma: v.gamma,
+          color: v.color
+        };
+        
+        this.channelToColor.set(channelName, v.color);
+        this.imageView.channelNameToView.set(channelName, channelView);
+      }
+    }
+
+    // need to populate zarr tile sources here
+    // let zarrSrcs = [];
+    for (const channelName of this.imageView.visibleChannelNames) {
+      const cIndex = this.channelNames.indexOf(channelName);
+      const newSource = await ZarrTileSource.create({
+        node: this.node,
+        fullImageHeight: this.sizeY,
+        fullImageWidth: this.sizeX,
+        tileSize: this.tileSize,
+        resolutions: this.resolutions,
+        tIndex: this.imageView.tIndex,
+        cIndex: cIndex,
+        zIndex: this.imageView.zIndex
+      });
+      this.imageView.zarrTileSources.push(newSource);
+
+    }
+
+    this.updateRasterSource(map);
+
+    if (this.isBaseImage) {
+      await this.updateOverviewControl(map);
     }
 
     this.isLoaded = true;

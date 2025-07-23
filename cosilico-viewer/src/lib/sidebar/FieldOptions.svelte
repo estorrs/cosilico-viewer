@@ -1,7 +1,9 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
+	import * as Alert from "$lib/components/ui/alert/index.js";
 
+	import Info from "@lucide/svelte/icons/info";
 	import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 
@@ -325,6 +327,13 @@
 		</Card.Header>
 		<Card.Content class="p-1 pt-0">
 			<ScrollArea class="rounded-md border p-2">
+				{#if selectedFields.length == 0}
+					<Alert.Root>
+						<Info class="size-4" />
+						<Alert.Title>Info!</Alert.Title>
+						<Alert.Description>No Active fields. Select a field to view.</Alert.Description>
+					</Alert.Root>
+				{/if}
 				{#each selectedFields as field (field.name)}
 					<!-- {#if field.isSelected} -->
 					<div class="flex items-center gap-2 pt-1 w-full">

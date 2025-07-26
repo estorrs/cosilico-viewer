@@ -1,0 +1,105 @@
+0.0.1: Pulling from estorrs/cosilico-py
+13b7e930469f: Already exists
+bde7d579160e: Already exists
+67f8219d5881: Already exists
+77df1aa39676: Already exists
+8d23cb141685: Already exists
+c885c5ba68bf: Pulling fs layer
+ceb336073dff: Pulling fs layer
+c885c5ba68bf: Download complete
+c885c5ba68bf: Pull complete
+ceb336073dff: Download complete
+ceb336073dff: Pull complete
+Digest: sha256:e1392e161e1b078a4392c0171d703eea93a33625a952d15cf47e7b54e52cd963
+Status: Downloaded newer image for estorrs/cosilico-py:0.0.1
+docker.io/estorrs/cosilico-py:0.0.1
+/miniconda/bin/jupyter-notebook:6: DeprecationWarning: Parsing dates involving a day of month without a year specified is ambiguious
+and fails to parse leap day. The default behavior will change in Python 3.15
+to either always raise an exception or to use a different default year (TBD).
+To avoid trouble, add a specific year to the input & format.
+See https://github.com/python/cpython/issues/70647.
+  from notebook.notebookapp import main
+[I 20:24:17.986 NotebookApp] [jupyter_nbextensions_configurator] enabled 0.6.1
+[W 2025-07-23 20:24:18.201 LabApp] 'port' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2025-07-23 20:24:18.201 LabApp] 'ip' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2025-07-23 20:24:18.201 LabApp] 'ip' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 2025-07-23 20:24:18.201 LabApp] 'ip' has moved from NotebookApp to ServerApp. This config will be passed to ServerApp. Be sure to update your config before our next release.
+[W 20:24:18.205 NotebookApp] Error loading server extension jupyterlab
+    Traceback (most recent call last):
+      File "/miniconda/lib/python3.13/site-packages/notebook/notebookapp.py", line 2050, in init_server_extensions
+        func(self)
+        ~~~~^^^^^^
+      File "/miniconda/lib/python3.13/site-packages/jupyterlab/serverextension.py", line 71, in load_jupyter_server_extension
+        extension.initialize()
+        ~~~~~~~~~~~~~~~~~~~~^^
+      File "/miniconda/lib/python3.13/site-packages/jupyterlab/labapp.py", line 926, in initialize
+        super().initialize()
+        ~~~~~~~~~~~~~~~~~~^^
+      File "/miniconda/lib/python3.13/site-packages/jupyter_server/extension/application.py", line 437, in initialize
+        self._prepare_handlers()
+        ~~~~~~~~~~~~~~~~~~~~~~^^
+      File "/miniconda/lib/python3.13/site-packages/jupyter_server/extension/application.py", line 327, in _prepare_handlers
+        self.initialize_handlers()
+        ~~~~~~~~~~~~~~~~~~~~~~~~^^
+      File "/miniconda/lib/python3.13/site-packages/jupyterlab/labapp.py", line 738, in initialize_handlers
+        page_config["token"] = self.serverapp.identity_provider.token
+                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    AttributeError: 'NotebookApp' object has no attribute 'identity_provider'
+[I 20:24:18.208 NotebookApp] Serving notebooks from local directory: /storage1/fs1/dinglab/Active/Projects/estorrs/viewer/notebooks/compute1
+[I 20:24:18.208 NotebookApp] Jupyter Notebook 6.5.7 is running at:
+[I 20:24:18.208 NotebookApp] http://compute1-exec-262.ris.wustl.edu:8888/?token=f312a4a52b2ba04cce3ffcee2be45cdbdc111dec38f55d6d
+[I 20:24:18.208 NotebookApp]  or http://127.0.0.1:8888/?token=f312a4a52b2ba04cce3ffcee2be45cdbdc111dec38f55d6d
+[I 20:24:18.208 NotebookApp] Use Control-C to stop this server and shut down all kernels (twice to skip confirmation).
+[C 20:24:18.223 NotebookApp] 
+    
+    To access the notebook, open this file in a browser:
+        file:///home/estorrs/.local/share/jupyter/runtime/nbserver-7-open.html
+    Or copy and paste one of these URLs:
+        http://compute1-exec-262.ris.wustl.edu:8888/?token=f312a4a52b2ba04cce3ffcee2be45cdbdc111dec38f55d6d
+     or http://127.0.0.1:8888/?token=f312a4a52b2ba04cce3ffcee2be45cdbdc111dec38f55d6d
+[I 20:27:17.619 NotebookApp] 302 GET /?token=f312a4a52b2ba04cce3ffcee2be45cdbdc111dec38f55d6d (10.25.19.91) 0.300000ms
+[W 20:27:30.437 NotebookApp] Config option `template_path` not recognized by `LenvsHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.442 NotebookApp] Config option `template_path` not recognized by `LenvsHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.460 NotebookApp] Config option `template_path` not recognized by `LenvsTocHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.464 NotebookApp] Config option `template_path` not recognized by `LenvsTocHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.501 NotebookApp] Config option `template_path` not recognized by `LenvsLatexExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.504 NotebookApp] Config option `template_path` not recognized by `LenvsLatexExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.700 NotebookApp] Config option `template_path` not recognized by `LenvsSlidesExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.704 NotebookApp] Config option `template_path` not recognized by `LenvsSlidesExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.853 NotebookApp] Config option `template_path` not recognized by `LenvsHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.858 NotebookApp] Config option `template_path` not recognized by `LenvsHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.876 NotebookApp] Config option `template_path` not recognized by `LenvsTocHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.880 NotebookApp] Config option `template_path` not recognized by `LenvsTocHTMLExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.917 NotebookApp] Config option `template_path` not recognized by `LenvsLatexExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:30.920 NotebookApp] Config option `template_path` not recognized by `LenvsLatexExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:31.142 NotebookApp] Config option `template_path` not recognized by `LenvsSlidesExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[W 20:27:31.146 NotebookApp] Config option `template_path` not recognized by `LenvsSlidesExporter`.  Did you mean one of: `extra_template_paths, template_name, template_paths`?
+[I 20:27:31.595 NotebookApp] Kernel started: 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539, name: python3
+[W 20:27:32.019 NotebookApp] The websocket_ping_timeout (90000) cannot be longer than the websocket_ping_interval (30000).
+    Setting websocket_ping_timeout=30000
+[I 20:29:31.674 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[W 22:43:32.019 NotebookApp] WebSocket ping timeout after 119998 ms.
+[I 22:43:37.023 NotebookApp] Starting buffering for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 11:32:16.215 NotebookApp] Restoring connection for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 11:33:46.834 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 15:16:50.255 NotebookApp] Starting buffering for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 19:56:05.702 NotebookApp] Restoring connection for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 19:57:06.899 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 19:59:04.309 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:01:04.124 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:03:03.716 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:10:45.009 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:17:45.145 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:20:47.361 NotebookApp] Starting buffering for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 20:20:48.296 NotebookApp] Kernel restarted: 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539
+[I 20:20:48.303 NotebookApp] Restoring connection for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 20:20:48.808 NotebookApp] Replaying 3 buffered messages
+[I 20:24:45.696 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:31:45.679 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[I 20:37:15.288 NotebookApp] KernelRestarter: restarting kernel (1/5), keep random ports
+WARNING:root:kernel 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539 restarted
+[I 20:38:45.690 NotebookApp] Saving file at /sandbox/populate_data.ipynb
+[W 22:13:18.307 NotebookApp] WebSocket ping timeout after 119996 ms.
+[I 22:13:23.310 NotebookApp] Starting buffering for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 11:58:07.567 NotebookApp] Restoring connection for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482
+[I 12:44:10.427 NotebookApp] Starting buffering for 10fcbfdc-3a25-4b55-b7d2-9dbfc9f35539:56b031a08d894a4794b96dd8783e3482

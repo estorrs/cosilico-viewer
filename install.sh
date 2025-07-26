@@ -10,5 +10,16 @@ npm install @supabase/ssr
 npm install svelte-loading-spinners
 npm install @tanstack/table-core
 npm i @dnd-kit-svelte/core
+npm install zarrita
 
 npm run build
+
+
+
+
+
+
+
+// exisiting
+npm install
+npm run dev

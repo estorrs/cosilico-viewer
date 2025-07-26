@@ -101,12 +101,6 @@ file_size_limit = "50MiB"
 # allowed_mime_types = ["image/png", "image/jpeg"]
 # objects_path = "./images"
 
-[[storage.cors]]
-allowed_origins = ["http://localhost:5173"]
-allowed_methods = ["GET", "HEAD"]
-allowed_headers = ["Authorization", "Range"]
-expose_headers   = ["Content-Range", "Accept-Ranges", "Content-Length"]
-max_age          = 3600
 
 [auth]
 enabled = true

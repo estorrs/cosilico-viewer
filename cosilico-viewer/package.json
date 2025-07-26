@@ -71,8 +71,11 @@
 		"@supabase/ssr": "^0.6.1",
 		"@supabase/supabase-js": "^2.50.0",
 		"@tanstack/table-core": "^8.21.3",
+		"@zarrita/core": "^0.0.3",
+		"@zarrita/indexing": "^0.0.3",
 		"ol": "^10.5.0",
 		"svelte-awesome-color-picker": "^4.0.2",
-		"svelte-loading-spinners": "^0.3.6"
+		"svelte-loading-spinners": "^0.3.6",
+		"zarrita": "^0.5.2"
 	}
 }

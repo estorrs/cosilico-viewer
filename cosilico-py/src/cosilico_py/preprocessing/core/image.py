@@ -103,10 +103,6 @@ def write_zoom_level(
         "tiles", shape=dataset_shape, dtype=dt, chunks=dataset_chunks, overwrite=True
     )
 
-    print('downsampled shape', downsampled.shape)
-
-    print('reshsaping to:', (num_tiles_x, tile_size, num_tiles_y, tile_size, *downsampled.shape[2:]))
-
     tiled_dask = downsampled.reshape(
         (num_tiles_x, tile_size, num_tiles_y, tile_size, *downsampled.shape[2:])
     )
@@ -193,7 +189,8 @@ def write_image_zarr_from_ome(
 
     # tifffile will automatically remove the T/Z dimension, adding it back in if needed
     if len(image.shape) == 2:   
-        image = da.expand_dims(image, axis=(2, 3, 4))
+        # image = da.expand_dims(image, axis=(2, 3, 4))
+        image = da.expand_dims(image, axis=(0, 3, 4))
     elif len(image.shape) == 3:
         image = da.expand_dims(image, axis=(3, 4))
     image = image.transpose(2, 1, 3, 0, 4) # now image is XYZCT

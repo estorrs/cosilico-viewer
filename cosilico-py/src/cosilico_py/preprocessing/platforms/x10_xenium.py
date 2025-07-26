@@ -6,6 +6,7 @@ import json
 import os
 
 from dateutil import parser
+from pyarrow import ArrowInvalid
 from rich import print
 import numpy as np
 import pandas as pd
@@ -29,8 +30,6 @@ from cosilico_py.preprocessing.core.layer import (
 
 PLATFORM_VERSIONS = ['Prime VV']
 
-
-
 def load_transcript_df(filepath, mpp=1., bbox=None):
     # Read only necessary columns & use `dtype` hints for memory efficiency
     dtype_dict = {
@@ -43,11 +42,21 @@ def load_transcript_df(filepath, mpp=1., bbox=None):
         "qv": "float32",
     }
 
-    source = pd.read_parquet(
-        filepath,
-        columns=["feature_name", "is_gene", "codeword_category", "x_location", "y_location", "transcript_id", "qv"],
-        engine="pyarrow"
-    ).astype(dtype_dict)
+    try:
+        source = pd.read_parquet(
+            filepath,
+            columns=["feature_name", "is_gene", "codeword_category", "x_location", "y_location", "transcript_id", "qv"],
+            engine="pyarrow"
+        ).astype(dtype_dict)
+    except ArrowInvalid: # is_gene is not in earlier versions
+        dtype_dict = {k:v for k, v in dtype_dict.items() if k not in ['is_gene', 'codeword_category']}
+        source = pd.read_parquet(
+            filepath,
+            columns=["feature_name", "x_location", "y_location", "transcript_id", "qv"],
+            engine="pyarrow"
+        ).astype(dtype_dict)
+        source['is_gene'] = True
+        source['codeword_category'] = 'predesigned_gene'
 
     # Filter first to minimize memory usage
     source = source.loc[source['is_gene']].copy()

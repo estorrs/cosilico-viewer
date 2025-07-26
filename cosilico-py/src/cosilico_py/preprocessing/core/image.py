@@ -103,6 +103,10 @@ def write_zoom_level(
         "tiles", shape=dataset_shape, dtype=dt, chunks=dataset_chunks, overwrite=True
     )
 
+    print('downsampled shape', downsampled.shape)
+
+    print('reshsaping to:', (num_tiles_x, tile_size, num_tiles_y, tile_size, *downsampled.shape[2:]))
+
     tiled_dask = downsampled.reshape(
         (num_tiles_x, tile_size, num_tiles_y, tile_size, *downsampled.shape[2:])
     )

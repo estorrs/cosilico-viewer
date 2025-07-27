@@ -365,7 +365,7 @@ begin
   if new.view_setting_id is null then
     insert into public.view_settings (name, created_by)
     values (
-      'Default',
+      'Default - ' || new.name,
       auth.uid()
     )
     returning id into new_vs_id;

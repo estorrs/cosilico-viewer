@@ -15,10 +15,6 @@ export class DualURLRangeReader {
       ...this.overrides,
       method: "HEAD",
     });
-    console.log('response is', res);
-    // if (!res.ok)
-    //   console.log('response', res);
-    //   throw new Error(`HEAD failed: ${res.status} ${res.statusText}`);
 
     const len = res.headers.get("Content-Length");
     if (!len) throw new Error("Content-Length missing from HEAD response");

@@ -37,3 +37,35 @@ export default {
 	}
 };
 
+
+
+// import adapter from '@sveltejs/adapter-cloudflare';
+
+// export default {
+// 	kit: {
+// 		adapter: adapter({
+// 			// See below for an explanation of these options
+// 			config: undefined,
+// 			platformProxy: {
+// 				configPath: undefined,
+// 				environment: undefined,
+// 				persist: undefined
+// 			},
+// 			fallback: 'plaintext',
+// 			routes: {
+// 				include: ['/*'],
+// 				exclude: ['<all>']
+// 			}
+// 		})
+// 	}
+// };
+
+// import adapter from '@sveltejs/adapter-vercel';
+
+// export default {
+// 	kit: {
+// 		adapter: adapter({
+// 			// see below for options that can be set here
+// 		})
+// 	}
+// };

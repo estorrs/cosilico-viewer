@@ -1,7 +1,11 @@
 
-import { ZipFileStore } from "@zarrita/storage";
+// import { ZipFileStore } from "@zarrita/storage";
+// import { ZipFileStore } from '@zarrita/storage/dist/fs/zip.js';
+import ZipFileStore from "@zarrita/storage/zip";
+
+
 import { open } from "@zarrita/core";
-import { get, slice } from "@zarrita/indexing";
+// import { get, slice } from "@zarrita/indexing";
 
 import { DualURLRangeReader } from "$lib/DualURLRangeReader.js";
 
@@ -10,19 +14,6 @@ export async function initZarr({ getUrl, headUrl }) {
   const store  = new ZipFileStore(reader);   // <- no `.fromUrl()` now
   return await open(store);                  // returns the root node
 }
-
-// export async function initZarr(zarrUrl) {
-//     try {
-//         // console.log(this.zarrUrl);
-//         const store = await ZipFileStore.fromUrl(zarrUrl);
-//         const node = await open(store); // Get the root structure
-
-//         console.log('node opened at', zarrUrl);
-//         return node;
-//     } catch (error) {
-//         console.error("Error loading Zarr:", error);
-//     }
-// }
 
 export async function printZarrTree(group, prefix = "") {
     const entries = await group.entries();

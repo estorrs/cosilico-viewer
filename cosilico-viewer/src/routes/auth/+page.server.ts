@@ -20,8 +20,7 @@ export const actions: Actions = {
       return fail(400, {
         form,
       });
-    }
-    
+    }    
     const { data, error } = await supabase.auth.signInWithPassword({
         email: form.data.email,
         password: form.data.password,

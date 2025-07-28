@@ -18,6 +18,8 @@
 		step = 1
 	} = $props();
 
+	maxZoom = 6; // hardcoding for now
+
     let redrawScaleBar = $state(false);
 
 	// let zoom = $state(10);

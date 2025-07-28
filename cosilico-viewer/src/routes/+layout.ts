@@ -2,6 +2,8 @@ import { createBrowserClient, createServerClient, isBrowser } from '@supabase/ss
 import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public'
 import type { LayoutLoad } from './$types.js'
 
+// export const prerender = true;
+
 export const load: LayoutLoad = async ({ data, depends, fetch }) => {
   /**
    * Declare a dependency so the layout can be invalidated, for example, on

@@ -777,25 +777,29 @@
 		{#key reloadImageInfoKey}
 			<Topbar 
 				onSaveViewSettings = {async () => {
-					const body = experiment.exportViewSettings();
-					const { error } = await supabase
-						.from('view_settings')
-						.update({ settings: body })
-						.eq('id', experiment.experimentObj.view_settings.id)
+					// commenting out for demo purposes
 
-					if (error) console.error(error);
+					// const body = experiment.exportViewSettings();
+					// const { error } = await supabase
+					// 	.from('view_settings')
+					// 	.update({ settings: body })
+					// 	.eq('id', experiment.experimentObj.view_settings.id)
+
+					// if (error) console.error(error);
 				}}
 				onExportViewSettings = {async (name) => {
-					const body = experiment.exportViewSettings();
-					const { error } = await supabase
-						.from('view_settings')
-						.insert({ 
-							name: name,
-							is_exported: true,
-							settings: body 
-						})
+					// commenting out for demo purposes
+					
+					// const body = experiment.exportViewSettings();
+					// const { error } = await supabase
+					// 	.from('view_settings')
+					// 	.insert({ 
+					// 		name: name,
+					// 		is_exported: true,
+					// 		settings: body 
+					// 	})
 						
-					if (error) console.error(error);
+					// if (error) console.error(error);
 				}}
 				onCaptureScreen = {() => captureScreen(map, experiment)}
 				supabase = {supabase}

@@ -2,7 +2,6 @@ import TileImage from 'ol/source/TileImage.js';
 import DataTileSource from 'ol/source/DataTile.js';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
 // import * as zarr from 'zarr';
-import { ZipFileStore } from "@zarrita/storage";
 import { open } from "@zarrita/core";
 
 

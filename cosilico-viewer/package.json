@@ -74,6 +74,8 @@
 	],
 	"dependencies": {
 		"@dnd-kit-svelte/core": "^0.0.8",
+		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+		"@esbuild-plugins/node-modules-polyfill": "^0.2.2",
 		"@supabase/ssr": "^0.6.1",
 		"@supabase/supabase-js": "^2.50.0",
 		"@tanstack/table-core": "^8.21.3",
@@ -81,6 +83,7 @@
 		"@zarrita/indexing": "^0.0.3",
 		"@zarrita/storage": "^0.1.1",
 		"ol": "^10.5.0",
+		"rollup-plugin-node-polyfills": "^0.2.1",
 		"svelte-awesome-color-picker": "^4.0.2",
 		"svelte-loading-spinners": "^0.3.6",
 		"zarrita": "^0.5.2"

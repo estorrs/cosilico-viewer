@@ -67,17 +67,19 @@ const authGuard: Handle = async ({ event, resolve }) => {
   event.locals.session = session
   event.locals.user = user
 
-  if (!event.locals.session && event.url.pathname.startsWith('/portal')) {
-    redirect(303, '/auth')
-  }
+  // no auth guards for demo
 
-  if (!event.locals.session && event.url.pathname.startsWith('/experiments')) {
-    redirect(303, '/auth')
-  }
+  // if (!event.locals.session && event.url.pathname.startsWith('/portal')) {
+  //   redirect(303, '/auth')
+  // }
 
-  if (event.locals.session && event.url.pathname === '/auth') {
-    redirect(303, '/portal/root')
-  }
+  // if (!event.locals.session && event.url.pathname.startsWith('/experiments')) {
+  //   redirect(303, '/auth')
+  // }
+
+  // if (event.locals.session && event.url.pathname === '/auth') {
+  //   redirect(303, '/portal/root')
+  // }
 
   return resolve(event)
 }

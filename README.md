@@ -39,10 +39,27 @@ The application as a whole has three main components.
 npm install -g supabase
 cd infra/supabase
 supabase start # launches Postgres, storage
+```
+
+Next, we need to supply some environmental variables to Supabase. These variables control which storage backend we will use. You can use any storage backend (i.e. AWS, Google Cloud, etc.), but here we use the local s3 storage that ships with supabase.
+
+To do so, we need to create a file at infra/supabase/functions/.env with the following contents. Replace the fields where necessary with the values output by `supabase start`. You will also need to create a new bucket called `zarrs` (or whatever you want) in the s3 storage. You can do that via the supabase studio portal at `http://127.0.0.1:54323` in the storage tab.
+
+```bash
+STORAGE_ACCESS_KEY_ID = "625729a08b95bf1b7ff351a663f3a23c"
+STORAGE_SECRET_ACCESS_KEY = "850181e4652dd023b7a98c58ae0d2d34bd487ee0cc3254aed6eda37307425907"
+STORAGE_ENDPOINT_URL = "http://127.0.0.1:54321/storage/v1/s3"
+STORAGE_REGION_NAME = "local"
+STORAGE_BUCKET_NAME = "zarrs"
+```
+
+Next, we launch our supabase edge functions in a seperate terminal.
+
+```bash
 supabase functions serve  # run in a second terminal, launches Edge runtime
 ```
 
-Shut everything down with:
+To shut everything down, run:
 
 ```bash
 supabase stop

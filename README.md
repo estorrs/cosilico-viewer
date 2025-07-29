@@ -1,97 +1,106 @@
 # Viewer
 
-A proof of concept for remote viewing application for multi-modal spatial datasets.
+*A proof‑of‑concept web viewer for multi‑modal spatial datasets.*
 
-Check out the [experiment viewer](https://lighthearted-kulfi-ce56ba.netlify.app/portal/demo_429ed69f-28e9-4663-8e71-222a7fbc7533) and [directory portal](https://lighthearted-kulfi-ce56ba.netlify.app/portal/demo_directory_429ed69f-28e9-4663-8e71-222a7fbc7533) demos. 
+[**Experiment Viewer Demo**](https://lighthearted-kulfi-ce56ba.netlify.app/portal/demo_429ed69f-28e9-4663-8e71-222a7fbc7533)\
+[**Directory Portal Demo**](https://lighthearted-kulfi-ce56ba.netlify.app/portal/demo_directory_429ed69f-28e9-4663-8e71-222a7fbc7533)
 
-## Motivation
+---
 
-The viewer is intented to be a proof of concept for an image viewer that also handles attached vector data (i.e. transcripts, cells, etc.). Downloading experiment data to view on your local machine really sucks, especially if you need to view a large number of samples. This type of remote viewer allows for data to be viewed through the browser, elimating that time consuming step. Additionally, since everything is browser based, we can construct an api that allows for uploading and downloading of experimental data in a synchronized format (no more tracking experimental files, etc.). 
+## Motivation (Why another viewer?)
 
-Think of it as similar in function to a remote image viewer like [Omero](https://www.openmicroscopy.org/omero/), but in addition to viewing images, you can also view vector data on top, such as gene transcripts and cells. When viewing an experiemnt, only the relavent transcripts and image channels currently being viewed for a particular location in the image are fetched, rather than downloading all the data a priori. This allows for data efficient viewing applications on the web. 
+Moving multi‑gigabyte experiments to your laptop to view a handful of genes is painful. **Viewer** streams only the imagery and vector features (gene transcripts, segmented cells, etc.) that are visible into your browser window. I.e., no pre‑downloads, no file wrangling.
 
-## Installation
+Because the entire stack is exposed through a Python API, the same infrastructure allows for uploads, downloads, and synchronized metadata, all in easy-to-use formats.
 
-There are three main components: the viewing application (for viewing the data through the browser), python library (for downloading, uploading, and interacting with experiment data), and supabase (backend infrastructure, databases, storage, etc.).
+Think [Omero](https://www.openmicroscopy.org/omero/), but with support for spatial‑omics vector data.
 
-Follow the following instructions to run locally. All three services must be running for the app to work.
+---
 
-#### Supabase
+## System overview
 
-We use the free verison of [Supabase](https://supabase.com/) to organize all our databases and authorization policies.
+The application as a whole has three main components.
 
-First we need to install supabase.
+| Layer          | Tech                                                  | Role                                      |
+| -------------- | ----------------------------------------------------- | ----------------------------------------- |
+| **Frontend**   | SvelteKit - OpenLayers - Zarrita                      | Browser rendering                         |
+| **Backend**    | Supabase (PostgreSQL, edge functions, object storage) | Auth, metadata, tile & vector serving     |
+| **Python SDK** |                                                       | Programmatic upload, download, automation |
+
+---
+
+## Quick start (local)
+
+> **Prereqs**: Docker (or Docker Desktop), Node ≥ 18, Conda (or another venv), Python ≥ 3.9, Poetry.
+
+### 1. Boot Supabase
 
 ```bash
-npm install supabase
-```
-
-We can then run the supabase containers locally. Note you must have either [Docker Compose](https://docs.docker.com/compose/) or [Docker Desktop](https://docs.docker.com/desktop/) running on your machine.
-
-```bash
+npm install -g supabase
 cd infra/supabase
-supabase start
+supabase start # launches Postgres, storage
+supabase functions serve  # run in a second terminal, launches Edge runtime
 ```
 
-In a seperate terminal, we also need to run the supabase edge functions.
-
-```bash
-supabase functions serve
-```
-
-To stop supabase, run:
+Shut everything down with:
 
 ```bash
 supabase stop
 ```
 
-#### Python library
-
-A python client for interacting with the viewer. This includes uploading and downloading data. To install, run the following. We reccomended installing into a fresh virtual environment to avoid package conflicts. Here we use [Miniconda](https://www.anaconda.com/docs/getting-started/miniconda/main), but any virtual environment could be used. [Poetry](https://python-poetry.org/) must be installed as a prerequisite.
+### 2. Install the Python SDK
 
 ```bash
-conda create -n cosilico-py -y -c conda-forge python poetry
+conda create -n cosilico-py -c conda-forge python=3.10 poetry -y
 conda activate cosilico-py
 
 cd cosilico-py
 poetry install
 ```
 
-For an example of uploading and downloading experimental data, please see [this notebook](https://github.com/estorrs/viewer/blob/main/notebooks/data_preprocessing/populate_project.ipynb). This notebook must be run before logging into the frontend web application since the a user is created in the notebook. Use that email and password to login to the web application.
+Run [`notebooks/data_preprocessing/populate_project.ipynb`](https://github.com/estorrs/viewer/blob/main/notebooks/data_preprocessing/populate_project.ipynb) to:
 
+1. Register a demo user.
+2. Upload an example experiment.
+3. Verify the upload.
 
-#### Viewing application
-
-The frontend is built with [Svelte](https://svelte.dev/), a javascript framework.
+### 3. Launch the viewer
 
 ```bash
 cd cosilico-viewer
 npm install
 ```
 
-First, we need to create a .env file so our application can talk to supabase. To do so, copy `API URL` and `anon key` from the output of `supabase start` and create a .env file at cosilico-viewer/.env with the following contents.
+First, we need to create a .env file so our application can talk to supabase. To do so, copy `API URL` and `anon key` from the output of `supabase start` and create a .env file at `cosilico-viewer/.env` with the following contents.
 
 ```bash
 PUBLIC_SUPABASE_URL = "http://127.0.0.1:54321"
 PUBLIC_SUPABASE_ANON_KEY = "YOUR_ANON_KEY"
 ```
 
-To run the development server run the following.
+Then run:
 
 ```bash
 npm run dev
 ```
 
-The viewer is now available at `http://localhost:5173`.
+Open [http://localhost:5173](http://localhost:5173), log in with the credentials used in the [populate_project notebook](https://github.com/estorrs/viewer/blob/main/notebooks/data_preprocessing/populate_project.ipynb), and start exploring.
 
-To login go to `http://localhost:5173/auth`, you will then be directed to the directory portal containing your experiments you created and uploaded with cosilico-py.
+---
 
+## How on‑demand streaming works
 
-## Concepts
+Data are stored as chunked **Zarr** arrays in object storage. Each pan/zoom operation requests only the raster tiles and vector chunks overlapping the viewport. This keeps network traffic and memory to the minimum size necessary to see what is on your screen.
 
-#### Zarr
+> **A quick note:**: Performance is good for datasets up to \~10 k × 10 k µm. For larger experiments, however, the S3 listing latency becomes noticeable; we’re working on smarter indexing. But until then, the applications mostly serves as a proof-of-concept.
 
-The way remote viewing is achieved is via Zarr files. We save experimental data in the Zarr format so that only parts of the zarrs with the relavent data are read, thereby avoiding downloading the whole dataset just to view a subset of the data.
+---
 
-Unfortunately, the reason this application remains a demo is when Zarr files get too big, the lookup for data downloading gets too slow, making viewing large experiments cumbersome. But it works great for small datasets! Say less than ~10k x 10x microns. 
+## Roadmap
+
+- **Permissions & sharing** — Role‑based controls for collaborative projects. Allow for sharable links for collaborators.
+- **Scalability** — Improved Zarr formatting to allow visualization of large experiments.
+- **Workflows** — New notebooks demonstrating various spatial workflows, along with integration into the viewer.
+- **Documentation** - More comprehensive documentation.
+- **More experimental platforms** - Build converters for more experimental formats (currently only supports 10X Xenium).
 
